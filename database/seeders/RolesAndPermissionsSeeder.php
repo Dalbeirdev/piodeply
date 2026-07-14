@@ -59,7 +59,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionEnum::ReportsView,
             ],
 
-            RoleEnum::Viewer->value => PermissionEnum::viewOnly(),
+            // View-only across modules — except the user directory, which
+            // stays reserved for Manager+ (least privilege).
+            RoleEnum::Viewer->value => array_values(array_diff(
+                PermissionEnum::viewOnly(),
+                [PermissionEnum::UsersView->value]
+            )),
         ];
 
         foreach ($matrix as $role => $permissions) {

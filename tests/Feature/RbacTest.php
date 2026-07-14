@@ -63,6 +63,7 @@ class RbacTest extends TestCase
         $this->assertFalse($client->can('clients.view'));
         $this->assertTrue($viewer->can('packages.view'));
         $this->assertFalse($viewer->can('packages.manage'));
+        $this->assertFalse($viewer->can('users.view'), 'viewers must not browse the user directory');
     }
 
     public function test_permission_middleware_gates_users_page(): void
