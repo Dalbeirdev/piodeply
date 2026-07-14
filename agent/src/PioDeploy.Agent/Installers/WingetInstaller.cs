@@ -42,7 +42,9 @@ public sealed class WingetInstaller : IInstaller
             return InstallResult.Fail($"Action '{job.Action}' is not supported for winget packages.");
         }
 
-        var result = await _processRunner.RunAsync("winget", arguments, _timeout, ct);
+        // Resolve the real winget.exe — the bare "winget" alias isn't on the
+        // PATH when the agent runs as the LocalSystem service.
+        var result = await _processRunner.RunAsync(WingetLocator.Resolve(), arguments, _timeout, ct);
 
         if (result.TimedOut)
         {
