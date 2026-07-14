@@ -80,6 +80,19 @@ class RbacTest extends TestCase
         $this->actingAs($superAdmin)->get('/admin/users')->assertOk();
     }
 
+    public function test_forbidden_page_is_friendly(): void
+    {
+        $technician = $this->userWithRole(RoleEnum::Technician);
+
+        $this->actingAs($technician)
+            ->get('/admin/users')
+            ->assertForbidden()
+            ->assertSee("You don't have access to this page", false)
+            ->assertSee('Back to dashboard')
+            ->assertSee($technician->name)
+            ->assertDontSee('User does not have');
+    }
+
     public function test_dynamic_menu_reflects_permissions(): void
     {
         $admin = $this->userWithRole(RoleEnum::Admin);
