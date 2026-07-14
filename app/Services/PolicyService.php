@@ -21,12 +21,15 @@ use Illuminate\Support\Collection;
  */
 class PolicyService
 {
-    /** Failed attempts re-queue at most once per this window. */
-    private const FAILURE_COOLDOWN_HOURS = 23;
-
     public function __construct(
         private readonly DeploymentService $deployments,
     ) {
+    }
+
+    /** Failed/cancelled attempts re-queue at most once per this window. */
+    private function failureBackoffHours(): int
+    {
+        return (int) app(SettingsService::class)->get('policies.failure_backoff_hours');
     }
 
     /* ─────────────────────────── Enforcement ─────────────────────────── */
@@ -403,7 +406,7 @@ class PolicyService
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
             ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
-            ->where('finished_at', '>=', now()->subHours(self::FAILURE_COOLDOWN_HOURS))
+            ->where('finished_at', '>=', now()->subHours($this->failureBackoffHours()))
             ->exists();
     }
 
@@ -430,7 +433,7 @@ class PolicyService
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
             ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
-            ->where('finished_at', '>=', now()->subHours(self::FAILURE_COOLDOWN_HOURS))
+            ->where('finished_at', '>=', now()->subHours($this->failureBackoffHours()))
             ->exists();
     }
 }

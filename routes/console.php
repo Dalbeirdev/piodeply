@@ -22,3 +22,6 @@ Schedule::command('agents:check-offline')->everyFifteenMinutes();
 
 // Morning compliance summary for subscribed channels.
 Schedule::command('policies:drift-digest')->dailyAt('08:00');
+
+// Audit-log retention (days configurable in Admin → Settings).
+Schedule::command('logs:prune')->dailyAt('03:30');

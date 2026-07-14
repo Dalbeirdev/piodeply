@@ -21,7 +21,7 @@
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5">
             <span class="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-600 to-teal-800 grid place-content-center text-white text-base font-extrabold shadow-sm" aria-hidden="true">P</span>
             <span class="text-[15px] font-bold tracking-tight text-slate-900">PioDeploy
-                <span class="font-medium text-slate-400 text-xs">· TechPio</span>
+                <span class="font-medium text-slate-400 text-xs">· {{ app(\App\Services\SettingsService::class)->get('branding.company_name') }}</span>
             </span>
         </a>
     </div>

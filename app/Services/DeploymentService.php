@@ -38,6 +38,8 @@ class DeploymentService
             'action'             => $action,
             'status'             => $status,
             'priority'           => max(1, min(10, $priority)),
+            'max_attempts'       => (int) app(\App\Services\SettingsService::class)
+                ->get('deployments.default_max_attempts'),
             'depends_on_job_id'  => $dependsOn?->id,
             'created_by'         => $createdBy,
         ]);

@@ -37,6 +37,10 @@ Route::middleware([
         ->middleware('permission:activity.view')
         ->name('activity.index');
 
+    Route::get('/admin/settings', \App\Livewire\Admin\SettingsPage::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.settings');
+
     Route::post('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'start'])
         ->middleware('role:Super Admin')
         ->name('impersonate.start');

@@ -71,7 +71,8 @@ class Computer extends Model
 
     public static function onlineThreshold(): int
     {
-        return (int) config('piodeploy.agent.online_threshold_seconds', 300);
+        return (int) app(\App\Services\SettingsService::class)
+            ->get('agent.online_threshold_seconds');
     }
 
     public function isOnline(): bool

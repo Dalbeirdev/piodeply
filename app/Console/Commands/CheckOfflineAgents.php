@@ -14,7 +14,8 @@ class CheckOfflineAgents extends Command
 
     public function handle(NotificationService $notifications): int
     {
-        $offlineAfter = (int) config('piodeploy.notifications.offline_after_minutes', 60);
+        $offlineAfter = (int) app(\App\Services\SettingsService::class)
+            ->get('notifications.offline_after_minutes');
 
         $computers = Computer::query()
             ->whereNotNull('last_seen_at') // never-enrolled machines are not outages
