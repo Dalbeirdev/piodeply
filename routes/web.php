@@ -25,6 +25,10 @@ Route::middleware([
         ->middleware('permission:users.view')
         ->name('admin.users');
 
+    Route::get('/admin/roles', \App\Livewire\Admin\ManageRoles::class)
+        ->middleware('permission:roles.manage')
+        ->name('admin.roles');
+
     Route::post('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'start'])
         ->middleware('role:Super Admin')
         ->name('impersonate.start');

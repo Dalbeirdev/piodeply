@@ -23,6 +23,8 @@ class NavigationService
                 'icon' => '<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'],
             ['label' => 'Users', 'route' => 'admin.users', 'active' => 'admin.users*', 'permission' => Permission::UsersView,
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'],
+            ['label' => 'Roles', 'route' => 'admin.roles', 'active' => 'admin.roles*', 'permission' => Permission::RolesManage,
+                'icon' => '<circle cx="12" cy="8" r="3.5"/><path d="M6 21v-1.5a6 6 0 0 1 9-5.2"/><path d="m16.5 20 1.6 1 2.9-4"/>'],
             ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'permission' => Permission::ClientsView,
                 'icon' => '<path d="M3 21h18M5 21V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14M9 9h1M9 13h1M14 9h1M14 13h1M10 21v-4h4v4"/>'],
             ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'permission' => Permission::ProjectsView,
