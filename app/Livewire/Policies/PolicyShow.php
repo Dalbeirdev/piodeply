@@ -69,6 +69,13 @@ class PolicyShow extends Component
         return view('livewire.policies.policy-show', [
             'summary' => $service->complianceSummary($this->policy),
             'rows'    => $filtered->values(),
+            'history' => \Spatie\Activitylog\Models\Activity::query()
+                ->where('subject_type', SoftwarePolicy::class)
+                ->where('subject_id', $this->policy->id)
+                ->with('causer')
+                ->latest()
+                ->limit(10)
+                ->get(),
         ])->layout('layouts.app');
     }
 }

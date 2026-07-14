@@ -147,6 +147,39 @@
                     </tbody>
                 </table></div>
             </div>
+
+            {{-- Change history --}}
+            <div class="pd-card p-6">
+                <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Change history</h3>
+                @forelse ($history as $entry)
+                    <div class="flex items-start gap-3 py-2 {{ ! $loop->last ? 'border-b border-slate-100' : '' }}">
+                        <span class="mt-1 h-2 w-2 rounded-full shrink-0 {{ match($entry->description) {
+                            'created' => 'bg-teal-500',
+                            'updated' => 'bg-blue-400',
+                            'exclusion_toggled' => 'bg-amber-400',
+                            default => 'bg-slate-300',
+                        } }}"></span>
+                        <div class="min-w-0 text-sm">
+                            <p class="text-slate-700">
+                                <span class="font-medium">{{ ucfirst(str_replace('_', ' ', $entry->description)) }}</span>
+                                <span class="text-slate-400">· {{ $entry->causer?->name ?? 'System' }}
+                                    · {{ $entry->created_at->diffForHumans() }}</span>
+                            </p>
+                            @if ($entry->description === 'updated' && $entry->properties->has('attributes'))
+                                <p class="text-xs text-slate-500 truncate">
+                                    @foreach ($entry->properties['attributes'] as $field => $newValue)
+                                        {{ $field }}:
+                                        <span class="line-through">{{ is_array($entry->properties['old'][$field] ?? null) ? json_encode($entry->properties['old'][$field]) : ($entry->properties['old'][$field] ?? '—') }}</span>
+                                        → <span class="font-medium">{{ is_array($newValue) ? json_encode($newValue) : $newValue }}</span>{{ ! $loop->last ? ' · ' : '' }}
+                                    @endforeach
+                                </p>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-400">No changes recorded yet.</p>
+                @endforelse
+            </div>
         </div>
     </div>
 </div>

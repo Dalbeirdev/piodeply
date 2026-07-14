@@ -64,6 +64,13 @@ Route::middleware([
         Route::get('/deployments', \App\Livewire\Deployments\DeploymentsIndex::class)->name('deployments.index');
     });
 
+    Route::middleware('permission:reports.view')->group(function () {
+        Route::get('/reports', \App\Livewire\Reports\ReportsIndex::class)->name('reports.index');
+        Route::get('/reports/compliance', \App\Livewire\Reports\ComplianceReport::class)->name('reports.compliance');
+        Route::get('/reports/deployments', \App\Livewire\Reports\DeploymentsReport::class)->name('reports.deployments');
+        Route::get('/reports/computers', \App\Livewire\Reports\ComputersReport::class)->name('reports.computers');
+    });
+
     Route::middleware('permission:policies.view')->group(function () {
         Route::get('/policies', \App\Livewire\Policies\PoliciesIndex::class)->name('policies.index');
         Route::get('/policies/create', \App\Livewire\Policies\PolicyForm::class)->name('policies.create');
