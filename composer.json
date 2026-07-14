@@ -9,9 +9,12 @@
         "php": "^8.2",
         "laravel/framework": "^12.0",
         "laravel/horizon": "^5.47",
-        "laravel/sanctum": "^4.3",
+        "laravel/jetstream": "^5.5",
+        "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "livewire/livewire": "^3.6.4",
         "predis/predis": "^3.5",
+        "spatie/laravel-activitylog": "^4.12",
         "spatie/laravel-permission": "^6.25"
     },
     "require-dev": {
@@ -83,6 +86,10 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "ext-pcntl": "8.2",
+            "ext-posix": "8.2"
         }
     },
     "minimum-stability": "stable",
