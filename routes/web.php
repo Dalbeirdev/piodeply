@@ -24,4 +24,10 @@ Route::middleware([
         Route::get('/clients/create', \App\Livewire\Clients\ClientForm::class)->name('clients.create');
         Route::get('/clients/{client}/edit', \App\Livewire\Clients\ClientForm::class)->name('clients.edit');
     });
+
+    Route::middleware('permission:projects.view')->group(function () {
+        Route::get('/projects', \App\Livewire\Projects\ProjectsIndex::class)->name('projects.index');
+        Route::get('/projects/create', \App\Livewire\Projects\ProjectForm::class)->name('projects.create');
+        Route::get('/projects/{project}/edit', \App\Livewire\Projects\ProjectForm::class)->name('projects.edit');
+    });
 });
