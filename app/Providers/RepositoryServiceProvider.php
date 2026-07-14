@@ -15,6 +15,6 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     /** @var array<class-string, class-string> */
     public array $bindings = [
-        // Populated per phase; no business entities exist yet (Phase 1).
+        \App\Repositories\Contracts\ClientRepositoryInterface::class => \App\Repositories\Eloquent\EloquentClientRepository::class,
     ];
 }

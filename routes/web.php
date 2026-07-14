@@ -18,4 +18,10 @@ Route::middleware([
     Route::get('/admin/users', \App\Livewire\Admin\ManageUsers::class)
         ->middleware('permission:users.view')
         ->name('admin.users');
+
+    Route::middleware('permission:clients.view')->group(function () {
+        Route::get('/clients', \App\Livewire\Clients\ClientsIndex::class)->name('clients.index');
+        Route::get('/clients/create', \App\Livewire\Clients\ClientForm::class)->name('clients.create');
+        Route::get('/clients/{client}/edit', \App\Livewire\Clients\ClientForm::class)->name('clients.edit');
+    });
 });
