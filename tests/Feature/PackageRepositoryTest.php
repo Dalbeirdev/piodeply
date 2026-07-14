@@ -227,6 +227,61 @@ class PackageRepositoryTest extends TestCase
         ]);
     }
 
+    public function test_show_page_displays_fleet_stats_and_recent_jobs(): void
+    {
+        $package = Package::factory()->create();
+        $computerA = \App\Models\Computer::factory()->create(['hostname' => 'STATS-PC-A']);
+        $computerB = \App\Models\Computer::factory()->create(['hostname' => 'STATS-PC-B']);
+
+        \App\Models\DeploymentJob::factory()->succeeded()->create(['package_id' => $package->id, 'computer_id' => $computerA->id]);
+        \App\Models\DeploymentJob::factory()->succeeded()->create(['package_id' => $package->id, 'computer_id' => $computerB->id]);
+        \App\Models\DeploymentJob::factory()->create(['package_id' => $package->id, 'computer_id' => $computerA->id]); // pending
+        \App\Models\DeploymentJob::factory()->failed()->create(['package_id' => $package->id, 'computer_id' => $computerB->id]);
+
+        Livewire::actingAs($this->admin())
+            ->test(PackageShow::class, ['package' => $package])
+            ->assertViewHas('stats', fn ($stats) => $stats['installed_on'] === 2
+                && $stats['in_flight'] === 1
+                && $stats['failed'] === 1
+                && $stats['last_deploy'] !== null)
+            ->assertSee('STATS-PC-A')
+            ->assertSee('Recent deployments');
+    }
+
+    public function test_quick_deploy_from_package_page_queues_job(): void
+    {
+        $package = Package::factory()->create();
+        $computer = \App\Models\Computer::factory()->create();
+
+        Livewire::actingAs($this->admin())
+            ->test(PackageShow::class, ['package' => $package])
+            ->set('deploy_computer_id', $computer->id)
+            ->set('deploy_action', 'install')
+            ->set('deploy_priority', 3)
+            ->call('deploy')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('deployment_jobs', [
+            'package_id'  => $package->id,
+            'computer_id' => $computer->id,
+            'action'      => 'install',
+            'priority'    => 3,
+        ]);
+    }
+
+    public function test_viewer_cannot_quick_deploy(): void
+    {
+        $package = Package::factory()->create();
+        $computer = \App\Models\Computer::factory()->create();
+        $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));
+
+        Livewire::actingAs($viewer)
+            ->test(PackageShow::class, ['package' => $package])
+            ->set('deploy_computer_id', $computer->id)
+            ->call('deploy')
+            ->assertForbidden();
+    }
+
     public function test_menu_shows_packages_for_permitted_users(): void
     {
         $this->actingAs($this->admin())->get('/dashboard')->assertSee('Packages');
