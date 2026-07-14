@@ -38,6 +38,12 @@ class AppServiceProvider extends ServiceProvider
                 ->by(sha1((string) $request->header('X-Api-Key', $request->ip())));
         });
 
+        // Integration API: per token-owner, tighter than the agent lane.
+        \Illuminate\Support\Facades\RateLimiter::for('integration', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)
+                ->by($request->user()?->id ?? $request->ip());
+        });
+
         // Super Admin passes every ability check, including future ones.
         Gate::before(function (User $user, string $ability) {
             return $user->hasRole(Role::SuperAdmin->value) ? true : null;

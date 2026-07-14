@@ -36,11 +36,11 @@ class JetstreamServiceProvider extends ServiceProvider
     {
         Jetstream::defaultApiTokenPermissions(['read']);
 
+        // Token abilities cap what a token may do; the owning user's role
+        // permissions still apply underneath.
         Jetstream::permissions([
-            'create',
-            'read',
-            'update',
-            'delete',
+            'read',   // list/inspect clients, projects, computers, packages, deployments, policies
+            'deploy', // queue deployment jobs
         ]);
     }
 }

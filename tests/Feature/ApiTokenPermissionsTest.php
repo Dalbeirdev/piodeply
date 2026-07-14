@@ -25,20 +25,20 @@ class ApiTokenPermissionsTest extends TestCase
         $token = $user->tokens()->create([
             'name' => 'Test Token',
             'token' => Str::random(40),
-            'abilities' => ['create', 'read'],
+            'abilities' => ['read'],
         ]);
 
         Livewire::test(ApiTokenManager::class)
             ->set(['managingPermissionsFor' => $token])
             ->set(['updateApiTokenForm' => [
                 'permissions' => [
-                    'delete',
+                    'deploy',
                     'missing-permission',
                 ],
             ]])
             ->call('updateApiToken');
 
-        $this->assertTrue($user->fresh()->tokens->first()->can('delete'));
+        $this->assertTrue($user->fresh()->tokens->first()->can('deploy'));
         $this->assertFalse($user->fresh()->tokens->first()->can('read'));
         $this->assertFalse($user->fresh()->tokens->first()->can('missing-permission'));
     }
