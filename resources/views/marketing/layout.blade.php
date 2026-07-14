@@ -6,7 +6,7 @@
     <title>@yield('title', $company . ' — Software deployment & policy management for MSPs')</title>
     <meta name="description" content="@yield('meta', 'Deploy, update and lock down software across your entire Windows fleet from one portal. Silent installs, desired-state policies, real-time compliance.')">
     <link rel="preconnect" href="{{ url('/') }}">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=4">
     <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
@@ -68,5 +68,28 @@
             </div>
         </div>
     </footer>
+
+    <script>
+    (function () {
+        var nav = document.getElementById('siteNav');
+        if (nav) {
+            var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
+            window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+        }
+
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        var els = document.querySelectorAll('.section-head, .feature, .quote, .step, .tier, .plan, .cta, .pricecalc, .contact-item, .form-card, .ptable');
+        els.forEach(function (el, i) { el.classList.add('reveal'); el.style.transitionDelay = (i % 3) * 90 + 'ms'; });
+
+        if (!('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('in'); }); return; }
+
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+        els.forEach(function (el) { io.observe(el); });
+    })();
+    </script>
 </body>
 </html>
