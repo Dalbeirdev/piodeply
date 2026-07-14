@@ -14,11 +14,22 @@ class SoftwarePolicyFactory extends Factory
     public function definition(): array
     {
         return [
-            'project_id' => Project::factory(),
-            'package_id' => Package::factory(),
-            'action'     => 'install',
-            'priority'   => 5,
-            'is_active'  => true,
+            'project_id'   => Project::factory(),
+            'package_id'   => Package::factory(),
+            'action'       => 'install',
+            'mode'         => 'enforce',
+            'version_mode' => 'latest',
+            'priority'     => 5,
         ];
+    }
+
+    public function audit(): static
+    {
+        return $this->state(fn () => ['mode' => 'audit']);
+    }
+
+    public function disabled(): static
+    {
+        return $this->state(fn () => ['mode' => 'disabled']);
     }
 }

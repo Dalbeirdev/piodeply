@@ -70,7 +70,8 @@ class AgentJobController extends Controller
             'installer_type' => $package?->installer_type->value,
             'winget_id'      => $package?->winget_id,
             'choco_id'       => $package?->choco_id,
-            'version'        => $version?->version,
+            // Policy-pinned version wins over the catalogue binary version.
+            'version'        => $job->target_version ?? $version?->version,
             'installer_url'  => $version?->installer_url,
             'sha256'         => $version?->sha256,
             'silent_args'    => $version?->silent_args,

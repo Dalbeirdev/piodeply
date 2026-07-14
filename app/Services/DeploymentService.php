@@ -24,6 +24,7 @@ class DeploymentService
         ?int $packageVersionId = null,
         ?DeploymentJob $dependsOn = null,
         ?int $createdBy = null,
+        ?string $targetVersion = null,
     ): DeploymentJob {
         $status = $dependsOn !== null && ! $dependsOn->status->isTerminal()
             ? JobStatus::Blocked
@@ -33,6 +34,7 @@ class DeploymentService
             'computer_id'        => $computer->id,
             'package_id'         => $package->id,
             'package_version_id' => $packageVersionId,
+            'target_version'     => $targetVersion,
             'action'             => $action,
             'status'             => $status,
             'priority'           => max(1, min(10, $priority)),

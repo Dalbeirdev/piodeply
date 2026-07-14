@@ -34,29 +34,72 @@
 
                 <div>
                     <x-label for="action" value="Rule" />
-                    <select id="action" wire:model="action"
+                    <select id="action" wire:model.live="action"
                             class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
-                        <option value="install">Install — put it on machines that don't have it</option>
-                        <option value="update">Auto update — keep it current on machines that have it</option>
-                        <option value="uninstall">Remove — uninstall it wherever it's found</option>
+                        @foreach ($actions as $actionOption)
+                            <option value="{{ $actionOption->value }}">{{ $actionOption->description() }}</option>
+                        @endforeach
                     </select>
                     <x-input-error for="action" class="mt-1" />
                 </div>
 
-                <div>
-                    <x-label for="priority" value="Priority (1 = highest, 10 = lowest)" />
-                    <x-input id="priority" type="number" min="1" max="10" class="mt-1 block w-24" wire:model="priority" />
-                    <x-input-error for="priority" class="mt-1" />
+                @if (! in_array($action, ['uninstall', 'block'], true))
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <x-label for="version_mode" value="Version" />
+                            <select id="version_mode" wire:model.live="version_mode"
+                                    class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                                @foreach ($versionModes as $versionModeOption)
+                                    <option value="{{ $versionModeOption->value }}">{{ $versionModeOption->label() }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error for="version_mode" class="mt-1" />
+                        </div>
+                        @if ($version_mode !== 'latest' || $action === 'force_update')
+                            <div>
+                                <x-label for="desired_version" value="Desired version" />
+                                <x-input id="desired_version" type="text" placeholder="e.g. 24.09"
+                                         class="mt-1 block w-full" wire:model="desired_version" />
+                                <x-input-error for="desired_version" class="mt-1" />
+                            </div>
+                        @endif
+                    </div>
+                    @if ($version_mode === 'exact')
+                        <p class="text-xs text-slate-500 -mt-3">Machines on any other version are moved to exactly this version — including downgrades.</p>
+                    @elseif ($version_mode === 'minimum')
+                        <p class="text-xs text-slate-500 -mt-3">Machines below this version are updated; machines at or above it are left alone.</p>
+                    @elseif ($version_mode === 'maximum')
+                        <p class="text-xs text-slate-500 -mt-3">Freeze: machines above this version are downgraded back to it; updates never go past it.</p>
+                    @endif
+                @endif
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <x-label for="mode" value="Mode" />
+                        <select id="mode" wire:model="mode"
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                            @foreach ($modes as $modeOption)
+                                <option value="{{ $modeOption->value }}">{{ $modeOption->label() }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error for="mode" class="mt-1" />
+                    </div>
+                    <div>
+                        <x-label for="priority" value="Priority" />
+                        <select id="priority" wire:model="priority"
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                            @foreach ($priorities as $priorityLabel => $priorityValue)
+                                <option value="{{ $priorityValue }}">{{ $priorityLabel }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error for="priority" class="mt-1" />
+                    </div>
                 </div>
 
-                <label class="flex items-center gap-2 text-sm text-slate-700">
-                    <x-checkbox wire:model="is_active" />
-                    Active — enforce automatically as agents report in
-                </label>
-
                 <div class="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
-                    Jobs are only queued for machines that actually need the action — machines already
-                    compliant, or with a job in flight, are skipped.
+                    <strong>Enforce</strong> queues jobs for machines out of desired state — automatically as agents
+                    report in. <strong>Audit only</strong> shows compliance on the policy page but never changes a
+                    machine. Version pinning requires a winget package.
                 </div>
 
                 <div class="flex justify-end gap-3 border-t pt-4">

@@ -14,7 +14,7 @@ class DeploymentJob extends Model
     use HasFactory;
 
     protected $fillable = [
-        'computer_id', 'package_id', 'package_version_id',
+        'computer_id', 'package_id', 'package_version_id', 'target_version',
         'action', 'status', 'priority', 'depends_on_job_id',
         'attempts', 'max_attempts', 'created_by',
         'claimed_at', 'finished_at', 'exit_code', 'output_log', 'failure_reason',

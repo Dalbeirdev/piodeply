@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Policies;
 
+use App\Enums\PolicyMode;
 use App\Livewire\Concerns\WithCompactPagination;
 use App\Models\SoftwarePolicy;
 use App\Services\PolicyService;
@@ -22,17 +23,27 @@ class PoliciesIndex extends Component
         }
     }
 
+    /** Quick toggle between Disabled and Enforce. */
     public function toggle(int $policyId): void
     {
         $policy = SoftwarePolicy::findOrFail($policyId);
         $this->authorize('update', $policy);
-        $policy->update(['is_active' => ! $policy->is_active]);
+
+        $policy->update(['mode' => $policy->mode === PolicyMode::Disabled
+            ? PolicyMode::Enforce->value
+            : PolicyMode::Disabled->value]);
     }
 
     public function enforceNow(int $policyId, PolicyService $service): void
     {
         $policy = SoftwarePolicy::with(['project', 'package'])->findOrFail($policyId);
         $this->authorize('enforce', $policy);
+
+        if ($policy->mode === PolicyMode::Audit) {
+            session()->flash('status', "{$policy->label()} is audit-only — it reports compliance but never queues jobs.");
+
+            return;
+        }
 
         $queued = $service->enforce($policy);
 
@@ -49,7 +60,7 @@ class PoliciesIndex extends Component
         session()->flash('status', 'Policy deleted.');
     }
 
-    public function render()
+    public function render(PolicyService $service)
     {
         $this->authorize('viewAny', SoftwarePolicy::class);
 
@@ -64,13 +75,20 @@ class PoliciesIndex extends Component
             ->when($this->search !== '', fn ($q) => $q->whereHas('package', fn ($p) => $p->where('name', 'like', "%{$this->search}%"))
                 ->orWhereHas('project', fn ($p) => $p->where('name', 'like', "%{$this->search}%")))
             ->when($this->projectFilter !== '', fn ($q) => $q->where('project_id', $this->projectFilter))
-            ->orderByDesc('is_active')
+            ->orderBy('priority')
             ->orderBy('id')
             ->paginate(20);
 
+        // Compliance snapshot per visible policy (page of 20 max).
+        $summaries = collect($policies->items())
+            ->mapWithKeys(fn (SoftwarePolicy $policy) => [
+                $policy->id => $policy->isActive() ? $service->complianceSummary($policy) : null,
+            ]);
+
         return view('livewire.policies.policies-index', [
-            'policies' => $policies,
-            'projects' => \App\Models\Project::orderBy('name')
+            'policies'  => $policies,
+            'summaries' => $summaries,
+            'projects'  => \App\Models\Project::orderBy('name')
                 ->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
                 ->get(['id', 'name']),
         ])->layout('layouts.app');

@@ -20,9 +20,9 @@
             @endif
 
             <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
-                Policies keep the fleet in a desired state: they queue install, update or remove jobs
-                for any machine that drifts, automatically each time an agent reports its software —
-                new machines self-provision on first check-in.
+                Policies keep the fleet in a desired state — install, keep updated, pin or freeze versions,
+                remove or block software. <strong>Enforce</strong> queues remediation jobs automatically as agents
+                report in; <strong>Audit only</strong> reports compliance without changing machines.
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
@@ -46,16 +46,17 @@
                             <th class="pd-th">Project</th>
                             <th class="pd-th">Action</th>
                             <th class="pd-th">Priority</th>
-                            <th class="pd-th">Last enforced</th>
-                            <th class="pd-th">Status</th>
+                            <th class="pd-th">Compliance</th>
+                            <th class="pd-th">Mode</th>
                             <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-slate-100">
                         @forelse ($policies as $policy)
-                            <tr @class(['opacity-60' => ! $policy->is_active])>
+                            @php $summary = $summaries[$policy->id] ?? null; @endphp
+                            <tr @class(['opacity-60' => $policy->mode === \App\Enums\PolicyMode::Disabled])>
                                 <td class="px-6 py-3 whitespace-nowrap">
-                                    <span class="font-medium text-slate-800">{{ $policy->label() }}</span>
+                                    <a href="{{ route('policies.show', $policy) }}" class="pd-link font-medium">{{ $policy->label() }}</a>
                                     <p class="text-xs text-slate-400">{{ $policy->package->vendor }}</p>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600">
@@ -65,27 +66,59 @@
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     @php
                                         $actionBadge = match ($policy->action) {
-                                            \App\Enums\JobAction::Install => 'bg-teal-50 text-teal-700 border-teal-200',
-                                            \App\Enums\JobAction::Update => 'bg-blue-50 text-blue-700 border-blue-200',
-                                            \App\Enums\JobAction::Uninstall => 'bg-red-50 text-red-700 border-red-200',
-                                            default => 'bg-slate-100 text-slate-700 border-slate-200',
+                                            \App\Enums\PolicyAction::Install => 'bg-teal-50 text-teal-700 border-teal-200',
+                                            \App\Enums\PolicyAction::Update => 'bg-blue-50 text-blue-700 border-blue-200',
+                                            \App\Enums\PolicyAction::ForceUpdate => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                                            \App\Enums\PolicyAction::Uninstall => 'bg-red-50 text-red-700 border-red-200',
+                                            \App\Enums\PolicyAction::Block => 'bg-rose-50 text-rose-700 border-rose-200',
                                         };
                                     @endphp
                                     <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $actionBadge }}">{{ $policy->action->label() }}</span>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $policy->priority }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-500 text-sm"
-                                    title="{{ $policy->last_enforced_at }}">
-                                    {{ $policy->last_enforced_at?->diffForHumans() ?? 'Never' }}
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    @php
+                                        $prioBadge = match ($policy->priorityLabel()) {
+                                            'Critical' => 'bg-red-50 text-red-700 border-red-200',
+                                            'High' => 'bg-amber-50 text-amber-700 border-amber-200',
+                                            'Normal' => 'bg-slate-100 text-slate-600 border-slate-200',
+                                            default => 'bg-slate-50 text-slate-400 border-slate-200',
+                                        };
+                                    @endphp
+                                    <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $prioBadge }}">{{ $policy->priorityLabel() }}</span>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap">
-                                    <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $policy->is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200' }}">
-                                        {{ $policy->is_active ? 'Active' : 'Disabled' }}
-                                    </span>
+                                    @if ($summary === null)
+                                        <span class="text-xs text-slate-400">—</span>
+                                    @elseif ($summary['target'] === 0)
+                                        <span class="text-xs text-slate-400">No computers</span>
+                                    @else
+                                        @php
+                                            $pct = $summary['percent'];
+                                            $pctColor = $pct >= 90 ? 'text-green-600' : ($pct >= 60 ? 'text-amber-600' : 'text-red-600');
+                                        @endphp
+                                        <a href="{{ route('policies.show', $policy) }}" class="group">
+                                            <span class="font-semibold {{ $pctColor }}">{{ $pct }}%</span>
+                                            <span class="text-xs text-slate-500 group-hover:text-slate-700">
+                                                {{ $summary['compliant'] }}/{{ $summary['target'] }} compliant
+                                                @if ($summary['failed'] > 0) · <span class="text-red-600">{{ $summary['failed'] }} failed</span> @endif
+                                                @if ($summary['pending'] > 0) · {{ $summary['pending'] }} pending @endif
+                                            </span>
+                                        </a>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    @php
+                                        $modeBadge = match ($policy->mode) {
+                                            \App\Enums\PolicyMode::Enforce => 'bg-green-50 text-green-700 border-green-200',
+                                            \App\Enums\PolicyMode::Audit => 'bg-blue-50 text-blue-700 border-blue-200',
+                                            \App\Enums\PolicyMode::Disabled => 'bg-slate-100 text-slate-500 border-slate-200',
+                                        };
+                                    @endphp
+                                    <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $modeBadge }}">{{ $policy->mode->label() }}</span>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @can('enforce', $policy)
-                                        @if ($policy->is_active)
+                                        @if ($policy->mode === \App\Enums\PolicyMode::Enforce)
                                             <x-icon-button icon="play" label="Enforce now"
                                                            wire:click="enforceNow({{ $policy->id }})"
                                                            wire:loading.attr="disabled" />
@@ -93,7 +126,7 @@
                                     @endcan
                                     @can('update', $policy)
                                         <x-icon-button icon="power" variant="amber"
-                                                       label="{{ $policy->is_active ? 'Disable' : 'Enable' }}"
+                                                       label="{{ $policy->mode === \App\Enums\PolicyMode::Disabled ? 'Enable' : 'Disable' }}"
                                                        wire:click="toggle({{ $policy->id }})" />
                                         <x-icon-button icon="edit" label="Edit"
                                                        href="{{ route('policies.edit', $policy) }}" />
@@ -107,8 +140,8 @@
                             </tr>
                         @empty
                             <tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">
-                                No policies yet. Create one — e.g. “Auto Update Chrome” or “Remove Java” — and it
-                                applies to every machine in the project.
+                                No policies yet. Create one — e.g. “Auto Update Chrome”, “7-Zip 24.09 exactly” or
+                                “Block AnyDesk” — and it applies to every machine in the project.
                             </td></tr>
                         @endforelse
                     </tbody>
