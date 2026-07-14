@@ -63,7 +63,7 @@
             </div>
 
             <div class="pd-card">
-                <table class="min-w-full divide-y divide-slate-100">
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="pd-th">Project</th>
@@ -131,7 +131,7 @@
                             <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">No projects found.</td></tr>
                         @endforelse
                     </tbody>
-                </table>
+                </table></div>
             </div>
 
             {{ $projects->links() }}

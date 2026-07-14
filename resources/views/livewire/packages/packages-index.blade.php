@@ -54,7 +54,7 @@
             </div>
 
             <div class="pd-card">
-                <table class="min-w-full divide-y divide-slate-100">
+                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead>
                         <tr>
                             <th class="pd-th">Package</th>
@@ -100,7 +100,7 @@
                                         <span class="text-slate-700 font-medium">{{ $package->latestVersion?->version ?? '—' }}</span>
                                         <span class="text-xs text-slate-400">({{ $package->versions_count }})</span>
                                     @else
-                                        <span class="text-xs text-slate-400 italic">resolved at install time</span>
+                                        <span class="text-xs text-slate-400 italic">auto (winget)</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3.5 whitespace-nowrap">
@@ -134,7 +134,7 @@
                             <tr><td colspan="6" class="px-6 py-12 text-center text-slate-400">No packages found.</td></tr>
                         @endforelse
                     </tbody>
-                </table>
+                </table></div>
             </div>
 
             {{ $packages->links() }}
