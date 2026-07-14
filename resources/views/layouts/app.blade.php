@@ -19,6 +19,24 @@
         <x-banner />
 
         <div class="min-h-screen bg-slate-50">
+            @if (session()->has(\App\Http\Controllers\ImpersonationController::SESSION_KEY))
+                <div class="bg-amber-400 text-amber-950">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 text-sm font-semibold">
+                        <span>
+                            ⚠ Impersonating <strong>{{ auth()->user()->name }}</strong>
+                            ({{ auth()->user()->getRoleNames()->join(', ') ?: 'no role' }}) — actions are performed as this user.
+                        </span>
+                        <form method="POST" action="{{ route('impersonate.leave') }}">
+                            @csrf
+                            <button type="submit"
+                                    class="px-3 py-1 rounded-lg bg-amber-950 text-amber-50 hover:bg-amber-900 text-xs font-bold">
+                                Return to my account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @endif
+
             @livewire('navigation-menu')
 
             <!-- Page Heading -->

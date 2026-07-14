@@ -25,6 +25,12 @@ Route::middleware([
         ->middleware('permission:users.view')
         ->name('admin.users');
 
+    Route::post('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'start'])
+        ->middleware('role:Super Admin')
+        ->name('impersonate.start');
+    Route::post('/impersonate/leave', [\App\Http\Controllers\ImpersonationController::class, 'leave'])
+        ->name('impersonate.leave');
+
     Route::middleware('permission:clients.view')->group(function () {
         Route::get('/clients', \App\Livewire\Clients\ClientsIndex::class)->name('clients.index');
         Route::get('/clients/create', \App\Livewire\Clients\ClientForm::class)->name('clients.create');
