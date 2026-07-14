@@ -6,14 +6,14 @@
     <title>@yield('title', $company . ' — Software deployment & policy management for MSPs')</title>
     <meta name="description" content="@yield('meta', 'Deploy, update and lock down software across your entire Windows fleet from one portal. Silent installs, desired-state policies, real-time compliance.')">
     <link rel="preconnect" href="{{ url('/') }}">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=1">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230f766e'/><text x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' fill='white' text-anchor='middle'>P</text></svg>">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=2">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
     <header class="nav" id="siteNav">
         <div class="container nav-inner">
             <a href="{{ route('home') }}" class="brand">
-                <span class="logo">P</span>
+                <img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="40" height="40">
                 <span>PioDeploy <span class="sub">· {{ $company }}</span></span>
             </a>
             <nav class="nav-links">
@@ -39,7 +39,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div>
-                    <div class="brand"><span class="logo">P</span><span>PioDeploy</span></div>
+                    <div class="brand"><img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="38" height="38"><span>PioDeploy</span></div>
                     <p class="fdesc">{{ $content->get('footer.tagline') }} Built for MSPs by {{ $company }}.</p>
                 </div>
                 <div>
@@ -63,7 +63,7 @@
             </div>
             <div class="footer-bottom">
                 <span>© {{ date('Y') }} {{ $company }}. All rights reserved.</span>
-                <span>PioDeploy — MSP deployment platform</span>
+                <span>piodeploy — MSP deployment platform</span>
             </div>
         </div>
     </footer>
