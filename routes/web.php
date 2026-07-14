@@ -30,4 +30,10 @@ Route::middleware([
         Route::get('/projects/create', \App\Livewire\Projects\ProjectForm::class)->name('projects.create');
         Route::get('/projects/{project}/edit', \App\Livewire\Projects\ProjectForm::class)->name('projects.edit');
     });
+
+    Route::middleware('permission:computers.view')->group(function () {
+        Route::get('/computers', \App\Livewire\Computers\ComputersIndex::class)->name('computers.index');
+        Route::get('/computers/{computer}', \App\Livewire\Computers\ComputerShow::class)->name('computers.show');
+        Route::get('/computers/{computer}/edit', \App\Livewire\Computers\ComputerEdit::class)->name('computers.edit');
+    });
 });

@@ -17,5 +17,6 @@ class RepositoryServiceProvider extends ServiceProvider
     public array $bindings = [
         \App\Repositories\Contracts\ClientRepositoryInterface::class => \App\Repositories\Eloquent\EloquentClientRepository::class,
         \App\Repositories\Contracts\ProjectRepositoryInterface::class => \App\Repositories\Eloquent\EloquentProjectRepository::class,
+        \App\Repositories\Contracts\ComputerRepositoryInterface::class => \App\Repositories\Eloquent\EloquentComputerRepository::class,
     ];
 }

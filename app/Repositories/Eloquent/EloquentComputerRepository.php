@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Repositories\Eloquent;
+
+use App\Models\Computer;
+use App\Repositories\Contracts\ComputerRepositoryInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+
+class EloquentComputerRepository extends BaseRepository implements ComputerRepositoryInterface
+{
+    public function __construct(Computer $model)
+    {
+        parent::__construct($model);
+    }
+
+    public function searchPaginated(
+        string $search = '',
+        ?int $projectId = null,
+        ?int $clientId = null,
+        ?bool $online = null,
+        bool $withTrashed = false,
+        int $perPage = 15,
+    ): LengthAwarePaginator {
+        return $this->query()
+            ->with('project.client')
+            ->when($withTrashed, fn ($q) => $q->withTrashed())
+            ->when($search !== '', fn ($q) => $q->search($search))
+            ->when($projectId !== null, fn ($q) => $q->where('project_id', $projectId))
+            ->when($clientId !== null, fn ($q) => $q->whereHas(
+                'project',
+                fn ($p) => $p->withTrashed()->where('client_id', $clientId)
+            ))
+            ->when($online === true, fn ($q) => $q->online())
+            ->when($online === false, fn ($q) => $q->offline())
+            ->orderBy('hostname')
+            ->paginate($perPage);
+    }
+
+    public function findByAgentUuid(string $agentUuid, bool $withTrashed = false): ?Computer
+    {
+        return $this->query()
+            ->when($withTrashed, fn ($q) => $q->withTrashed())
+            ->where('agent_uuid', $agentUuid)
+            ->first();
+    }
+
+    public function restore(Computer $computer): bool
+    {
+        return (bool) $computer->restore();
+    }
+}
