@@ -30,6 +30,7 @@ builder.Services.AddHttpClient("downloads", client =>
 
 builder.Services.AddSingleton<IAgentIdentity, AgentIdentityProvider>();
 builder.Services.AddSingleton<IInventoryCollector, WindowsInventoryCollector>();
+builder.Services.AddSingleton<ISoftwareCollector, WindowsSoftwareCollector>();
 
 // Installer engine + strategies
 builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();

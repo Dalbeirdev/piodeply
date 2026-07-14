@@ -268,6 +268,29 @@ class ComputerManagementTest extends TestCase
             ->assertSee('Recent deployments');
     }
 
+    public function test_show_page_lists_software_with_search_and_managed_badge(): void
+    {
+        $computer = Computer::factory()->create();
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Random Tool', 'source' => 'registry',
+        ]);
+        $package = \App\Models\Package::factory()->create(['winget_id' => 'Git.Git']);
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Git.Git', 'version' => '2.46.0', 'source' => 'winget',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertSee('Installed software')
+            ->assertSee('(2 detected)')
+            ->assertSee('Random Tool')
+            ->assertSee('Git.Git')
+            ->assertSee('managed')
+            ->set('softwareSearch', 'Random')
+            ->assertSee('Random Tool')
+            ->assertDontSee('Git.Git');
+    }
+
     public function test_menu_shows_computers_for_permitted_users(): void
     {
         $this->actingAs($this->admin())->get('/dashboard')->assertSee('Computers');

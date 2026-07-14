@@ -72,6 +72,38 @@ class ComputerService
         return $computer->fresh();
     }
 
+    /**
+     * Replace the computer's software inventory (agents report the full
+     * list each time — replace semantics keep it authoritative).
+     *
+     * @param list<array{name: string, version?: ?string, publisher?: ?string, source: string}> $items
+     */
+    public function replaceSoftwareInventory(Computer $computer, array $items): int
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($computer, $items) {
+            $computer->software()->delete();
+
+            $now = now();
+            $rows = collect($items)
+                ->filter(fn (array $item) => trim((string) ($item['name'] ?? '')) !== '')
+                ->map(fn (array $item) => [
+                    'computer_id' => $computer->id,
+                    'name'        => mb_substr(trim($item['name']), 0, 255),
+                    'version'     => isset($item['version']) ? mb_substr((string) $item['version'], 0, 100) : null,
+                    'publisher'   => isset($item['publisher']) ? mb_substr((string) $item['publisher'], 0, 255) : null,
+                    'source'      => $item['source'],
+                    'created_at'  => $now,
+                    'updated_at'  => $now,
+                ]);
+
+            $rows->chunk(500)->each(fn ($chunk) => \App\Models\ComputerSoftware::insert($chunk->all()));
+
+            $computer->forceFill(['last_seen_at' => now()])->saveQuietly();
+
+            return $rows->count();
+        });
+    }
+
     public function reassign(Computer $computer, Project $project): Computer
     {
         $this->computers->update($computer, ['project_id' => $project->id]);

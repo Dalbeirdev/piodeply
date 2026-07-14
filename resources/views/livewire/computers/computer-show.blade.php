@@ -218,6 +218,63 @@
                 </div>
             </div>
 
+            {{-- Installed software --}}
+            <div class="pd-card">
+                <div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-3">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Installed software
+                        <span class="ml-1 text-slate-400 font-normal normal-case">({{ $softwareTotal }} detected)</span>
+                    </h3>
+                    <input type="search" wire:model.live.debounce.300ms="softwareSearch"
+                           placeholder="Search software…" aria-label="Search installed software"
+                           class="pd-input w-64 py-1.5">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100">
+                        <thead>
+                            <tr>
+                                <th class="pd-th">Name</th>
+                                <th class="pd-th">Version</th>
+                                <th class="pd-th">Publisher</th>
+                                <th class="pd-th">Source</th>
+                                <th class="pd-th">Catalogue</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @forelse ($softwareItems as $item)
+                                <tr>
+                                    <td class="px-6 py-2.5 text-sm text-slate-800 {{ $item->source === 'winget' ? 'font-mono text-[13px]' : '' }}">{{ $item->name }}</td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 font-mono text-[13px]">{{ $item->version ?? '—' }}</td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 max-w-[16rem] truncate">{{ $item->publisher ?? '—' }}</td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap">
+                                        <span class="pd-badge {{ $item->source === 'winget' ? 'pd-badge-sky' : ($item->source === 'choco' ? 'pd-badge-amber' : 'pd-badge-slate') }}">{{ $item->source }}</span>
+                                    </td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap">
+                                        @if ($item->source === 'winget' && $managedPackages->has($item->name))
+                                            <a href="{{ route('packages.show', $managedPackages[$item->name]) }}"
+                                               class="pd-badge pd-badge-teal hover:bg-teal-100">managed</a>
+                                        @else
+                                            <span class="text-xs text-slate-300">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">
+                                    @if ($softwareTotal === 0)
+                                        No software inventory reported yet — it arrives with the agent's next report.
+                                    @else
+                                        No software matches your search.
+                                    @endif
+                                </td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @if ($softwareItems->count() === 150)
+                    <p class="px-6 py-2 text-xs text-slate-400 border-t border-slate-100">Showing first 150 matches — refine the search to narrow down.</p>
+                @endif
+            </div>
+
             {{-- Recent deployments --}}
             <div class="pd-card">
                 <div class="flex items-center justify-between px-6 pt-5 pb-2">

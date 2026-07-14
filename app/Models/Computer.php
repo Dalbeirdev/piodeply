@@ -43,6 +43,17 @@ class Computer extends Model
         return $this->belongsTo(Project::class)->withTrashed();
     }
 
+    public function software(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ComputerSoftware::class);
+    }
+
+    /** @return list<string> */
+    public static function softwareSources(): array
+    {
+        return ComputerSoftware::SOURCES;
+    }
+
     public function client(): HasOneThrough
     {
         return $this->hasOneThrough(

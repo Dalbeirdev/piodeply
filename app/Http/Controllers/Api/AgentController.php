@@ -84,6 +84,27 @@ class AgentController extends Controller
     }
 
     /**
+     * POST /api/v1/agent/software — full installed-software inventory.
+     */
+    public function software(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'agent_uuid'           => ['required', 'uuid'],
+            'software'             => ['required', 'array', 'max:3000'],
+            'software.*.name'      => ['required', 'string', 'max:255'],
+            'software.*.version'   => ['nullable', 'string', 'max:100'],
+            'software.*.publisher' => ['nullable', 'string', 'max:255'],
+            'software.*.source'    => ['required', \Illuminate\Validation\Rule::in(Computer::softwareSources())],
+        ]);
+
+        $computer = $this->resolveComputer($request, $validated['agent_uuid']);
+
+        $stored = $this->computers->replaceSoftwareInventory($computer, $validated['software']);
+
+        return response()->json(['status' => 'ok', 'stored' => $stored]);
+    }
+
+    /**
      * The agent's public IP is what we see on the wire — agents never
      * self-report it.
      */

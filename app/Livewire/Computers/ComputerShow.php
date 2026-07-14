@@ -13,6 +13,8 @@ class ComputerShow extends Component
 {
     public Computer $computer;
 
+    public string $softwareSearch = '';
+
     public function mount(Computer $computer): void
     {
         $this->authorize('view', $computer);
@@ -87,6 +89,17 @@ class ComputerShow extends Component
                 ->where('subject_id', $this->computer->id)
                 ->latest()->limit(5)->get(),
             'diskUsedPercent' => $diskUsedPercent,
+            'softwareTotal'   => $this->computer->software()->count(),
+            'softwareItems'   => $this->computer->software()
+                ->when($this->softwareSearch !== '', fn ($q) => $q->where(fn ($w) => $w
+                    ->where('name', 'like', "%{$this->softwareSearch}%")
+                    ->orWhere('publisher', 'like', "%{$this->softwareSearch}%")))
+                ->orderBy('name')
+                ->limit(150)
+                ->get(),
+            // Exact winget-id match -> the software is a managed catalogue package.
+            'managedPackages' => \App\Models\Package::whereNotNull('winget_id')
+                ->pluck('id', 'winget_id'),
         ])->layout('layouts.app');
     }
 }

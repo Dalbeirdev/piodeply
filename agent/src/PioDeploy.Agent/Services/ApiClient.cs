@@ -9,6 +9,7 @@ public interface IApiClient
     Task<RegisterResponse?> RegisterAsync(RegisterRequest request, CancellationToken ct);
     Task<HeartbeatResponse?> HeartbeatAsync(HeartbeatRequest request, CancellationToken ct);
     Task<bool> SendInventoryAsync(InventoryRequest request, CancellationToken ct);
+    Task<bool> SendSoftwareAsync(SoftwareRequest request, CancellationToken ct);
     Task<IReadOnlyList<JobPayload>> ClaimJobsAsync(string agentUuid, CancellationToken ct);
     Task<bool> ReportJobResultAsync(long jobId, JobResultRequest result, CancellationToken ct);
 }
@@ -66,6 +67,17 @@ public sealed class ApiClient : IApiClient
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Inventory upload failed: {Status}", (int)response.StatusCode);
+        }
+
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> SendSoftwareAsync(SoftwareRequest request, CancellationToken ct)
+    {
+        var response = await _http.PostAsJsonAsync("api/v1/agent/software", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Software inventory upload failed: {Status}", (int)response.StatusCode);
         }
 
         return response.IsSuccessStatusCode;

@@ -170,6 +170,56 @@ class AgentApiTest extends TestCase
         $this->assertSame($uuid, $computer->agent_uuid);
     }
 
+    public function test_software_inventory_is_stored_with_replace_semantics(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid' => $uuid,
+            'software'   => [
+                ['name' => 'Old App', 'version' => '1.0', 'publisher' => 'Acme', 'source' => 'registry'],
+                ['name' => 'Git.Git', 'version' => '2.46.0', 'source' => 'winget'],
+            ],
+        ], $this->agentHeaders())->assertOk()->assertJsonPath('stored', 2);
+
+        // Second report replaces, never accumulates.
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid' => $uuid,
+            'software'   => [
+                ['name' => 'New App', 'version' => '2.0', 'source' => 'msi'],
+            ],
+        ], $this->agentHeaders())->assertOk()->assertJsonPath('stored', 1);
+
+        $computer = Computer::first();
+        $this->assertSame(1, $computer->software()->count());
+        $this->assertSame('New App', $computer->software()->first()->name);
+    }
+
+    public function test_software_inventory_validates_source_and_caps_size(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid' => $uuid,
+            'software'   => [['name' => 'X', 'source' => 'carrier-pigeon']],
+        ], $this->agentHeaders())->assertUnprocessable();
+
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid' => $uuid,
+            'software'   => array_fill(0, 3001, ['name' => 'X', 'source' => 'registry']),
+        ], $this->agentHeaders())->assertUnprocessable();
+    }
+
+    public function test_software_endpoint_requires_known_agent(): void
+    {
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid' => (string) Str::uuid(),
+            'software'   => [['name' => 'X', 'source' => 'registry']],
+        ], $this->agentHeaders())->assertNotFound();
+    }
+
     public function test_rotated_key_locks_out_old_key(): void
     {
         $uuid = (string) Str::uuid();

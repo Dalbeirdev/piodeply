@@ -14,6 +14,7 @@ public sealed class Worker : BackgroundService
     private readonly IApiClient _api;
     private readonly IAgentIdentity _identity;
     private readonly IInventoryCollector _inventory;
+    private readonly ISoftwareCollector _software;
     private readonly IInstallerEngine _engine;
     private readonly ILogger<Worker> _logger;
 
@@ -24,12 +25,14 @@ public sealed class Worker : BackgroundService
         IApiClient api,
         IAgentIdentity identity,
         IInventoryCollector inventory,
+        ISoftwareCollector software,
         IInstallerEngine engine,
         ILogger<Worker> logger)
     {
         _api = api;
         _identity = identity;
         _inventory = inventory;
+        _software = software;
         _engine = engine;
         _logger = logger;
     }
@@ -116,6 +119,7 @@ public sealed class Worker : BackgroundService
                     _logger.LogInformation(
                         "Registered as computer #{Id} in project '{Project}' (heartbeat {Beat}s)",
                         response.ComputerId, response.Project, _heartbeatSeconds);
+                    await SendSoftwareAsync(ct); // initial software inventory
                     return;
                 }
             }
@@ -184,10 +188,35 @@ public sealed class Worker : BackgroundService
             {
                 _logger.LogInformation("Inventory refreshed.");
             }
+
+            await SendSoftwareAsync(ct);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Inventory refresh failed; will retry next cycle");
+        }
+    }
+
+    private async Task SendSoftwareAsync(CancellationToken ct)
+    {
+        try
+        {
+            var software = await _software.CollectAsync(ct);
+
+            var ok = await _api.SendSoftwareAsync(new SoftwareRequest
+            {
+                AgentUuid = _identity.GetAgentUuid(),
+                Software = software,
+            }, ct);
+
+            if (ok)
+            {
+                _logger.LogInformation("Software inventory sent ({Count} entries).", software.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Software inventory collection failed; will retry next cycle");
         }
     }
 

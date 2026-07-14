@@ -32,6 +32,20 @@ public sealed class JobResultRequest
     [JsonPropertyName("failure_reason")] public string? FailureReason { get; set; }
 }
 
+public sealed class SoftwareEntry
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("version")] public string? Version { get; set; }
+    [JsonPropertyName("publisher")] public string? Publisher { get; set; }
+    [JsonPropertyName("source")] public string Source { get; set; } = "registry";
+}
+
+public sealed class SoftwareRequest
+{
+    [JsonPropertyName("agent_uuid")] public string AgentUuid { get; set; } = string.Empty;
+    [JsonPropertyName("software")] public IReadOnlyList<SoftwareEntry> Software { get; set; } = [];
+}
+
 /// <summary>Outcome of one installer execution.</summary>
 public sealed record InstallResult(bool Success, int? ExitCode, string Log, string? FailureReason)
 {

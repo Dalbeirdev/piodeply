@@ -16,6 +16,7 @@ Route::prefix('v1/agent')
         Route::post('/register', [AgentController::class, 'register']);
         Route::post('/heartbeat', [AgentController::class, 'heartbeat']);
         Route::post('/inventory', [AgentController::class, 'inventory']);
+        Route::post('/software', [AgentController::class, 'software']);
         Route::post('/jobs', [AgentJobController::class, 'index']); // POST: carries agent_uuid + claims
         Route::post('/jobs/{job}/result', [AgentJobController::class, 'result']);
     });
