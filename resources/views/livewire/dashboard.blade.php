@@ -67,6 +67,28 @@
                 </a>
             </div>
 
+            {{-- Browser policy compliance --}}
+            @if (($browserPolicySummary['policies'] ?? 0) > 0)
+                <div class="pd-card p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">Browser policy compliance</h3>
+                        <a href="{{ route('browser-policies.index') }}" class="text-xs text-teal-600 hover:underline">View policies</a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-center">
+                        <div><p class="text-2xl font-bold text-slate-800">{{ $browserPolicySummary['target'] }}</p>
+                            <p class="text-xs uppercase tracking-wider text-slate-400">Devices targeted</p></div>
+                        <div><p class="text-2xl font-bold text-green-600">{{ $browserPolicySummary['protected'] }}</p>
+                            <p class="text-xs uppercase tracking-wider text-slate-400">Protected</p></div>
+                        <div><p class="text-2xl font-bold text-red-600">{{ $browserPolicySummary['non_compliant'] }}</p>
+                            <p class="text-xs uppercase tracking-wider text-slate-400">Non-compliant</p></div>
+                        <div><p class="text-2xl font-bold text-blue-600">{{ $browserPolicySummary['pending'] }}</p>
+                            <p class="text-xs uppercase tracking-wider text-slate-400">Pending</p></div>
+                        <div><p class="text-2xl font-bold text-amber-600">{{ $browserPolicySummary['unsupported'] }}</p>
+                            <p class="text-xs uppercase tracking-wider text-slate-400">Unsupported</p></div>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {{-- Fleet by client: stacked horizontal bars --}}
                 <div class="pd-card p-6">

@@ -27,6 +27,13 @@ Route::prefix('v1')
 
         Route::get('/policies', [\App\Http\Controllers\Api\V1\PoliciesController::class, 'index']);
         Route::get('/policies/{policy}', [\App\Http\Controllers\Api\V1\PoliciesController::class, 'show']);
+
+        Route::get('/browser-policies', [\App\Http\Controllers\Api\V1\BrowserPoliciesController::class, 'index']);
+        Route::post('/browser-policies', [\App\Http\Controllers\Api\V1\BrowserPoliciesController::class, 'store']);
+        Route::get('/browser-policies/{policy}', [\App\Http\Controllers\Api\V1\BrowserPoliciesController::class, 'show']);
+        Route::put('/browser-policies/{policy}', [\App\Http\Controllers\Api\V1\BrowserPoliciesController::class, 'update']);
+        Route::delete('/browser-policies/{policy}', [\App\Http\Controllers\Api\V1\BrowserPoliciesController::class, 'destroy']);
+        Route::get('/computers/{computer}/browser-policies', [\App\Http\Controllers\Api\V1\BrowserPoliciesController::class, 'deviceResults']);
     });
 
 Route::prefix('v1/agent')
@@ -38,4 +45,6 @@ Route::prefix('v1/agent')
         Route::post('/software', [AgentController::class, 'software']);
         Route::post('/jobs', [AgentJobController::class, 'index']); // POST: carries agent_uuid + claims
         Route::post('/jobs/{job}/result', [AgentJobController::class, 'result']);
+        Route::post('/browser-policies', [\App\Http\Controllers\Api\AgentBrowserPolicyController::class, 'index']);
+        Route::post('/browser-policies/results', [\App\Http\Controllers\Api\AgentBrowserPolicyController::class, 'results']);
     });

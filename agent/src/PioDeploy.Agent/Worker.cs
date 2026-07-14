@@ -16,10 +16,12 @@ public sealed class Worker : BackgroundService
     private readonly IInventoryCollector _inventory;
     private readonly ISoftwareCollector _software;
     private readonly IInstallerEngine _engine;
+    private readonly IBrowserPolicyEnforcer _browserPolicies;
     private readonly ILogger<Worker> _logger;
 
     private int _heartbeatSeconds = 60;
-    private readonly int _inventoryEveryBeats = 60; // full refresh ~hourly
+    private readonly int _inventoryEveryBeats = 60;      // full refresh ~hourly
+    private readonly int _browserPolicyEveryBeats = 15;  // policy sync ~every 15 min
 
     public Worker(
         IApiClient api,
@@ -27,6 +29,7 @@ public sealed class Worker : BackgroundService
         IInventoryCollector inventory,
         ISoftwareCollector software,
         IInstallerEngine engine,
+        IBrowserPolicyEnforcer browserPolicies,
         ILogger<Worker> logger)
     {
         _api = api;
@@ -34,6 +37,7 @@ public sealed class Worker : BackgroundService
         _inventory = inventory;
         _software = software;
         _engine = engine;
+        _browserPolicies = browserPolicies;
         _logger = logger;
     }
 
@@ -76,6 +80,12 @@ public sealed class Worker : BackgroundService
                 if (++beats % _inventoryEveryBeats == 0)
                 {
                     await SendInventoryAsync(stoppingToken);
+                }
+
+                // First beat after start, then on the regular cadence.
+                if (beats == 1 || beats % _browserPolicyEveryBeats == 0)
+                {
+                    await EnforceBrowserPoliciesAsync(stoppingToken);
                 }
             }
             catch (AgentNotRegisteredException)
@@ -173,6 +183,38 @@ public sealed class Worker : BackgroundService
 
     private static string? Truncate(string? value, int max)
         => value is null || value.Length <= max ? value : value[..max];
+
+    /// <summary>Pulls the browser-policy desired state, applies it (with
+    /// rollback of settings no longer managed) and reports compliance.</summary>
+    private async Task EnforceBrowserPoliciesAsync(CancellationToken ct)
+    {
+        try
+        {
+            var document = await _api.GetBrowserPoliciesAsync(_identity.GetAgentUuid(), ct);
+            if (document is null)
+            {
+                return; // transient fetch failure — next cycle retries
+            }
+
+            var results = _browserPolicies.Enforce(document);
+
+            if (results.Count > 0)
+            {
+                await _api.ReportBrowserPolicyResultsAsync(new BrowserPolicyResultsRequest
+                {
+                    AgentUuid = _identity.GetAgentUuid(),
+                    Results = results,
+                }, ct);
+            }
+
+            _logger.LogInformation("Browser policies enforced: {Policies} policy item(s), {Results} result(s).",
+                document.Policies.Count, results.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Browser policy enforcement failed; will retry next cycle");
+        }
+    }
 
     private async Task SendInventoryAsync(CancellationToken ct)
     {

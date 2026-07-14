@@ -88,5 +88,10 @@ Route::middleware([
         Route::get('/policies/create', \App\Livewire\Policies\PolicyForm::class)->name('policies.create');
         Route::get('/policies/{policy}', \App\Livewire\Policies\PolicyShow::class)->name('policies.show');
         Route::get('/policies/{policy}/edit', \App\Livewire\Policies\PolicyForm::class)->name('policies.edit');
+
+        Route::get('/browser-policies', \App\Livewire\BrowserPolicies\BrowserPoliciesIndex::class)->name('browser-policies.index');
+        Route::get('/browser-policies/create', \App\Livewire\BrowserPolicies\BrowserPolicyForm::class)->name('browser-policies.create');
+        Route::get('/browser-policies/{policy}', \App\Livewire\BrowserPolicies\BrowserPolicyShow::class)->name('browser-policies.show');
+        Route::get('/browser-policies/{policy}/edit', \App\Livewire\BrowserPolicies\BrowserPolicyForm::class)->name('browser-policies.edit');
     });
 });

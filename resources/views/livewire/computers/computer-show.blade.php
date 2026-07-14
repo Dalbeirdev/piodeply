@@ -218,6 +218,42 @@
                 </div>
             </div>
 
+            {{-- Browser policies --}}
+            @if ($browserPolicyRows->isNotEmpty())
+                <div class="pd-card p-6">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Browser policies</h3>
+                    <div class="space-y-3">
+                        @foreach ($browserPolicyRows as $row)
+                            <div class="flex flex-wrap items-center gap-3 text-sm {{ $row['excluded'] ? 'opacity-50' : '' }}">
+                                <a href="{{ route('browser-policies.show', $row['policy']) }}" class="pd-link font-medium w-64 truncate">
+                                    {{ $row['policy']->name }}
+                                </a>
+                                @if ($row['excluded'])
+                                    <span class="text-xs text-slate-400">Excluded from this machine</span>
+                                @elseif ($row['results']->isEmpty())
+                                    <span class="text-xs text-blue-600">Awaiting agent</span>
+                                @else
+                                    @foreach ($row['results'] as $browser => $result)
+                                        <span class="text-xs" title="{{ $result->detail }}">
+                                            <span class="text-slate-500">{{ \App\Enums\Browser::from($browser)->label() }}:</span>
+                                            <span @class([
+                                                'font-semibold',
+                                                'text-green-600' => $result->status === 'compliant',
+                                                'text-red-600' => in_array($result->status, ['non_compliant', 'error'], true),
+                                                'text-blue-600' => $result->status === 'pending_restart',
+                                                'text-amber-600' => $result->status === 'unsupported',
+                                                'text-slate-400' => $result->status === 'not_installed',
+                                            ])>{{ str_replace('_', ' ', $result->status) }}</span>
+                                        </span>
+                                    @endforeach
+                                    <span class="text-xs text-slate-400">· checked {{ $row['results']->max('reported_at')?->diffForHumans() }}</span>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             {{-- Installed software --}}
             <div class="pd-card">
                 <div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-3">

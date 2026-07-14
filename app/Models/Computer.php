@@ -49,6 +49,11 @@ class Computer extends Model
         return $this->hasMany(ComputerSoftware::class);
     }
 
+    public function browserPolicyResults(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BrowserPolicyResult::class);
+    }
+
     /** @return list<string> */
     public static function softwareSources(): array
     {

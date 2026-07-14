@@ -18,10 +18,11 @@ class NotificationChannel extends Model
 
     /** Every event the platform can notify about. */
     public const EVENTS = [
-        'job.failed'          => 'Deployment failed (retries exhausted)',
-        'computer.registered' => 'New computer enrolled',
-        'agent.offline'       => 'Agent went offline',
-        'policy.drift'        => 'Daily compliance drift digest',
+        'job.failed'            => 'Deployment failed (retries exhausted)',
+        'computer.registered'   => 'New computer enrolled',
+        'agent.offline'         => 'Agent went offline',
+        'policy.drift'          => 'Daily compliance drift digest',
+        'browser_policy.failed' => 'Browser policy failed or non-compliant',
     ];
 
     protected $fillable = [

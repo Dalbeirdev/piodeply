@@ -12,6 +12,8 @@ public interface IApiClient
     Task<bool> SendSoftwareAsync(SoftwareRequest request, CancellationToken ct);
     Task<IReadOnlyList<JobPayload>> ClaimJobsAsync(string agentUuid, CancellationToken ct);
     Task<bool> ReportJobResultAsync(long jobId, JobResultRequest result, CancellationToken ct);
+    Task<BrowserPolicyDocument?> GetBrowserPoliciesAsync(string agentUuid, CancellationToken ct);
+    Task<bool> ReportBrowserPolicyResultsAsync(BrowserPolicyResultsRequest request, CancellationToken ct);
 }
 
 /// <summary>Typed HTTP client for the PioDeploy agent API. Authentication is
@@ -95,6 +97,29 @@ public sealed class ApiClient : IApiClient
         var payload = await response.Content.ReadFromJsonAsync<JobsResponse>(cancellationToken: ct);
 
         return payload?.Jobs ?? [];
+    }
+
+    public async Task<BrowserPolicyDocument?> GetBrowserPoliciesAsync(string agentUuid, CancellationToken ct)
+    {
+        var response = await _http.PostAsJsonAsync("api/v1/agent/browser-policies", new { agent_uuid = agentUuid }, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Browser policy fetch failed: {Status}", (int)response.StatusCode);
+            return null;
+        }
+
+        return await response.Content.ReadFromJsonAsync<BrowserPolicyDocument>(cancellationToken: ct);
+    }
+
+    public async Task<bool> ReportBrowserPolicyResultsAsync(BrowserPolicyResultsRequest request, CancellationToken ct)
+    {
+        var response = await _http.PostAsJsonAsync("api/v1/agent/browser-policies/results", request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Browser policy result report failed: {Status}", (int)response.StatusCode);
+        }
+
+        return response.IsSuccessStatusCode;
     }
 
     public async Task<bool> ReportJobResultAsync(long jobId, JobResultRequest result, CancellationToken ct)

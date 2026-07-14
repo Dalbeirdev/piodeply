@@ -109,6 +109,16 @@ class ComputerShow extends Component
                 ->limit(150)
                 ->get(),
             'managedPackages' => $managedPackages,
+            'browserPolicyRows' => \App\Models\BrowserPolicy::query()
+                ->where('project_id', $this->computer->project_id)
+                ->where('status', 'active')
+                ->with(['results' => fn ($q) => $q->where('computer_id', $this->computer->id)])
+                ->get()
+                ->map(fn ($policy) => [
+                    'policy'   => $policy,
+                    'excluded' => $policy->excludedComputers()->whereKey($this->computer->id)->exists(),
+                    'results'  => $policy->results->keyBy('browser'),
+                ]),
         ])->layout('layouts.app');
     }
 }

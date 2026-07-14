@@ -44,6 +44,7 @@ builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.A
 builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.MsixInstaller>();
 builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.PowerShellInstaller>();
 builder.Services.AddSingleton<IInstallerEngine, InstallerEngine>();
+builder.Services.AddSingleton<IBrowserPolicyEnforcer, BrowserPolicyEnforcer>();
 
 builder.Services.AddHostedService<Worker>();
 

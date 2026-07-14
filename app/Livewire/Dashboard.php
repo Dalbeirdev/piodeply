@@ -126,6 +126,7 @@ class Dashboard extends Component
             'fleetByClient' => $this->fleetByClient(),
             'series'        => $this->deploymentsSeries(),
             'activity'      => Activity::with('causer')->latest()->limit(8)->get(),
+            'browserPolicySummary' => app(\App\Services\BrowserPolicyService::class)->fleetSummary(),
         ])->layout('layouts.app');
     }
 
