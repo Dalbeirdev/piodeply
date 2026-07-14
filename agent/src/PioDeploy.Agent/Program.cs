@@ -21,8 +21,29 @@ builder.Services.AddHttpClient<IApiClient, ApiClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// Plain client for installer downloads (no API key attached).
+builder.Services.AddHttpClient("downloads", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(15);
+    client.DefaultRequestHeaders.Add("User-Agent", "PioDeployAgent/1.0");
+});
+
 builder.Services.AddSingleton<IAgentIdentity, AgentIdentityProvider>();
 builder.Services.AddSingleton<IInventoryCollector, WindowsInventoryCollector>();
+
+// Installer engine + strategies
+builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
+builder.Services.AddSingleton<IChecksumVerifier, ChecksumVerifier>();
+builder.Services.AddSingleton<IPackageDownloader, PackageDownloader>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.WingetInstaller>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.ChocoInstaller>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.MsiInstaller>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.ExeInstaller>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.ZipInstaller>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.MsixInstaller>();
+builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.PowerShellInstaller>();
+builder.Services.AddSingleton<IInstallerEngine, InstallerEngine>();
+
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();

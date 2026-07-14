@@ -21,8 +21,29 @@ heartbeats every 60 seconds, and reports system inventory (WMI + registry).
   the connection itself; agents never self-report it.
 - **Logs**: rolling daily files at `%ProgramData%\PioDeploy\logs\` (size-capped),
   no external logging dependencies.
-- **Jobs**: the heartbeat response carries `pending_jobs`; download/install/
-  uninstall execution activates with the deployment/installer phases.
+- **Jobs**: when the heartbeat reports pending work, the agent claims jobs
+  (priority-ordered) and executes them sequentially via the installer engine,
+  reporting exit code + output log per job.
+
+## Installer engine
+
+Strategy per installer type, orchestrated by `InstallerEngine` (never throws;
+every outcome becomes a reportable result):
+
+| Type | Execution | Notes |
+|---|---|---|
+| winget | `winget install/upgrade/uninstall --exact --silent` | `install` uses `--no-upgrade` (ensure-present; `update` upgrades). Already-installed / no-applicable-upgrade exit codes are success. `rollback` pins `--version --force`. |
+| choco | `choco install/upgrade/uninstall -y` | 1641/3010 (reboot) are success. |
+| msi | download → **SHA-256 verify** → `msiexec /i|/x file /qn /norestart` + args | 3010/1641 success. |
+| exe | download → verify → run with silent args | uninstall unsupported (use winget/choco/msi). |
+| zip / portable | download → verify → extract to `%ProgramData%\PioDeploy\Apps\<name>` | partial extraction rolled back. |
+| msix | download → verify → `Add-AppxPackage` | |
+| powershell | download → verify → `powershell -ExecutionPolicy Bypass -File` | |
+
+Binary payloads are **never executed without a checksum match**; downloads go
+to a per-job scratch dir removed afterwards. Processes run with argument
+lists (no shell), merged-output capture capped at 60 KB, 30-minute timeout
+with process-tree kill.
 
 ## Build & test
 

@@ -9,6 +9,8 @@ public interface IApiClient
     Task<RegisterResponse?> RegisterAsync(RegisterRequest request, CancellationToken ct);
     Task<HeartbeatResponse?> HeartbeatAsync(HeartbeatRequest request, CancellationToken ct);
     Task<bool> SendInventoryAsync(InventoryRequest request, CancellationToken ct);
+    Task<IReadOnlyList<JobPayload>> ClaimJobsAsync(string agentUuid, CancellationToken ct);
+    Task<bool> ReportJobResultAsync(long jobId, JobResultRequest result, CancellationToken ct);
 }
 
 /// <summary>Typed HTTP client for the PioDeploy agent API. Authentication is
@@ -64,6 +66,31 @@ public sealed class ApiClient : IApiClient
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogWarning("Inventory upload failed: {Status}", (int)response.StatusCode);
+        }
+
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IReadOnlyList<JobPayload>> ClaimJobsAsync(string agentUuid, CancellationToken ct)
+    {
+        var response = await _http.PostAsJsonAsync("api/v1/agent/jobs", new { agent_uuid = agentUuid }, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Job claim failed: {Status}", (int)response.StatusCode);
+            return [];
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<JobsResponse>(cancellationToken: ct);
+
+        return payload?.Jobs ?? [];
+    }
+
+    public async Task<bool> ReportJobResultAsync(long jobId, JobResultRequest result, CancellationToken ct)
+    {
+        var response = await _http.PostAsJsonAsync($"api/v1/agent/jobs/{jobId}/result", result, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Job result report failed for #{Job}: {Status}", jobId, (int)response.StatusCode);
         }
 
         return response.IsSuccessStatusCode;

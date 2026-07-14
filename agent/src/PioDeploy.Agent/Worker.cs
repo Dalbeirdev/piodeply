@@ -14,6 +14,7 @@ public sealed class Worker : BackgroundService
     private readonly IApiClient _api;
     private readonly IAgentIdentity _identity;
     private readonly IInventoryCollector _inventory;
+    private readonly IInstallerEngine _engine;
     private readonly ILogger<Worker> _logger;
 
     private int _heartbeatSeconds = 60;
@@ -23,11 +24,13 @@ public sealed class Worker : BackgroundService
         IApiClient api,
         IAgentIdentity identity,
         IInventoryCollector inventory,
+        IInstallerEngine engine,
         ILogger<Worker> logger)
     {
         _api = api;
         _identity = identity;
         _inventory = inventory;
+        _engine = engine;
         _logger = logger;
     }
 
@@ -58,8 +61,8 @@ public sealed class Worker : BackgroundService
 
                     if (response.PendingJobs > 0)
                     {
-                        // Job execution arrives with the deployment phases.
                         _logger.LogInformation("{Jobs} job(s) pending on server", response.PendingJobs);
+                        await ProcessJobsAsync(stoppingToken);
                     }
                 }
                 else
@@ -130,6 +133,42 @@ public sealed class Worker : BackgroundService
             delay = Grow(delay);
         }
     }
+
+    /// <summary>Claims pending jobs and executes them sequentially, reporting
+    /// each result. Keeps draining until the server has nothing left.</summary>
+    private async Task ProcessJobsAsync(CancellationToken ct)
+    {
+        for (var batch = 0; batch < 10 && !ct.IsCancellationRequested; batch++)
+        {
+            var jobs = await _api.ClaimJobsAsync(_identity.GetAgentUuid(), ct);
+            if (jobs.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var job in jobs)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var result = await _engine.ExecuteAsync(job, ct);
+
+                await _api.ReportJobResultAsync(job.JobId, new JobResultRequest
+                {
+                    AgentUuid = _identity.GetAgentUuid(),
+                    Success = result.Success,
+                    ExitCode = result.ExitCode,
+                    OutputLog = Truncate(result.Log, 60_000),
+                    FailureReason = result.FailureReason,
+                }, ct);
+            }
+        }
+    }
+
+    private static string? Truncate(string? value, int max)
+        => value is null || value.Length <= max ? value : value[..max];
 
     private async Task SendInventoryAsync(CancellationToken ct)
     {
