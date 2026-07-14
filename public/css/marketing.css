@@ -335,7 +335,8 @@ p { margin:0 0 1rem; }
 .footer .brand { color:#fff; margin-bottom:1rem; }
 .footer .brand .logo-img { width:44px; height:44px; }
 .footer h4 { color:#fff; font-size:.85rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:1rem; }
-.footer a { display:inline-block; color:var(--slate-400); padding:.3rem 0; font-size:.92rem; transition:.15s; position:relative; }
+.footer a { display:block; width:fit-content; color:var(--slate-400); padding:.3rem 0; font-size:.92rem; transition:.15s; position:relative; }
+.footer .social a { display:grid; }
 .footer a::after { content:""; position:absolute; left:0; bottom:.15rem; height:1px; width:0; background:var(--teal-400); transition:width .2s; }
 .footer a:hover { color:var(--teal-300); } .footer a:hover::after { width:100%; }
 .footer .fdesc { color:var(--slate-500); font-size:.92rem; max-width:32ch; }
