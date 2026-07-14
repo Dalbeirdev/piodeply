@@ -23,6 +23,7 @@ class NotificationChannel extends Model
         'agent.offline'         => 'Agent went offline',
         'policy.drift'          => 'Daily compliance drift digest',
         'browser_policy.failed' => 'Browser policy failed or non-compliant',
+        'lead.received'         => 'Contact / access-request submitted on the website',
     ];
 
     protected $fillable = [

@@ -2,9 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Public marketing site.
+Route::get('/', [\App\Http\Controllers\MarketingController::class, 'home'])->name('home');
+Route::get('/about', [\App\Http\Controllers\MarketingController::class, 'about'])->name('about');
+Route::get('/pricing', [\App\Http\Controllers\MarketingController::class, 'pricing'])->name('pricing');
+Route::get('/contact', [\App\Http\Controllers\MarketingController::class, 'contact'])->name('contact');
+Route::get('/privacy', [\App\Http\Controllers\MarketingController::class, 'privacy'])->name('privacy');
+Route::get('/get-started', [\App\Http\Controllers\MarketingController::class, 'getStarted'])->name('get-started');
+Route::post('/leads', [\App\Http\Controllers\MarketingController::class, 'storeLead'])
+    ->middleware('throttle:6,1')->name('leads.store');
 
 // Public agent download (the token is the secret; keys are never embedded).
 Route::middleware('throttle:30,1')->group(function () {

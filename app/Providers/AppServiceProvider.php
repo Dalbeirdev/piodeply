@@ -32,6 +32,14 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Pagination\Paginator::defaultView('pagination.compact');
         \Illuminate\Pagination\Paginator::defaultSimpleView('pagination.compact');
 
+        // Shared branding for the public marketing site.
+        \Illuminate\Support\Facades\View::composer('marketing.*', function ($view) {
+            $view->with([
+                'company' => app(\App\Services\SettingsService::class)->get('branding.company_name'),
+                'email'   => config('mail.from.address') ?: 'hello@piodeploy.app',
+            ]);
+        });
+
         // Agent API: generous but bounded — one fleet key shouldn't starve others.
         \Illuminate\Support\Facades\RateLimiter::for('agent', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(240)
