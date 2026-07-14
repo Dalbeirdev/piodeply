@@ -102,11 +102,11 @@
 <section class="section alt">
     <div class="container">
         <div class="section-head">
-            <h2>Simple, fleet-based pricing</h2>
-            <p>Pay for endpoints under management. Every plan includes the full platform — no feature gates.</p>
+            <h2>Fair, per-machine pricing</h2>
+            <p>Pay only for machines under management — from <strong>$0.20 each</strong> at scale, cheaper than the usual per-machine rates. Every machine includes the full platform.</p>
         </div>
-        @include('marketing.partials.plans')
-        <p class="center muted" style="margin-top:28px;">Need a tailored quote? <a href="{{ route('contact') }}" style="color:var(--teal-700);font-weight:600;">Talk to us →</a></p>
+        @include('marketing.partials.pricing')
+        <p class="center muted" style="margin-top:28px;">See the full breakdown on the <a href="{{ route('pricing') }}" style="color:var(--teal-700);font-weight:600;">pricing page →</a></p>
     </div>
 </section>
 

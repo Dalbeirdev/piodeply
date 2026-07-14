@@ -55,13 +55,15 @@ STRIPE_WEBHOOK_SECRET=whsec_...</pre>
                     <p class="text-xs text-slate-500 mt-1">Stripe supports 135+ currencies — e.g. usd, eur, gbp, inr, aud.</p>
                 </div>
                 <div class="text-sm text-slate-600">
-                    <span class="font-semibold">Plans</span> (monthly, per endpoint):
-                    @foreach ($plans as $key => $p)
+                    <span class="font-semibold">Graduated per-machine schedule</span> (monthly):
+                    @php $prev = 0; @endphp
+                    @foreach ($tiers as $t)
                         <span class="inline-block text-xs bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5 ml-1">
-                            {{ $p['name'] }} {{ number_format($p['unit_amount'] / 100, 2) }}
+                            {{ $t['up_to'] ? ($prev + 1) . '–' . $t['up_to'] : ($prev . '+') }}: ${{ number_format($t['unit'] / 100, 2) }}
                         </span>
+                        @php $prev = $t['up_to'] ?? $prev; @endphp
                     @endforeach
-                    <p class="text-xs text-slate-400 mt-1">Amounts are defined in code (BillingService::PLANS) to keep pricing consistent with the site.</p>
+                    <p class="text-xs text-slate-400 mt-1">Defined in code (BillingService::TIERS) to keep pricing consistent with the site.</p>
                 </div>
                 <div class="flex justify-end border-t pt-4">
                     <x-button>Save billing settings</x-button>

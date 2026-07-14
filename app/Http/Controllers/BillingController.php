@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Payment;
 use App\Services\BillingService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class BillingController extends Controller
 {
@@ -20,13 +19,11 @@ class BillingController extends Controller
         abort_unless($this->billing->isConfigured(), 404, 'Online payment is not enabled.');
 
         $validated = $request->validate([
-            'plan'      => ['required', Rule::in(array_keys(BillingService::PLANS))],
-            'endpoints' => ['required', 'integer', 'between:1,100000'],
+            'machines' => ['required', 'integer', 'between:1,100000'],
         ]);
 
         $url = $this->billing->createCheckout(
-            plan: $validated['plan'],
-            quantity: (int) $validated['endpoints'],
+            machines: (int) $validated['machines'],
             successUrl: route('billing.success'),
             cancelUrl: route('pricing'),
         );
@@ -64,8 +61,8 @@ class BillingController extends Controller
                 [
                     'provider'       => 'stripe',
                     'customer_email' => $session['customer_details']['email'] ?? ($session['customer_email'] ?? null),
-                    'plan'           => $session['metadata']['plan'] ?? null,
-                    'quantity'       => isset($session['metadata']['quantity']) ? (int) $session['metadata']['quantity'] : null,
+                    'plan'           => 'per-machine',
+                    'quantity'       => isset($session['metadata']['machines']) ? (int) $session['metadata']['machines'] : null,
                     'amount_total'   => $session['amount_total'] ?? null,
                     'currency'       => $session['currency'] ?? null,
                     'status'         => ($session['payment_status'] ?? '') === 'paid' ? 'paid' : 'pending',

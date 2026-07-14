@@ -76,11 +76,23 @@ class ContentAndBillingTest extends TestCase
 
     // ── Billing config ─────────────────────────────────────────────────
 
+    public function test_graduated_quote_is_cheaper_than_the_market_schedule(): void
+    {
+        $billing = app(BillingService::class);
+
+        // 50 machines: 20×$0.80 + 30×$0.40 = $28.00
+        $this->assertSame(2800, $billing->quoteCents(50));
+        // 700 machines: 20×0.80 + 480×0.40 + 200×0.20 = $248.00 (vs $310 at 1/.5/.25)
+        $this->assertSame(24800, $billing->quoteCents(700));
+        // Never charges below one machine.
+        $this->assertSame(80, $billing->quoteCents(1));
+    }
+
     public function test_checkout_is_disabled_until_configured(): void
     {
         // No keys / not enabled → route 404s and pricing shows the lead CTA.
-        $this->post('/billing/checkout', ['plan' => 'growth', 'endpoints' => 10])->assertNotFound();
-        $this->get('/pricing')->assertOk()->assertSee('Get started')->assertDontSee('Subscribe');
+        $this->post('/billing/checkout', ['machines' => 100])->assertNotFound();
+        $this->get('/pricing')->assertOk()->assertSee('Request access')->assertDontSee('Subscribe →');
     }
 
     public function test_configured_checkout_creates_a_stripe_session_and_redirects(): void
@@ -92,14 +104,14 @@ class ContentAndBillingTest extends TestCase
             'api.stripe.com/*' => Http::response(['id' => 'cs_test_123', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_123']),
         ]);
 
-        $this->post('/billing/checkout', ['plan' => 'growth', 'endpoints' => 25])
+        $this->post('/billing/checkout', ['machines' => 700])
             ->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
 
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'checkout/sessions')
                 && $request['mode'] === 'subscription'
-                && $request['line_items'][0]['quantity'] === 25
-                && $request['line_items'][0]['price_data']['unit_amount'] === 150;
+                && $request['line_items'][0]['quantity'] === 1
+                && $request['line_items'][0]['price_data']['unit_amount'] === 24800; // graduated total
         });
     }
 
@@ -137,7 +149,7 @@ class ContentAndBillingTest extends TestCase
                 'amount_total' => 3750,
                 'currency' => 'usd',
                 'customer_details' => ['email' => 'buyer@example.test'],
-                'metadata' => ['plan' => 'growth', 'quantity' => 25],
+                'metadata' => ['machines' => 700],
                 'mode' => 'subscription',
             ]],
         ]);
@@ -151,7 +163,7 @@ class ContentAndBillingTest extends TestCase
 
         $this->assertDatabaseHas('payments', [
             'reference' => 'cs_test_999', 'status' => 'paid',
-            'customer_email' => 'buyer@example.test', 'quantity' => 25,
+            'customer_email' => 'buyer@example.test', 'quantity' => 700,
         ]);
     }
 

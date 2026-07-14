@@ -49,7 +49,7 @@ class BillingSettings extends Component
             'hasKeys'    => ! empty(config('services.stripe.secret')) && ! empty(config('services.stripe.key')),
             'isLive'     => $billing->isLive(),
             'configured' => $billing->isConfigured(),
-            'plans'      => BillingService::PLANS,
+            'tiers'      => BillingService::TIERS,
             'payments'   => \App\Models\Payment::latest()->limit(10)->get(),
         ])->layout('layouts.app');
     }

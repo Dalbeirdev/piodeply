@@ -16,15 +16,44 @@ class BillingService
 {
     private const API = 'https://api.stripe.com/v1';
 
-    /** Recurring plans surfaced on the pricing page (monthly, per endpoint). */
-    public const PLANS = [
-        'starter' => ['name' => 'Starter', 'unit_amount' => 200, 'min' => 1],   // $2.00 / endpoint
-        'growth'  => ['name' => 'Growth',  'unit_amount' => 150, 'min' => 1],   // $1.50 / endpoint
+    /**
+     * Graduated per-machine pricing (monthly), deliberately below the
+     * common $1.00 / $0.50 / $0.25 market schedule. Each tier: the machine
+     * count it runs up to (null = unlimited) and the per-machine price in
+     * cents that applies within that band.
+     */
+    public const TIERS = [
+        ['up_to' => 20,   'unit' => 80],   // first 20 machines  @ $0.80
+        ['up_to' => 500,  'unit' => 40],   // next 480 (21–500)  @ $0.40
+        ['up_to' => null, 'unit' => 20],   // 500+               @ $0.20
     ];
 
     public function __construct(
         private readonly SettingsService $settings,
     ) {
+    }
+
+    /** Graduated monthly total, in minor units (cents), for N machines. */
+    public function quoteCents(int $machines): int
+    {
+        $machines = max(1, $machines);
+        $total = 0;
+        $prev = 0;
+
+        foreach (self::TIERS as $tier) {
+            if ($machines <= $prev) {
+                break;
+            }
+            $cap = $tier['up_to'] ?? $machines;
+            $count = min($machines, $cap) - $prev;
+            $total += $count * $tier['unit'];
+            $prev = $cap;
+            if ($tier['up_to'] === null) {
+                break;
+            }
+        }
+
+        return $total;
     }
 
     /** Is Stripe usable — enabled by the operator AND keyed in .env? */
@@ -46,17 +75,19 @@ class BillingService
     }
 
     /**
-     * Create a Stripe Checkout Session for a subscription and return its
-     * hosted URL. Quantity is the number of endpoints.
+     * Create a Stripe Checkout Session for the graduated monthly total of
+     * N machines and return its hosted URL. The computed total is charged
+     * as a single monthly line (quantity 1) so no Stripe tiered Price is
+     * required.
      */
-    public function createCheckout(string $plan, int $quantity, string $successUrl, string $cancelUrl): ?string
+    public function createCheckout(int $machines, string $successUrl, string $cancelUrl): ?string
     {
-        if (! $this->isConfigured() || ! isset(self::PLANS[$plan])) {
+        if (! $this->isConfigured()) {
             return null;
         }
 
-        $config = self::PLANS[$plan];
-        $quantity = max($config['min'], min(100000, $quantity));
+        $machines = max(1, min(100000, $machines));
+        $total = $this->quoteCents($machines);
 
         $response = Http::withToken(config('services.stripe.secret'))
             ->asForm()
@@ -65,15 +96,15 @@ class BillingService
                 'success_url' => $successUrl . '?session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url'  => $cancelUrl,
                 'line_items'  => [[
-                    'quantity'   => $quantity,
+                    'quantity'   => 1,
                     'price_data' => [
                         'currency'     => $this->currency(),
-                        'unit_amount'  => $config['unit_amount'],
+                        'unit_amount'  => $total,
                         'recurring'    => ['interval' => 'month'],
-                        'product_data' => ['name' => "PioDeploy {$config['name']} — per endpoint"],
+                        'product_data' => ['name' => "PioDeploy — {$machines} machines / month"],
                     ],
                 ]],
-                'metadata' => ['plan' => $plan, 'quantity' => $quantity],
+                'metadata' => ['machines' => $machines],
             ]);
 
         if ($response->failed()) {
