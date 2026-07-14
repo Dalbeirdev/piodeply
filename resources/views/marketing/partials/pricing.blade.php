@@ -34,21 +34,19 @@
 </div>
 
 <div class="pricecalc">
-    @if ($configured)
-        <form method="POST" action="{{ route('billing.checkout') }}" class="in" style="display:flex;align-items:end;gap:16px;flex-wrap:wrap;">
-            @csrf
-            <div>
-                <label for="calcMachines">Machines under management</label>
-                <input id="calcMachines" name="machines" type="number" min="1" max="100000" value="100">
-            </div>
-            <button class="btn btn-primary btn-lg" type="submit">Subscribe →</button>
-        </form>
-    @else
-        <div class="in">
-            <label for="calcMachines">Machines under management</label>
-            <input id="calcMachines" type="number" min="1" max="100000" value="100">
-        </div>
-    @endif
+    <div class="in" style="flex:1;min-width:260px;">
+        <label for="calcMachines">Machines under management: <strong id="calcCount">100</strong></label>
+        <input id="calcRange" type="range" min="10" max="5000" step="10" value="100" style="margin:.4rem 0;">
+        @if ($configured)
+            <form method="POST" action="{{ route('billing.checkout') }}" style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+                @csrf
+                <input id="calcMachines" name="machines" type="number" min="1" max="100000" value="100" style="width:8rem;">
+                <button class="btn btn-primary" type="submit">Subscribe →</button>
+            </form>
+        @else
+            <input id="calcMachines" type="number" min="1" max="100000" value="100" style="width:8rem;margin-top:6px;">
+        @endif
+    </div>
     @php $defaultCents = isset($billing) ? $billing->quoteCents(100) : 4800; @endphp
     <div class="out">
         <div class="total" id="calcPrice">${{ number_format($defaultCents / 100, 2) }}</div>
@@ -104,14 +102,30 @@
         return total;
     }
     var inp = document.getElementById('calcMachines'),
+        range = document.getElementById('calcRange'),
+        count = document.getElementById('calcCount'),
         price = document.getElementById('calcPrice'),
         per = document.getElementById('calcPer');
-    function update() {
-        var n = Math.max(1, parseInt(inp.value) || 0),
-            cents = quote(n);
+    function paint(n) {
+        var cents = quote(n);
+        if (count) count.textContent = n.toLocaleString();
         price.textContent = '$' + (cents / 100).toFixed(2);
         per.textContent = '$' + (cents / 100 / n).toFixed(2);
     }
-    if (inp) { inp.addEventListener('input', update); update(); }
+    if (inp) {
+        inp.addEventListener('input', function () {
+            var n = Math.max(1, parseInt(inp.value) || 0);
+            if (range && n <= +range.max) range.value = n;
+            paint(n);
+        });
+    }
+    if (range) {
+        range.addEventListener('input', function () {
+            var n = parseInt(range.value);
+            if (inp) inp.value = n;
+            paint(n);
+        });
+    }
+    paint(100);
 })();
 </script>

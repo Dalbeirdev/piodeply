@@ -6,7 +6,10 @@
     <title>@yield('title', $company . ' — Software deployment & policy management for MSPs')</title>
     <meta name="description" content="@yield('meta', 'Deploy, update and lock down software across your entire Windows fleet from one portal. Silent installs, desired-state policies, real-time compliance.')">
     <link rel="preconnect" href="{{ url('/') }}">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=4">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=5">
     <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
@@ -71,24 +74,120 @@
 
     <script>
     (function () {
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         var nav = document.getElementById('siteNav');
         if (nav) {
             var onScroll = function () { nav.classList.toggle('scrolled', window.scrollY > 8); };
             window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
         }
 
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        function countUp(el) {
+            if (el.dataset.done) return; el.dataset.done = '1';
+            var target = parseInt(el.dataset.count), suffix = el.dataset.suffix || '';
+            if (reduce || !target) { el.textContent = target.toLocaleString() + suffix; return; }
+            var start = performance.now(), dur = 1100;
+            (function step(now) {
+                var p = Math.min(1, (now - start) / dur), val = Math.round(target * (1 - Math.pow(1 - p, 3)));
+                el.textContent = val.toLocaleString() + suffix;
+                if (p < 1) requestAnimationFrame(step);
+            })(start);
+        }
+        function fillGauge(el) {
+            var pct = parseFloat(el.dataset.gauge), circ = 326.7;
+            el.style.strokeDashoffset = reduce ? circ * (1 - pct / 100) : circ * (1 - pct / 100);
+        }
+        function fillBar(el) { el.style.width = el.dataset.fill + '%'; }
 
-        var els = document.querySelectorAll('.section-head, .feature, .quote, .step, .tier, .plan, .cta, .pricecalc, .contact-item, .form-card, .ptable');
-        els.forEach(function (el, i) { el.classList.add('reveal'); el.style.transitionDelay = (i % 3) * 90 + 'ms'; });
+        var io = ('IntersectionObserver' in window) ? new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (!e.isIntersecting) return;
+                var t = e.target;
+                t.classList.add('in');
+                t.querySelectorAll('[data-count]').forEach(countUp);
+                if (t.matches('[data-count]')) countUp(t);
+                t.querySelectorAll('[data-gauge]').forEach(fillGauge);
+                t.querySelectorAll('[data-fill]').forEach(fillBar);
+                io.unobserve(t);
+            });
+        }, { threshold: 0.2, rootMargin: '0px 0px -40px 0px' }) : null;
 
-        if (!('IntersectionObserver' in window)) { els.forEach(function (el) { el.classList.add('in'); }); return; }
+        var reveals = document.querySelectorAll('.section-head, .feature, .why-item, .flow-step, .quote, .tier, .plan, .contact-item, .form-card, .value-grid > *, .gauge, .dash, .compare, .cta, .pricecalc, .metric, [data-count]');
+        reveals.forEach(function (el, i) {
+            if (!el.matches('[data-count]') && !el.classList.contains('reveal')) { el.classList.add('reveal'); el.style.transitionDelay = (i % 3) * 80 + 'ms'; }
+            if (io) io.observe(el); else { el.classList.add('in'); }
+        });
 
-        var io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
-        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        var mock = document.getElementById('heroMock'); if (mock) mock.classList.add('in');
 
-        els.forEach(function (el) { io.observe(el); });
+        if (reduce) return;
+
+        var bg = document.getElementById('heroBg');
+        if (bg) {
+            window.addEventListener('mousemove', function (ev) {
+                var x = (ev.clientX / window.innerWidth - 0.5), y = (ev.clientY / window.innerHeight - 0.5);
+                bg.querySelectorAll('.blob').forEach(function (b) {
+                    var d = parseFloat(b.dataset.depth) * 100;
+                    b.style.transform = 'translate(' + (x * d) + 'px,' + (y * d) + 'px)';
+                });
+            }, { passive: true });
+        }
+
+        document.querySelectorAll('[data-tilt]').forEach(function (card) {
+            card.addEventListener('mousemove', function (ev) {
+                var r = card.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width - 0.5, py = (ev.clientY - r.top) / r.height - 0.5;
+                card.style.transform = 'translateY(-8px) rotateX(' + (-py * 6) + 'deg) rotateY(' + (px * 6) + 'deg)';
+            });
+            card.addEventListener('mouseleave', function () { card.style.transform = ''; });
+        });
+
+        var dash = document.getElementById('dash');
+        if (dash) {
+            var tabs = dash.querySelectorAll('.dash-tab'), panels = dash.querySelectorAll('.dash-panel'), auto = true;
+            function activate(name) {
+                tabs.forEach(function (t) { t.classList.toggle('active', t.dataset.tab === name); });
+                panels.forEach(function (p) { p.classList.toggle('active', p.dataset.panel === name); });
+                dash.querySelectorAll('.dash-panel.active [data-fill]').forEach(fillBar);
+                dash.querySelectorAll('.dash-panel.active [data-count]').forEach(function (el) { delete el.dataset.done; countUp(el); });
+            }
+            tabs.forEach(function (t) { t.addEventListener('click', function () { auto = false; activate(t.dataset.tab); }); });
+            var order = ['devices', 'policies', 'deployments', 'compliance'], idx = 0;
+            setInterval(function () { if (auto) { idx = (idx + 1) % order.length; activate(order[idx]); } }, 4000);
+        }
+
+        var feedList = document.getElementById('feedList');
+        if (feedList) {
+            var events = [
+                ['ti', '#0d9488', '#f0fdfa', 'Chrome updated', 'DEMO-PC-01'],
+                ['ti', '#0284c7', '#eff6ff', 'Firefox installed', 'ACME-07'],
+                ['ti', '#6366f1', '#eef2ff', 'Policy assigned', 'Block incognito'],
+                ['ti', '#0d9488', '#f0fdfa', 'Machine online', 'GLOBEX-12'],
+                ['ti', '#b45309', '#fffbeb', 'Device locked down', 'FIN-03'],
+                ['ti', '#0284c7', '#eff6ff', '7-Zip deployed', 'DEMO-PC-03'],
+            ];
+            var e = 0;
+            function pushEvent() {
+                var ev = events[e % events.length]; e++;
+                var li = document.createElement('li');
+                li.className = 'feed-item feed-enter';
+                li.innerHTML = '<span class="fic" style="background:' + ev[2] + ';color:' + ev[1] + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>' +
+                    '<div><div style="font-weight:600;color:var(--slate-800);font-size:.88rem">' + ev[3] + '</div><div style="font-size:.78rem;color:var(--slate-400)">' + ev[4] + '</div></div>' +
+                    '<span class="ftime">just now</span>';
+                feedList.insertBefore(li, feedList.firstChild);
+                feedList.querySelectorAll('.ftime').forEach(function (t, i) { if (i > 0) t.textContent = (i * 3 + 2) + 's ago'; });
+                while (feedList.children.length > 6) feedList.removeChild(feedList.lastChild);
+            }
+            for (var k = 0; k < 5; k++) pushEvent();
+            setInterval(pushEvent, 3000);
+        }
+
+        document.querySelectorAll('.faq-q').forEach(function (q) {
+            q.addEventListener('click', function () {
+                var item = q.parentElement, a = item.querySelector('.faq-a');
+                var open = item.classList.toggle('open');
+                a.style.maxHeight = open ? a.scrollHeight + 'px' : '0';
+            });
+        });
     })();
     </script>
 </body>
