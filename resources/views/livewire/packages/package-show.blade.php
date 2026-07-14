@@ -95,16 +95,12 @@
 
             {{-- Quick deploy --}}
             @can('create', \App\Models\DeploymentJob::class)
-                <div class="pd-card p-6">
+                <div class="pd-card !overflow-visible p-6">
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Deploy this package</h3>
                     <form wire:submit="deploy" class="grid grid-cols-1 md:grid-cols-4 gap-2 items-start">
                         <div class="md:col-span-2">
-                            <select wire:model="deploy_computer_id" aria-label="Computer" class="pd-select w-full">
-                                <option value="">— select computer —</option>
-                                @foreach ($computers as $computer)
-                                    <option value="{{ $computer->id }}">{{ $computer->hostname }}</option>
-                                @endforeach
-                            </select>
+                            <x-searchable-select wire:model="deploy_computer_id" placeholder="— select computer —"
+                                :options="$computers->map(fn ($c) => ['value' => $c->id, 'label' => $c->hostname])->values()->all()" />
                             <x-input-error for="deploy_computer_id" class="mt-1" />
                         </div>
                         <select wire:model="deploy_action" aria-label="Action" class="pd-select w-full">
