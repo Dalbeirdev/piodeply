@@ -181,6 +181,9 @@ class ClientPortalTest extends TestCase
 
     public function test_agent_binary_404s_until_a_bundle_is_published(): void
     {
+        // Isolate from any real published bundle on the local disk.
+        \Illuminate\Support\Facades\Storage::fake('local');
+
         $this->get("/download/agent/{$this->globexProject->download_token}/binary")->assertNotFound();
     }
 
