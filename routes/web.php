@@ -43,4 +43,8 @@ Route::middleware([
         Route::get('/packages/{package}', \App\Livewire\Packages\PackageShow::class)->name('packages.show');
         Route::get('/packages/{package}/edit', \App\Livewire\Packages\PackageForm::class)->name('packages.edit');
     });
+
+    Route::middleware('permission:deployments.view')->group(function () {
+        Route::get('/deployments', \App\Livewire\Deployments\DeploymentsIndex::class)->name('deployments.index');
+    });
 });

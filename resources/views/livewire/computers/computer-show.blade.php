@@ -21,6 +21,12 @@
     </x-slot>
 
     <div class="py-12">
+        @can('create', \App\Models\DeploymentJob::class)
+            <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 mb-6">
+                @livewire('deployments.deploy-to-computer', ['computer' => $computer], key('deploy-'.$computer->id))
+            </div>
+        @endcan
+
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             @php
                 $sections = [

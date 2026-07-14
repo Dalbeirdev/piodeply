@@ -7,6 +7,7 @@ use App\Http\Requests\Api\AgentRegisterRequest;
 use App\Models\Computer;
 use App\Models\Project;
 use App\Services\ComputerService;
+use App\Services\DeploymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,6 +15,7 @@ class AgentController extends Controller
 {
     public function __construct(
         private readonly ComputerService $computers,
+        private readonly DeploymentService $deployments,
     ) {
     }
 
@@ -58,7 +60,7 @@ class AgentController extends Controller
 
         return response()->json([
             'status'            => 'ok',
-            'pending_jobs'      => 0, // populated by the deployment phase
+            'pending_jobs'      => $this->deployments->pendingCountFor($computer),
             'heartbeat_seconds' => (int) config('piodeploy.agent.heartbeat_seconds'),
             'server_time'       => now()->toIso8601String(),
         ]);
