@@ -282,10 +282,15 @@ class ComputerManagementTest extends TestCase
         Livewire::actingAs($this->admin())
             ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
             ->assertSee('Installed software')
-            ->assertSee('(2 detected)')
-            ->assertSee('Random Tool')
+            ->assertSee('1 managed · 2 detected')
+            // Managed-only is the default view:
             ->assertSee('Git.Git')
             ->assertSee('managed')
+            ->assertDontSee('Random Tool')
+            // Toggling off reveals the full inventory:
+            ->set('softwareManagedOnly', false)
+            ->assertSee('Random Tool')
+            ->assertSee('Git.Git')
             ->set('softwareSearch', 'Random')
             ->assertSee('Random Tool')
             ->assertDontSee('Git.Git');

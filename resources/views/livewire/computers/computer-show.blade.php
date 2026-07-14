@@ -223,11 +223,20 @@
                 <div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-3">
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
                         Installed software
-                        <span class="ml-1 text-slate-400 font-normal normal-case">({{ $softwareTotal }} detected)</span>
+                        <span class="ml-1 text-slate-400 font-normal normal-case">
+                            ({{ $softwareManaged }} managed · {{ $softwareTotal }} detected)
+                        </span>
                     </h3>
-                    <input type="search" wire:model.live.debounce.300ms="softwareSearch"
-                           placeholder="Search software…" aria-label="Search installed software"
-                           class="pd-input w-64 py-1.5">
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 text-sm text-slate-600 whitespace-nowrap">
+                            <input type="checkbox" wire:model.live="softwareManagedOnly"
+                                   class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                            Managed only
+                        </label>
+                        <input type="search" wire:model.live.debounce.300ms="softwareSearch"
+                               placeholder="Search software…" aria-label="Search installed software"
+                               class="pd-input w-64 py-1.5">
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-100">
@@ -262,6 +271,8 @@
                                 <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">
                                     @if ($softwareTotal === 0)
                                         No software inventory reported yet — it arrives with the agent's next report.
+                                    @elseif ($softwareManagedOnly && $softwareSearch === '')
+                                        No managed catalogue software detected — untick “Managed only” to see all {{ $softwareTotal }} entries.
                                     @else
                                         No software matches your search.
                                     @endif

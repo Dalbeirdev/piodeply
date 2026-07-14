@@ -15,6 +15,9 @@ class ComputerShow extends Component
 
     public string $softwareSearch = '';
 
+    /** Default view: only software matching managed catalogue packages. */
+    public bool $softwareManagedOnly = true;
+
     public function mount(Computer $computer): void
     {
         $this->authorize('view', $computer);
@@ -74,6 +77,9 @@ class ComputerShow extends Component
             );
         }
 
+        // Exact winget-id match -> the software is a managed catalogue package.
+        $managedPackages = \App\Models\Package::whereNotNull('winget_id')->pluck('id', 'winget_id');
+
         return view('livewire.computers.computer-show', [
             'health' => $this->healthChecks(),
             'stats'  => [
@@ -90,16 +96,19 @@ class ComputerShow extends Component
                 ->latest()->limit(5)->get(),
             'diskUsedPercent' => $diskUsedPercent,
             'softwareTotal'   => $this->computer->software()->count(),
+            'softwareManaged' => $this->computer->software()
+                ->where('source', 'winget')->whereIn('name', $managedPackages->keys())->count(),
             'softwareItems'   => $this->computer->software()
+                ->when($this->softwareManagedOnly, fn ($q) => $q
+                    ->where('source', 'winget')
+                    ->whereIn('name', $managedPackages->keys()))
                 ->when($this->softwareSearch !== '', fn ($q) => $q->where(fn ($w) => $w
                     ->where('name', 'like', "%{$this->softwareSearch}%")
                     ->orWhere('publisher', 'like', "%{$this->softwareSearch}%")))
                 ->orderBy('name')
                 ->limit(150)
                 ->get(),
-            // Exact winget-id match -> the software is a managed catalogue package.
-            'managedPackages' => \App\Models\Package::whereNotNull('winget_id')
-                ->pluck('id', 'winget_id'),
+            'managedPackages' => $managedPackages,
         ])->layout('layouts.app');
     }
 }
