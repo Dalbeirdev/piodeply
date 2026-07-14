@@ -59,4 +59,10 @@ Route::middleware([
     Route::middleware('permission:deployments.view')->group(function () {
         Route::get('/deployments', \App\Livewire\Deployments\DeploymentsIndex::class)->name('deployments.index');
     });
+
+    Route::middleware('permission:policies.view')->group(function () {
+        Route::get('/policies', \App\Livewire\Policies\PoliciesIndex::class)->name('policies.index');
+        Route::get('/policies/create', \App\Livewire\Policies\PolicyForm::class)->name('policies.create');
+        Route::get('/policies/{policy}/edit', \App\Livewire\Policies\PolicyForm::class)->name('policies.edit');
+    });
 });

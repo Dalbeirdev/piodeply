@@ -80,7 +80,7 @@ class ComputerService
      */
     public function replaceSoftwareInventory(Computer $computer, array $items): int
     {
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($computer, $items) {
+        $stored = \Illuminate\Support\Facades\DB::transaction(function () use ($computer, $items) {
             $computer->software()->delete();
 
             $now = now();
@@ -102,6 +102,12 @@ class ComputerService
 
             return $rows->count();
         });
+
+        // Fresh inventory in hand — heal any drift from the project's
+        // software policies (new machines self-provision here).
+        app(PolicyService::class)->enforceForComputer($computer);
+
+        return $stored;
     }
 
     public function reassign(Computer $computer, Project $project): Computer

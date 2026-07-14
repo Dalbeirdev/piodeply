@@ -16,6 +16,7 @@
         'cancel'     => '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/>',
         'key'        => '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3 21 2M15 7l3 3"/>',
         'reassign'   => '<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>',
+        'play'       => '<path d="m6 4 14 8-14 8z"/>',
     ];
     $path = $icons[$icon] ?? $icons['edit'];
     $classes = trim("pd-icon-btn {$variantClass}");

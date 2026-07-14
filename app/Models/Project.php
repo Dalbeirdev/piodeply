@@ -44,6 +44,11 @@ class Project extends Model
         return $this->hasMany(Computer::class);
     }
 
+    public function softwarePolicies(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SoftwarePolicy::class);
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(fn (Builder $q) => $q
