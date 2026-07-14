@@ -76,7 +76,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...</pre>
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50"><tr>
                         <th class="pd-th">When</th><th class="pd-th">Email</th><th class="pd-th">Plan</th>
-                        <th class="pd-th">Endpoints</th><th class="pd-th">Amount</th><th class="pd-th">Status</th>
+                        <th class="pd-th">Machines</th><th class="pd-th">Amount</th><th class="pd-th">Status</th>
                     </tr></thead>
                     <tbody class="bg-white divide-y divide-slate-100">
                         @forelse ($payments as $payment)
