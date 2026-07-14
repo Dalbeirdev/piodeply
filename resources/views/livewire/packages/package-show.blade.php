@@ -1,12 +1,15 @@
 <div>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">
-                {{ $package->name }}
-                <span class="ml-2 align-middle text-xs font-semibold rounded-full px-2 py-0.5 border bg-blue-50 text-blue-700 border-blue-200">
-                    {{ $package->installer_type->label() }}
+            <div class="flex items-center gap-3">
+                <span class="pd-tile">
+                    <x-category-icon :name="$package->category->name" />
                 </span>
-            </h2>
+                <h2 class="font-semibold text-xl text-slate-900 leading-tight">
+                    {{ $package->name }}
+                    <span class="ml-2 align-middle pd-badge pd-badge-sky">{{ $package->installer_type->label() }}</span>
+                </h2>
+            </div>
             @can('update', $package)
                 <a href="{{ route('packages.edit', $package) }}"
                    class="text-sm pd-action">Edit package</a>
