@@ -57,6 +57,28 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
+     * Local initials avatar (inline SVG) — the Jetstream default uses an
+     * external avatar service, which breaks on offline/locked-down networks.
+     */
+    protected function defaultProfilePhotoUrl(): string
+    {
+        $initials = collect(explode(' ', trim($this->name)))
+            ->filter()
+            ->take(2)
+            ->map(fn (string $segment) => mb_strtoupper(mb_substr($segment, 0, 1)))
+            ->join('');
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+            . '<rect width="100" height="100" fill="#0f766e"/>'
+            . '<text x="50" y="54" font-family="ui-sans-serif,system-ui,sans-serif" font-size="40" '
+            . 'fill="#ffffff" text-anchor="middle" dominant-baseline="middle">'
+            . e($initials)
+            . '</text></svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

@@ -42,6 +42,16 @@ class AuthActivityLogTest extends TestCase
         $this->assertSame($user->email, $activity->properties['email']);
     }
 
+    public function test_default_avatar_is_local_not_external(): void
+    {
+        $user = User::factory()->create(['name' => 'Super Admin']);
+
+        $this->assertStringStartsWith('data:image/svg+xml;base64,', $user->profile_photo_url);
+        $this->assertStringContainsString('SA', base64_decode(
+            substr($user->profile_photo_url, strlen('data:image/svg+xml;base64,'))
+        ));
+    }
+
     public function test_logout_is_logged(): void
     {
         $user = User::factory()->create();
