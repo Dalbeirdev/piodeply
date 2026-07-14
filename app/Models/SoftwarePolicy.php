@@ -28,16 +28,21 @@ class SoftwarePolicy extends Model
     protected $fillable = [
         'project_id', 'package_id', 'action', 'mode',
         'version_mode', 'desired_version', 'priority',
+        'frequency', 'window_days', 'window_start', 'window_end',
+        'test_delay_days', 'production_delay_days', 'rollout_started_at',
         'created_by', 'last_enforced_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'action'           => PolicyAction::class,
-            'mode'             => PolicyMode::class,
-            'version_mode'     => PolicyVersionMode::class,
-            'last_enforced_at' => 'datetime',
+            'action'             => PolicyAction::class,
+            'mode'               => PolicyMode::class,
+            'version_mode'       => PolicyVersionMode::class,
+            'frequency'          => \App\Enums\PolicyFrequency::class,
+            'window_days'        => 'array',
+            'rollout_started_at' => 'datetime',
+            'last_enforced_at'   => 'datetime',
         ];
     }
 
@@ -92,6 +97,66 @@ class SoftwarePolicy extends Model
         return "{$verb} {$this->package->name}{$version}";
     }
 
+    /* ---- Scheduling ---- */
+
+    /** No window configured means "run anytime". */
+    public function hasWindow(): bool
+    {
+        return ! empty($this->window_days) && $this->window_start !== null && $this->window_end !== null;
+    }
+
+    /**
+     * Is the maintenance window open right now? Handles overnight windows
+     * (e.g. 22:00–04:00, where the window belongs to its starting day).
+     */
+    public function isInWindow(?\Carbon\CarbonInterface $at = null): bool
+    {
+        if (! $this->hasWindow()) {
+            return true;
+        }
+
+        $at ??= now();
+        $time = $at->format('H:i:s');
+        $start = $this->window_start;
+        $end = $this->window_end;
+
+        if ($start <= $end) {
+            return in_array($at->isoWeekday(), $this->window_days, false)
+                && $time >= $start && $time <= $end;
+        }
+
+        // Overnight: today's window started yesterday evening or ends tomorrow.
+        return (in_array($at->isoWeekday(), $this->window_days, false) && $time >= $start)
+            || (in_array($at->copy()->subDay()->isoWeekday(), $this->window_days, false) && $time <= $end);
+    }
+
+    /** When does the given ring become eligible for this rollout? */
+    public function ringEligibleAt(\App\Enums\DeploymentRing $ring): ?\Carbon\CarbonInterface
+    {
+        $start = $this->rollout_started_at ?? $this->created_at;
+
+        return match ($ring) {
+            \App\Enums\DeploymentRing::Emergency,
+            \App\Enums\DeploymentRing::Pilot => $start,
+            \App\Enums\DeploymentRing::Test => $start?->copy()->addDays($this->test_delay_days),
+            \App\Enums\DeploymentRing::Production => $start?->copy()->addDays($this->production_delay_days),
+        };
+    }
+
+    public function windowLabel(): string
+    {
+        if (! $this->hasWindow()) {
+            return 'Anytime';
+        }
+
+        $days = collect($this->window_days)
+            ->sort()
+            ->map(fn (int $day) => \Carbon\Carbon::create(2024, 1, $day)->isoFormat('ddd')) // 2024-01-01 is a Monday
+            ->join(', ');
+
+        return $days . ' ' . substr($this->window_start, 0, 5) . '–' . substr($this->window_end, 0, 5);
+    }
+
     public function priorityLabel(): string
     {
         return match (true) {
@@ -106,7 +171,8 @@ class SoftwarePolicy extends Model
     {
         return LogOptions::defaults()
             ->useLogName('policies')
-            ->logOnly(['project_id', 'package_id', 'action', 'mode', 'version_mode', 'desired_version', 'priority'])
+            ->logOnly(['project_id', 'package_id', 'action', 'mode', 'version_mode', 'desired_version', 'priority',
+                'frequency', 'window_days', 'window_start', 'window_end', 'test_delay_days', 'production_delay_days'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
     }

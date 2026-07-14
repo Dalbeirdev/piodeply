@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DeploymentRing;
 use App\Enums\JobAction;
 use App\Enums\JobStatus;
 use App\Enums\PolicyAction;
@@ -20,8 +21,8 @@ use Illuminate\Support\Collection;
  */
 class PolicyService
 {
-    /** Routine updates / failed attempts re-queue at most once per window. */
-    private const COOLDOWN_HOURS = 23;
+    /** Failed attempts re-queue at most once per this window. */
+    private const FAILURE_COOLDOWN_HOURS = 23;
 
     public function __construct(
         private readonly DeploymentService $deployments,
@@ -30,10 +31,18 @@ class PolicyService
 
     /* ─────────────────────────── Enforcement ─────────────────────────── */
 
-    /** Enforce one policy across its project. Returns jobs queued. */
-    public function enforce(SoftwarePolicy $policy): int
+    /**
+     * Enforce one policy across its project. Returns jobs queued.
+     * An operator's manual "Enforce now" passes $ignoreWindow — deliberate
+     * clicks outrank the maintenance window, but never the ring rollout.
+     */
+    public function enforce(SoftwarePolicy $policy, bool $ignoreWindow = false): int
     {
         if (! $policy->isEnforceable()) {
+            return 0;
+        }
+
+        if (! $ignoreWindow && ! $policy->isInWindow()) {
             return 0;
         }
 
@@ -41,6 +50,9 @@ class PolicyService
 
         $queued = 0;
         foreach ($policy->project->computers()->whereNotIn('id', $excluded)->get() as $computer) {
+            if (! $this->ringEligible($policy, $computer)) {
+                continue;
+            }
             if ($this->enforceOn($policy, $computer)) {
                 $queued++;
             }
@@ -69,6 +81,11 @@ class PolicyService
             if (! $policy->package->is_active) {
                 continue;
             }
+            // Automatic enforcement respects the schedule; the scheduled
+            // policies:enforce run picks these up when the window opens.
+            if (! $policy->isInWindow() || ! $this->ringEligible($policy, $computer)) {
+                continue;
+            }
             if ($policy->excludedComputers()->whereKey($computer->id)->exists()) {
                 continue;
             }
@@ -78,6 +95,32 @@ class PolicyService
         }
 
         return $queued;
+    }
+
+    /** Enforce every enforceable, in-window policy — the scheduler's entry point. */
+    public function enforceAll(): int
+    {
+        $queued = 0;
+
+        SoftwarePolicy::with(['package', 'project'])
+            ->where('mode', \App\Enums\PolicyMode::Enforce)
+            ->get()
+            ->each(function (SoftwarePolicy $policy) use (&$queued) {
+                $queued += $this->enforce($policy);
+            });
+
+        return $queued;
+    }
+
+    public function ringEligible(SoftwarePolicy $policy, Computer $computer): bool
+    {
+        if ($computer->ring === DeploymentRing::Emergency) {
+            return true;
+        }
+
+        $eligibleAt = $policy->ringEligibleAt($computer->ring);
+
+        return $eligibleAt === null || $eligibleAt->lte(now());
     }
 
     private function enforceOn(SoftwarePolicy $policy, Computer $computer): bool
@@ -235,15 +278,28 @@ class PolicyService
                 if ($policy->action === PolicyAction::Update
                     && $policy->version_mode === PolicyVersionMode::Latest
                     && $this->hasRecentSuccess($policy, $computer, JobAction::Update)) {
-                    return $this->row($computer, 'compliant', $state['version'], 'Updated within the last day');
+                    return $this->row($computer, 'compliant', $state['version'], 'Updated within the last ' . $policy->frequency->label() . ' run');
                 }
 
                 if ($this->hasJobInFlight($policy, $computer)) {
                     return $this->row($computer, 'pending', $state['version'], 'Remediation job queued or running');
                 }
 
+                // Drift exists but the schedule holds it back.
+                if (! $this->ringEligible($policy, $computer)) {
+                    $eligibleAt = $policy->ringEligibleAt($computer->ring);
+
+                    return $this->row($computer, 'scheduled', $state['version'],
+                        "{$computer->ring->label()} ring eligible {$eligibleAt->diffForHumans()}");
+                }
+
+                if (! $policy->isInWindow()) {
+                    return $this->row($computer, 'scheduled', $state['version'],
+                        "Waiting for maintenance window ({$policy->windowLabel()})");
+                }
+
                 if ($this->lastAttemptFailed($policy, $computer)) {
-                    return $this->row($computer, 'failed', $state['version'], 'Last remediation attempt failed');
+                    return $this->row($computer, 'failed', $state['version'], 'Last attempt failed or was cancelled — backing off');
                 }
 
                 return $this->row($computer, 'non_compliant', $state['version'], $this->driftReason($policy, $state));
@@ -261,6 +317,7 @@ class PolicyService
             'target'        => $rows->where('status', '!=', 'excluded')->count(),
             'compliant'     => $rows->where('status', 'compliant')->count(),
             'pending'       => $rows->where('status', 'pending')->count(),
+            'scheduled'     => $rows->where('status', 'scheduled')->count(),
             'failed'        => $rows->where('status', 'failed')->count(),
             'non_compliant' => $rows->where('status', 'non_compliant')->count(),
             'excluded'      => $rows->where('status', 'excluded')->count(),
@@ -327,25 +384,26 @@ class PolicyService
             return true;
         }
 
-        // Routine latest-updates: at most one per cooldown window.
+        // Routine latest-updates: at most one per frequency window.
         if ($policy->action === PolicyAction::Update
             && $policy->version_mode === PolicyVersionMode::Latest
             && $this->hasRecentSuccess($policy, $computer, JobAction::Update)) {
             return true;
         }
 
-        // Force update: at most one reinstall per cooldown window.
+        // Force update: at most one reinstall per frequency window.
         if ($policy->action === PolicyAction::ForceUpdate
             && $this->hasRecentSuccess($policy, $computer, JobAction::Rollback)) {
             return true;
         }
 
-        // Failed attempts are not hammered — an operator retries sooner
-        // from the deployments page if needed.
+        // Failed attempts are not hammered, and an operator's cancel is
+        // respected for the same window — desired state re-asserts after
+        // the backoff (exclude the machine to opt out permanently).
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
-            ->where('status', JobStatus::Failed)
-            ->where('finished_at', '>=', now()->subHours(self::COOLDOWN_HOURS))
+            ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
+            ->where('finished_at', '>=', now()->subHours(self::FAILURE_COOLDOWN_HOURS))
             ->exists();
     }
 
@@ -363,7 +421,7 @@ class PolicyService
             ->where('package_id', $policy->package_id)
             ->where('action', $action)
             ->where('status', JobStatus::Succeeded)
-            ->where('finished_at', '>=', now()->subHours(self::COOLDOWN_HOURS))
+            ->where('finished_at', '>=', now()->subHours($policy->frequency->cooldownHours()))
             ->exists();
     }
 
@@ -371,8 +429,8 @@ class PolicyService
     {
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
-            ->where('status', JobStatus::Failed)
-            ->where('finished_at', '>=', now()->subHours(self::COOLDOWN_HOURS))
+            ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
+            ->where('finished_at', '>=', now()->subHours(self::FAILURE_COOLDOWN_HOURS))
             ->exists();
     }
 }

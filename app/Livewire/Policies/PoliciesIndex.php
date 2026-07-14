@@ -45,7 +45,7 @@ class PoliciesIndex extends Component
             return;
         }
 
-        $queued = $service->enforce($policy);
+        $queued = $service->enforce($policy, ignoreWindow: true);
 
         session()->flash('status', $queued > 0
             ? "{$policy->label()}: {$queued} job(s) queued."

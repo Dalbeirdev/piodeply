@@ -35,12 +35,12 @@ class PolicyShow extends Component
             return;
         }
 
-        $queued = $service->enforce($this->policy);
+        $queued = $service->enforce($this->policy, ignoreWindow: true);
         $this->policy->refresh();
 
         session()->flash('status', $queued > 0
             ? "{$queued} remediation job(s) queued."
-            : 'Fleet already compliant — nothing to queue.');
+            : 'Fleet already compliant — nothing to queue (ring delays still apply).');
     }
 
     public function toggleExclusion(int $computerId): void

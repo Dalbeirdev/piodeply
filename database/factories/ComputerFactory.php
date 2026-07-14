@@ -17,6 +17,7 @@ class ComputerFactory extends Factory
 
         return [
             'project_id'       => Project::factory(),
+            'ring'             => 'production',
             'agent_uuid'       => (string) Str::uuid(),
             'agent_version'    => '1.0.' . fake()->numberBetween(0, 20),
             'last_seen_at'     => now()->subMinutes(fake()->numberBetween(0, 120)),
@@ -38,6 +39,11 @@ class ComputerFactory extends Factory
             'tpm_enabled'      => true,
             'tpm_version'      => '2.0',
         ];
+    }
+
+    public function ring(string $ring): static
+    {
+        return $this->state(fn () => ['ring' => $ring]);
     }
 
     public function online(): static

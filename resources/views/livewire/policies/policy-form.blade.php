@@ -96,10 +96,78 @@
                     </div>
                 </div>
 
+                {{-- Scheduling --}}
+                <div class="border-t pt-4 space-y-4">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Scheduling</h3>
+
+                    @if (in_array($action, ['update', 'force_update'], true))
+                        <div>
+                            <x-label for="frequency" value="Run frequency" />
+                            <select id="frequency" wire:model="frequency"
+                                    class="mt-1 block w-full sm:w-48 border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                                @foreach ($frequencies as $frequencyOption)
+                                    <option value="{{ $frequencyOption->value }}">{{ $frequencyOption->label() }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-500">How often each machine re-runs this action at most.</p>
+                            <x-input-error for="frequency" class="mt-1" />
+                        </div>
+                    @endif
+
+                    <div>
+                        <x-label value="Maintenance window" />
+                        <p class="text-xs text-slate-500 mb-2">Leave all days unticked to run anytime, as soon as drift is detected.</p>
+                        <div class="flex flex-wrap gap-3">
+                            @foreach ($weekdays as $dayNumber => $dayLabel)
+                                <label class="flex items-center gap-1.5 text-sm text-slate-700">
+                                    <x-checkbox value="{{ $dayNumber }}" wire:model.live="window_days" />
+                                    {{ $dayLabel }}
+                                </label>
+                            @endforeach
+                        </div>
+                        @if ($window_days !== [])
+                            <div class="mt-3 flex items-center gap-3">
+                                <div>
+                                    <x-label for="window_start" value="From" class="text-xs" />
+                                    <x-input id="window_start" type="time" class="mt-1 block" wire:model="window_start" />
+                                </div>
+                                <div>
+                                    <x-label for="window_end" value="Until" class="text-xs" />
+                                    <x-input id="window_end" type="time" class="mt-1 block" wire:model="window_end" />
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-slate-500">Overnight windows work too — e.g. 22:00 until 04:00.</p>
+                        @endif
+                        <x-input-error for="window_start" class="mt-1" />
+                        <x-input-error for="window_end" class="mt-1" />
+                    </div>
+
+                    <div>
+                        <x-label value="Staged rollout (deployment rings)" />
+                        <p class="text-xs text-slate-500 mb-2">
+                            Pilot machines get changes immediately. Test and Production wait the days below.
+                            Emergency machines ignore delays and windows. Set both to 0 to roll out everywhere at once.
+                        </p>
+                        <div class="flex items-center gap-4">
+                            <div>
+                                <x-label for="test_delay_days" value="Test after (days)" class="text-xs" />
+                                <x-input id="test_delay_days" type="number" min="0" max="365" class="mt-1 block w-24" wire:model="test_delay_days" />
+                            </div>
+                            <div>
+                                <x-label for="production_delay_days" value="Production after (days)" class="text-xs" />
+                                <x-input id="production_delay_days" type="number" min="0" max="365" class="mt-1 block w-24" wire:model="production_delay_days" />
+                            </div>
+                        </div>
+                        <x-input-error for="test_delay_days" class="mt-1" />
+                        <x-input-error for="production_delay_days" class="mt-1" />
+                    </div>
+                </div>
+
                 <div class="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
                     <strong>Enforce</strong> queues jobs for machines out of desired state — automatically as agents
-                    report in. <strong>Audit only</strong> shows compliance on the policy page but never changes a
-                    machine. Version pinning requires a winget package.
+                    report in and every 5 minutes while the maintenance window is open. <strong>Audit only</strong>
+                    shows compliance but never changes a machine. Version pinning requires a winget package.
+                    Changing the desired version restarts the ring rollout.
                 </div>
 
                 <div class="flex justify-end gap-3 border-t pt-4">

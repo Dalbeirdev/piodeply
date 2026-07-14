@@ -18,7 +18,7 @@ class Computer extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'project_id', 'agent_uuid', 'agent_version', 'last_seen_at',
+        'project_id', 'ring', 'agent_uuid', 'agent_version', 'last_seen_at',
         'hostname', 'serial_number', 'manufacturer', 'model',
         'os_name', 'os_version', 'windows_build',
         'cpu', 'ram_bytes', 'disk_total_bytes', 'disk_free_bytes',
@@ -29,6 +29,7 @@ class Computer extends Model
     protected function casts(): array
     {
         return [
+            'ring' => \App\Enums\DeploymentRing::class,
             'last_seen_at' => 'datetime',
             'ram_bytes' => 'integer',
             'disk_total_bytes' => 'integer',

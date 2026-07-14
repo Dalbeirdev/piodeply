@@ -29,6 +29,19 @@ class PolicyForm extends Component
 
     public int $priority = 5;
 
+    public string $frequency = 'daily';
+
+    /** @var list<int> ISO weekdays 1 (Mon) – 7 (Sun); empty = anytime */
+    public array $window_days = [];
+
+    public ?string $window_start = null;
+
+    public ?string $window_end = null;
+
+    public int $test_delay_days = 0;
+
+    public int $production_delay_days = 0;
+
     public function mount(?SoftwarePolicy $policy = null): void
     {
         if ($policy !== null && $policy->exists) {
@@ -41,6 +54,12 @@ class PolicyForm extends Component
             $this->version_mode = $policy->version_mode->value;
             $this->desired_version = $policy->desired_version;
             $this->priority = $policy->priority;
+            $this->frequency = $policy->frequency?->value ?? 'daily';
+            $this->window_days = $policy->window_days ?? [];
+            $this->window_start = $policy->window_start ? substr($policy->window_start, 0, 5) : null;
+            $this->window_end = $policy->window_end ? substr($policy->window_end, 0, 5) : null;
+            $this->test_delay_days = $policy->test_delay_days ?? 0;
+            $this->production_delay_days = $policy->production_delay_days ?? 0;
         } else {
             $this->authorize('create', SoftwarePolicy::class);
         }
@@ -58,13 +77,37 @@ class PolicyForm extends Component
             'version_mode'    => ['required', Rule::in(PolicyVersionMode::values())],
             'desired_version' => ['nullable', 'string', 'max:100', 'regex:/^[0-9][0-9A-Za-z.\-+]*$/'],
             'priority'        => ['required', 'integer', 'between:1,10'],
+            'frequency'       => ['required', Rule::in(\App\Enums\PolicyFrequency::values())],
+            'window_days'     => ['array'],
+            'window_days.*'   => ['integer', 'between:1,7'],
+            'window_start'    => ['nullable', 'date_format:H:i', 'required_with:window_end'],
+            'window_end'      => ['nullable', 'date_format:H:i', 'required_with:window_start'],
+            'test_delay_days'       => ['required', 'integer', 'between:0,365'],
+            'production_delay_days' => ['required', 'integer', 'between:0,365'],
         ], [
             'desired_version.regex' => 'Versions look like 24.09 or 139.0.7258.67.',
         ], [
             'project_id'      => 'project',
             'package_id'      => 'package',
             'desired_version' => 'version',
+            'window_start'    => 'window start',
+            'window_end'      => 'window end',
         ]);
+
+        // A window needs both days and times; days without times (or vice
+        // versa) is half a window.
+        if ($validated['window_days'] !== [] && ($validated['window_start'] === null || $validated['window_end'] === null)) {
+            $this->addError('window_start', 'Pick a start and end time for the maintenance window.');
+
+            return null;
+        }
+        if ($validated['window_days'] === []) {
+            $validated['window_start'] = null;
+            $validated['window_end'] = null;
+            $validated['window_days'] = null;
+        } else {
+            $validated['window_days'] = array_values(array_map('intval', $validated['window_days']));
+        }
 
         $versionMode = PolicyVersionMode::from($validated['version_mode']);
         $action = PolicyAction::from($validated['action']);
@@ -111,10 +154,17 @@ class PolicyForm extends Component
         }
 
         if ($this->policy) {
+            // A new desired version is a new rollout — rings restage from now.
+            if ($validated['desired_version'] !== $this->policy->desired_version) {
+                $validated['rollout_started_at'] = now();
+            }
             $this->policy->update($validated);
             session()->flash('status', 'Policy saved.');
         } else {
-            SoftwarePolicy::create($validated + ['created_by' => auth()->id()]);
+            SoftwarePolicy::create($validated + [
+                'created_by'         => auth()->id(),
+                'rollout_started_at' => now(),
+            ]);
             session()->flash('status', 'Policy created. It applies automatically as agents report in — or use “Enforce now”.');
         }
 
@@ -130,6 +180,8 @@ class PolicyForm extends Component
             'modes'        => PolicyMode::cases(),
             'versionModes' => PolicyVersionMode::cases(),
             'priorities'   => SoftwarePolicy::PRIORITIES,
+            'frequencies'  => \App\Enums\PolicyFrequency::cases(),
+            'weekdays'     => [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'],
         ])->layout('layouts.app');
     }
 }

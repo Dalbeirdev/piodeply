@@ -57,7 +57,10 @@
                             <tr @class(['opacity-60' => $policy->mode === \App\Enums\PolicyMode::Disabled])>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     <a href="{{ route('policies.show', $policy) }}" class="pd-link font-medium">{{ $policy->label() }}</a>
-                                    <p class="text-xs text-slate-400">{{ $policy->package->vendor }}</p>
+                                    <p class="text-xs text-slate-400">
+                                        {{ $policy->package->vendor }}
+                                        @if ($policy->hasWindow()) · {{ $policy->windowLabel() }} @endif
+                                    </p>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600">
                                     {{ $policy->project->name }}
@@ -102,6 +105,7 @@
                                                 {{ $summary['compliant'] }}/{{ $summary['target'] }} compliant
                                                 @if ($summary['failed'] > 0) · <span class="text-red-600">{{ $summary['failed'] }} failed</span> @endif
                                                 @if ($summary['pending'] > 0) · {{ $summary['pending'] }} pending @endif
+                                                @if (($summary['scheduled'] ?? 0) > 0) · {{ $summary['scheduled'] }} scheduled @endif
                                             </span>
                                         </a>
                                     @endif

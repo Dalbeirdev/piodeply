@@ -6,6 +6,10 @@
                 <p class="text-sm text-slate-500 mt-0.5">
                     {{ $policy->project->name }} · {{ $policy->project->client->company_name }}
                     · {{ $policy->mode->label() }} · {{ $policy->priorityLabel() }} priority
+                    · Window: {{ $policy->windowLabel() }}
+                    @if ($policy->test_delay_days > 0 || $policy->production_delay_days > 0)
+                        · Rings: test +{{ $policy->test_delay_days }}d, production +{{ $policy->production_delay_days }}d
+                    @endif
                     @if ($policy->creator) · created by {{ $policy->creator->name }} @endif
                 </p>
             </div>
@@ -37,12 +41,13 @@
             @endif
 
             {{-- Compliance summary — click a card to filter the table --}}
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                 @php
                     $cards = [
                         ['key' => '',              'label' => 'Target',        'value' => $summary['target'],        'tone' => 'text-slate-800'],
                         ['key' => 'compliant',     'label' => 'Compliant',     'value' => $summary['compliant'],     'tone' => 'text-green-600'],
                         ['key' => 'pending',       'label' => 'Pending',       'value' => $summary['pending'],       'tone' => 'text-blue-600'],
+                        ['key' => 'scheduled',     'label' => 'Scheduled',     'value' => $summary['scheduled'],     'tone' => 'text-violet-600'],
                         ['key' => 'failed',        'label' => 'Failed',        'value' => $summary['failed'],        'tone' => 'text-red-600'],
                         ['key' => 'non_compliant', 'label' => 'Non-compliant', 'value' => $summary['non_compliant'], 'tone' => 'text-amber-600'],
                         ['key' => 'offline',       'label' => 'Offline',       'value' => $summary['offline'],       'tone' => 'text-slate-500'],
@@ -94,12 +99,14 @@
                             <tr @class(['opacity-60' => $row['status'] === 'excluded'])>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     <a href="{{ route('computers.show', $row['computer']) }}" class="pd-link">{{ $row['computer']->hostname }}</a>
+                                    <span class="ml-1 text-xs text-slate-400">{{ $row['computer']->ring->label() }}</span>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     @php
                                         $statusBadge = match ($row['status']) {
                                             'compliant' => 'bg-green-50 text-green-700 border-green-200',
                                             'pending' => 'bg-blue-50 text-blue-700 border-blue-200',
+                                            'scheduled' => 'bg-violet-50 text-violet-700 border-violet-200',
                                             'failed' => 'bg-red-50 text-red-700 border-red-200',
                                             'non_compliant' => 'bg-amber-50 text-amber-700 border-amber-200',
                                             'excluded' => 'bg-slate-100 text-slate-500 border-slate-200',

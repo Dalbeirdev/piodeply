@@ -23,6 +23,21 @@
                     <x-input-error for="project_id" class="mt-1" />
                 </div>
 
+                <div>
+                    <x-label for="ring" value="Deployment ring" />
+                    <select id="ring" wire:model="ring"
+                            class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                        @foreach ($rings as $ringOption)
+                            <option value="{{ $ringOption->value }}">{{ $ringOption->label() }}</option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Pilot machines get policy changes first; Test and Production follow after each policy's
+                        rollout delays. Emergency machines skip delays and maintenance windows.
+                    </p>
+                    <x-input-error for="ring" class="mt-1" />
+                </div>
+
                 <div class="flex justify-end gap-3 border-t pt-4">
                     <a href="{{ route('computers.show', $computer) }}"
                        class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">

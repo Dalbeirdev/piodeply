@@ -20,6 +20,9 @@ class SoftwarePolicyFactory extends Factory
             'mode'         => 'enforce',
             'version_mode' => 'latest',
             'priority'     => 5,
+            'frequency'    => 'daily',
+            'test_delay_days'       => 0,
+            'production_delay_days' => 0,
         ];
     }
 
