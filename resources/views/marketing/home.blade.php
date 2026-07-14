@@ -99,6 +99,35 @@
     </div>
 </section>
 
+<section class="section">
+    <div class="container">
+        <div class="section-head">
+            <span class="eyebrow" style="color:var(--teal-700);background:var(--teal-50);border-color:var(--teal-100);">Loved by MSPs</span>
+            <h2>What operators say</h2>
+            <p>Built for the way MSPs actually run — quiet, hands-off, and one portal for every client.</p>
+        </div>
+        <div class="quotes">
+            @php
+                $quotes = [
+                    ['We pushed the agent through our RMM on a Friday and had every client\'s fleet enrolled by Monday. Incognito is locked down and nobody noticed a thing.', 'D', 'Operations Lead', '600-seat MSP'],
+                    ['Desired-state policies mean I stop chasing machines that missed an update. It fixes itself and shows me the 2% that didn\'t.', 'K', 'Automation Engineer', 'Managed IT provider'],
+                    ['One portal for deploys, browser policies and compliance across every client. It replaced three tools and a pile of PowerShell.', 'M', 'Owner', 'Boutique MSP'],
+                ];
+            @endphp
+            @foreach ($quotes as [$text, $initial, $name, $role])
+                <div class="quote">
+                    <div class="stars">★★★★★</div>
+                    <p>“{{ $text }}”</p>
+                    <div class="who">
+                        <div class="av">{{ $initial }}</div>
+                        <div><div class="n">{{ $name }}</div><div class="r">{{ $role }}</div></div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+
 <section class="section alt">
     <div class="container">
         <div class="section-head">

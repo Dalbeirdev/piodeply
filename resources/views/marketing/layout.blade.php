@@ -6,7 +6,7 @@
     <title>@yield('title', $company . ' — Software deployment & policy management for MSPs')</title>
     <meta name="description" content="@yield('meta', 'Deploy, update and lock down software across your entire Windows fleet from one portal. Silent installs, desired-state policies, real-time compliance.')">
     <link rel="preconnect" href="{{ url('/') }}">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=3">
     <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
