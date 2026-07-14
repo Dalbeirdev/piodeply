@@ -12,30 +12,30 @@
     @endphp
 
     <nav role="navigation" aria-label="Pagination" class="flex justify-center">
-        <div class="inline-flex items-stretch rounded-lg border border-gray-300 bg-white shadow-sm overflow-hidden text-sm font-medium">
+        <div class="inline-flex items-stretch rounded-lg border border-slate-300 bg-white shadow-sm overflow-hidden text-sm font-medium">
             {{-- Previous --}}
             @if ($paginator->onFirstPage())
-                <span class="px-4 py-2 text-gray-300 select-none" aria-disabled="true">&lsaquo; Previous</span>
+                <span class="px-4 py-2 text-slate-300 select-none" aria-disabled="true">&lsaquo; Previous</span>
             @else
                 <button type="button" wire:click="previousPage('{{ $paginator->getPageName() }}')" wire:loading.attr="disabled" rel="prev"
-                        class="px-4 py-2 text-gray-700 hover:bg-gray-50">&lsaquo; Previous</button>
+                        class="px-4 py-2 text-slate-700 hover:bg-slate-50">&lsaquo; Previous</button>
             @endif
 
             {{-- Page numbers with ellipsis --}}
             @foreach ($pages as $index => $page)
                 @if ($index > 0 && $page - $pages[$index - 1] > 1)
-                    <span class="px-3 py-2 border-l border-gray-200 text-gray-400 select-none">&hellip;</span>
+                    <span class="px-3 py-2 border-l border-slate-200 text-slate-400 select-none">&hellip;</span>
                 @endif
 
                 @if ($page === $current)
                     <span aria-current="page"
-                          class="px-4 py-2 border-l border-gray-200 text-gray-900 font-semibold ring-1 ring-inset ring-gray-900 rounded-sm">
+                          class="px-4 py-2 border-l border-slate-200 text-teal-700 font-semibold ring-1 ring-inset ring-teal-600 bg-teal-50/50 rounded-sm">
                         {{ $page }}
                     </span>
                 @else
                     <button type="button" wire:click="gotoPage({{ $page }}, '{{ $paginator->getPageName() }}')" wire:loading.attr="disabled"
                             aria-label="Go to page {{ $page }}"
-                            class="px-4 py-2 border-l border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-900">
+                            class="px-4 py-2 border-l border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900">
                         {{ $page }}
                     </button>
                 @endif
@@ -44,9 +44,9 @@
             {{-- Next --}}
             @if ($paginator->hasMorePages())
                 <button type="button" wire:click="nextPage('{{ $paginator->getPageName() }}')" wire:loading.attr="disabled" rel="next"
-                        class="px-4 py-2 border-l border-gray-200 text-gray-700 hover:bg-gray-50">Next &rsaquo;</button>
+                        class="px-4 py-2 border-l border-slate-200 text-slate-700 hover:bg-slate-50">Next &rsaquo;</button>
             @else
-                <span class="px-4 py-2 border-l border-gray-200 text-gray-300 select-none" aria-disabled="true">Next &rsaquo;</span>
+                <span class="px-4 py-2 border-l border-slate-200 text-slate-300 select-none" aria-disabled="true">Next &rsaquo;</span>
             @endif
         </div>
     </nav>

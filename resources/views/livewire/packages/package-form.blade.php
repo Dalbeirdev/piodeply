@@ -1,13 +1,13 @@
 <div>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">
             {{ $package ? 'Edit ' . $package->name : 'New Package' }}
         </h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
-            <form wire:submit="save" class="bg-white shadow-xl sm:rounded-lg p-6 space-y-5">
+            <form wire:submit="save" class="pd-card p-6 space-y-5">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <x-label for="name" value="Name" />
@@ -17,7 +17,7 @@
                     <div>
                         <x-label for="package_category_id" value="Category" />
                         <select id="package_category_id" wire:model="package_category_id"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             <option value="">— select —</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -41,7 +41,7 @@
                     <div>
                         <x-label for="installer_type" value="Installer type" />
                         <select id="installer_type" wire:model.live="installer_type"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             @foreach ($types as $type)
                                 <option value="{{ $type->value }}">{{ $type->label() }}</option>
                             @endforeach
@@ -50,7 +50,7 @@
                     <div>
                         <x-label for="architecture" value="Architecture" />
                         <select id="architecture" wire:model="architecture"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             @foreach ($architectures as $arch)
                                 <option value="{{ $arch->value }}">{{ $arch->value }}</option>
                             @endforeach
@@ -78,12 +78,12 @@
                 <div>
                     <x-label for="description" value="Description" />
                     <textarea id="description" rows="3" wire:model="description"
-                              class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                              class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm"></textarea>
                 </div>
 
                 <div class="flex justify-end gap-3 border-t pt-4">
                     <a href="{{ route('packages.index') }}"
-                       class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
+                       class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
                         Cancel
                     </a>
                     <x-button>{{ $package ? 'Save changes' : 'Create package' }}</x-button>

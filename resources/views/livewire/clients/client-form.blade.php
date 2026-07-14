@@ -1,13 +1,13 @@
 <div>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">
             {{ $client ? 'Edit ' . $client->company_name : 'New Client' }}
         </h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
-            <form wire:submit="save" class="bg-white shadow-xl sm:rounded-lg p-6 space-y-6">
+            <form wire:submit="save" class="pd-card p-6 space-y-6">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -28,7 +28,7 @@
                     <div>
                         <x-label for="timezone" value="Timezone" />
                         <select id="timezone" wire:model="timezone"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             @foreach ($timezones as $tz)
                                 <option value="{{ $tz }}">{{ $tz }}</option>
                             @endforeach
@@ -38,7 +38,7 @@
                     <div>
                         <x-label for="status" value="Status" />
                         <select id="status" wire:model="status"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             @foreach ($statuses as $statusOption)
                                 <option value="{{ $statusOption->value }}">{{ $statusOption->label() }}</option>
                             @endforeach
@@ -48,7 +48,7 @@
                     <div>
                         <x-label for="logo" value="Logo (PNG/JPG, max 1 MB)" />
                         <input id="logo" type="file" wire:model="logo" accept="image/*"
-                               class="mt-1 block w-full text-sm text-gray-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-gray-100">
+                               class="mt-1 block w-full text-sm text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-slate-100">
                         <x-input-error for="logo" class="mt-1" />
                         @if ($client?->logoUrl())
                             <img src="{{ $client->logoUrl() }}" alt="Current logo" class="mt-2 h-10 rounded">
@@ -57,7 +57,7 @@
                 </div>
 
                 <fieldset class="border-t pt-4">
-                    <legend class="text-sm font-semibold text-gray-700">Address</legend>
+                    <legend class="text-sm font-semibold text-slate-700">Address</legend>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div class="md:col-span-2">
                             <x-label for="address_line1" value="Address line 1" />
@@ -75,7 +75,7 @@
                 </fieldset>
 
                 <fieldset class="border-t pt-4">
-                    <legend class="text-sm font-semibold text-gray-700">Billing</legend>
+                    <legend class="text-sm font-semibold text-slate-700">Billing</legend>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div>
                             <x-label for="billing_email" value="Billing email" />
@@ -95,9 +95,9 @@
 
                 <fieldset class="border-t pt-4">
                     <div class="flex items-center justify-between">
-                        <legend class="text-sm font-semibold text-gray-700">Contacts</legend>
+                        <legend class="text-sm font-semibold text-slate-700">Contacts</legend>
                         <button type="button" wire:click="addContact"
-                                class="text-sm font-semibold text-indigo-600 hover:underline">+ Add contact</button>
+                                class="text-sm pd-action">+ Add contact</button>
                     </div>
                     <div class="space-y-3 mt-2">
                         @forelse ($contacts as $index => $contact)
@@ -117,8 +117,8 @@
                                 <x-input type="text" class="block w-full text-sm" placeholder="Phone"
                                          aria-label="Contact phone" wire:model="contacts.{{ $index }}.phone" />
                                 <div class="flex items-center gap-3 pt-1.5">
-                                    <label class="flex items-center gap-1 text-xs text-gray-600">
-                                        <input type="checkbox" wire:model="contacts.{{ $index }}.is_primary" class="rounded border-gray-300">
+                                    <label class="flex items-center gap-1 text-xs text-slate-600">
+                                        <input type="checkbox" wire:model="contacts.{{ $index }}.is_primary" class="rounded border-slate-300">
                                         Primary
                                     </label>
                                     <button type="button" wire:click="removeContact({{ $index }})"
@@ -126,7 +126,7 @@
                                 </div>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500">No contacts yet.</p>
+                            <p class="text-sm text-slate-500">No contacts yet.</p>
                         @endforelse
                     </div>
                 </fieldset>
@@ -134,12 +134,12 @@
                 <div>
                     <x-label for="notes" value="Notes" />
                     <textarea id="notes" rows="3" wire:model="notes"
-                              class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"></textarea>
+                              class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm"></textarea>
                 </div>
 
                 <div class="flex justify-end gap-3 border-t pt-4">
                     <a href="{{ route('clients.index') }}"
-                       class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-50">
+                       class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
                         Cancel
                     </a>
                     <x-button>{{ $client ? 'Save changes' : 'Create client' }}</x-button>

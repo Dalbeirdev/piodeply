@@ -1,6 +1,6 @@
 <div wire:poll.10s>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ __('Deployments') }}</h2>
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Deployments') }}</h2>
     </x-slot>
 
     <div class="py-12">
@@ -14,16 +14,16 @@
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search computer or package…" aria-label="Search deployments"
-                       class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-72">
+                       class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-72">
                 <select wire:model.live="status" aria-label="Filter by status"
-                        class="border-gray-300 rounded-md shadow-sm text-sm">
+                        class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All statuses</option>
                     @foreach ($statuses as $s)
                         <option value="{{ $s->value }}">{{ $s->label() }}</option>
                     @endforeach
                 </select>
                 <select wire:model.live="action" aria-label="Filter by action"
-                        class="border-gray-300 rounded-md shadow-sm text-sm">
+                        class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All actions</option>
                     @foreach ($actions as $a)
                         <option value="{{ $a->value }}">{{ $a->label() }}</option>
@@ -31,33 +31,33 @@
                 </select>
             </div>
 
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+            <div class="pd-card">
+                <table class="min-w-full divide-y divide-slate-100">
+                    <thead class="bg-slate-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Computer</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Package</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="pd-th">Computer</th>
+                            <th class="pd-th">Package</th>
+                            <th class="pd-th">Action</th>
+                            <th class="pd-th">Priority</th>
+                            <th class="pd-th">Attempts</th>
+                            <th class="pd-th">Status</th>
                             <th class="px-6 py-3"></th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white divide-y divide-slate-100">
                         @forelse ($jobs as $job)
                             <tr>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     <a href="{{ route('computers.show', $job->computer) }}"
-                                       class="text-indigo-700 hover:underline">{{ $job->computer->hostname }}</a>
+                                       class="pd-link">{{ $job->computer->hostname }}</a>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-gray-700">
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-700">
                                     {{ $job->package->name }}
-                                    <span class="text-xs text-gray-400">{{ $job->packageVersion?->version }}</span>
+                                    <span class="text-xs text-slate-400">{{ $job->packageVersion?->version }}</span>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-gray-600">{{ $job->action->label() }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-gray-600">{{ $job->priority }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-gray-600">{{ $job->attempts }}/{{ $job->max_attempts }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->action->label() }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->priority }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->attempts }}/{{ $job->max_attempts }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     @php
                                         $badge = match ($job->status) {
@@ -65,8 +65,8 @@
                                             \App\Enums\JobStatus::Failed => 'bg-red-50 text-red-700 border-red-200',
                                             \App\Enums\JobStatus::Running => 'bg-blue-50 text-blue-700 border-blue-200',
                                             \App\Enums\JobStatus::Blocked => 'bg-yellow-50 text-yellow-700 border-yellow-200',
-                                            \App\Enums\JobStatus::Cancelled => 'bg-gray-100 text-gray-500 border-gray-200',
-                                            default => 'bg-gray-100 text-gray-700 border-gray-200',
+                                            \App\Enums\JobStatus::Cancelled => 'bg-slate-100 text-slate-500 border-slate-200',
+                                            default => 'bg-slate-100 text-slate-700 border-slate-200',
                                         };
                                     @endphp
                                     <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $badge }}">{{ $job->status->label() }}</span>
@@ -77,17 +77,17 @@
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-2">
                                     @can('manage', $job)
                                         @if (in_array($job->status, [\App\Enums\JobStatus::Failed, \App\Enums\JobStatus::Cancelled], true))
-                                            <button wire:click="retry({{ $job->id }})" class="font-semibold text-indigo-600 hover:underline">Retry</button>
+                                            <button wire:click="retry({{ $job->id }})" class="pd-action">Retry</button>
                                         @elseif (! $job->status->isTerminal())
                                             <button wire:click="cancel({{ $job->id }})"
                                                     wire:confirm="Cancel this job?"
-                                                    class="font-semibold text-red-600 hover:underline">Cancel</button>
+                                                    class="pd-action-danger">Cancel</button>
                                         @endif
                                     @endcan
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No deployment jobs yet. Queue one from a computer's page.</td></tr>
+                            <tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">No deployment jobs yet. Queue one from a computer's page.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

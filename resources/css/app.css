@@ -5,3 +5,98 @@
 [x-cloak] {
     display: none;
 }
+
+/* ============================================================
+   PioDeploy design system — soft-card + teal on slate neutrals
+   ============================================================ */
+
+@layer components {
+    /* Surfaces */
+    .pd-card {
+        @apply bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden;
+    }
+
+    /* Table primitives */
+    .pd-th {
+        @apply px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-400;
+    }
+
+    .pd-card table thead {
+        @apply bg-slate-50/70;
+    }
+
+    .pd-card table tbody tr {
+        @apply transition-colors;
+    }
+
+    .pd-card table tbody tr:hover {
+        @apply bg-slate-50/60;
+    }
+
+    /* Links & row actions */
+    .pd-link {
+        @apply font-semibold text-teal-700 hover:text-teal-900 hover:underline;
+    }
+
+    .pd-action {
+        @apply text-[13px] font-semibold text-slate-500 hover:text-teal-700 transition-colors;
+    }
+
+    .pd-action-danger {
+        @apply text-[13px] font-semibold text-slate-400 hover:text-red-600 transition-colors;
+    }
+
+    .pd-action-amber {
+        @apply text-[13px] font-semibold text-slate-500 hover:text-amber-600 transition-colors;
+    }
+
+    /* Badges */
+    .pd-badge {
+        @apply inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5 border;
+    }
+
+    .pd-badge .pd-dot {
+        @apply h-1.5 w-1.5 rounded-full bg-current opacity-60;
+    }
+
+    .pd-badge-green {
+        @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+    }
+
+    .pd-badge-slate {
+        @apply bg-slate-100 text-slate-600 border-slate-200;
+    }
+
+    .pd-badge-amber {
+        @apply bg-amber-50 text-amber-700 border-amber-200;
+    }
+
+    .pd-badge-red {
+        @apply bg-red-50 text-red-600 border-red-200;
+    }
+
+    .pd-badge-sky {
+        @apply bg-sky-50 text-sky-700 border-sky-200;
+    }
+
+    .pd-badge-teal {
+        @apply bg-teal-50 text-teal-700 border-teal-200;
+    }
+
+    /* Toolbar controls */
+    .pd-input {
+        @apply rounded-lg border-slate-300 shadow-sm text-sm
+               focus:border-teal-500 focus:ring-teal-500 placeholder:text-slate-400;
+    }
+
+    .pd-select {
+        @apply rounded-lg border-slate-300 shadow-sm text-sm text-slate-600
+               focus:border-teal-500 focus:ring-teal-500;
+    }
+
+    /* Package/entity initial tile */
+    .pd-tile {
+        @apply h-9 w-9 rounded-lg grid place-content-center text-sm font-bold
+               bg-gradient-to-br from-teal-50 to-teal-100 text-teal-700 border border-teal-200/60;
+    }
+}
