@@ -65,10 +65,18 @@ class User extends Authenticatable implements MustVerifyEmail
      * Tenancy: a user bound to a client only sees that client's data.
      * Staff users have no client binding and see everything their
      * permissions allow.
+     *
+     * Fails closed: a tenant-facing (Client-role) account that was
+     * created without a client binding must see nothing, not the whole
+     * fleet — 0 matches no client, so every scope comes back empty.
      */
     public function tenantClientId(): ?int
     {
-        return $this->client_id;
+        if ($this->client_id !== null) {
+            return $this->client_id;
+        }
+
+        return $this->hasRole(\App\Enums\Role::Client->value) ? 0 : null;
     }
 
     /**

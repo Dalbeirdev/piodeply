@@ -72,6 +72,51 @@ class ClientPortalTest extends TestCase
             ->assertDontSee('GLOBEX-PC');
     }
 
+    public function test_unbound_client_role_user_fails_closed_and_sees_nothing(): void
+    {
+        // A Client-role account created without a client binding must not
+        // fall back to staff-wide visibility.
+        $unbound = tap(User::factory()->create(['client_id' => null]),
+            fn (User $u) => $u->assignRole(RoleEnum::Client->value));
+
+        Livewire::actingAs($unbound)
+            ->test(ComputersIndex::class)
+            ->assertDontSee('ACME-PC')
+            ->assertDontSee('GLOBEX-PC');
+
+        $this->actingAs($unbound)
+            ->get("/computers/{$this->acmeComputer->id}")
+            ->assertForbidden();
+    }
+
+    public function test_unbound_viewer_is_staff_and_sees_all_clients(): void
+    {
+        // Viewer is an internal read-only role — no binding means fleet-wide
+        // visibility on purpose. Binding one to a client scopes it.
+        $viewer = tap(User::factory()->create(['client_id' => null]),
+            fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));
+
+        Livewire::actingAs($viewer)
+            ->test(ComputersIndex::class)
+            ->assertSee('ACME-PC')
+            ->assertSee('GLOBEX-PC');
+    }
+
+    public function test_client_bound_viewer_is_scoped_like_a_client(): void
+    {
+        $boundViewer = tap(User::factory()->create(['client_id' => $this->acme->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));
+
+        Livewire::actingAs($boundViewer)
+            ->test(ComputersIndex::class)
+            ->assertSee('ACME-PC')
+            ->assertDontSee('GLOBEX-PC');
+
+        $this->actingAs($boundViewer)
+            ->get("/computers/{$this->globexComputer->id}")
+            ->assertForbidden();
+    }
+
     public function test_direct_access_to_foreign_computer_is_forbidden(): void
     {
         $this->actingAs($this->acmeUser)
