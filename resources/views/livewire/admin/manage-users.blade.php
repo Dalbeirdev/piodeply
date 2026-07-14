@@ -26,6 +26,7 @@
                             <th class="pd-th">Name</th>
                             <th class="pd-th">Email</th>
                             <th class="pd-th">Role</th>
+                            <th class="pd-th">Client binding</th>
                             <th class="pd-th">Joined</th>
                         </tr>
                     </thead>
@@ -46,6 +47,20 @@
                                         </select>
                                     @else
                                         <span class="text-sm text-slate-600">{{ $user->getRoleNames()->join(', ') ?: '—' }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    @if (! $user->is(auth()->user()) && auth()->user()->can('assignRole', $user))
+                                        <select class="border-slate-300 rounded-md shadow-sm text-sm"
+                                                aria-label="Client binding for {{ $user->name }}"
+                                                wire:change="setClient({{ $user->id }}, $event.target.value)">
+                                            <option value="" @selected($user->client_id === null)>— staff (all clients) —</option>
+                                            @foreach ($clients as $client)
+                                                <option value="{{ $client->id }}" @selected($user->client_id === $client->id)>{{ $client->company_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <span class="text-sm text-slate-600">{{ $user->client?->company_name ?? '—' }}</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500">{{ $user->created_at->format('Y-m-d') }}</td>

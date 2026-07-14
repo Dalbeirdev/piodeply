@@ -15,13 +15,15 @@
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search hostname, serial, IP, MAC…" aria-label="Search computers"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-80">
-                <select wire:model.live="clientId" aria-label="Filter by client"
+                @unless ($isTenant ?? false)
+<select wire:model.live="clientId" aria-label="Filter by client"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All clients</option>
                     @foreach ($clients as $client)
                         <option value="{{ $client->id }}">{{ $client->company_name }}</option>
                     @endforeach
                 </select>
+@endunless
                 <select wire:model.live="projectId" aria-label="Filter by project"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All projects</option>
@@ -35,10 +37,12 @@
                     <option value="online">Online</option>
                     <option value="offline">Offline</option>
                 </select>
-                <label class="flex items-center gap-2 text-sm text-slate-600">
+                @unless ($isTenant ?? false)
+<label class="flex items-center gap-2 text-sm text-slate-600">
                     <input type="checkbox" wire:model.live="showTrashed" class="rounded border-slate-300">
                     Show deleted
                 </label>
+@endunless
             </div>
 
             <div class="pd-card">

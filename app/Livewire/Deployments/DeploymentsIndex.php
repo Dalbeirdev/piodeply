@@ -42,8 +42,15 @@ class DeploymentsIndex extends Component
     {
         $this->authorize('viewAny', DeploymentJob::class);
 
+        // Tenancy: client-bound users see only their own machines' jobs.
+        $tenantId = auth()->user()->tenantClientId();
+
         $jobs = DeploymentJob::query()
             ->with(['computer', 'package', 'packageVersion'])
+            ->when($tenantId !== null, fn ($q) => $q->whereHas(
+                'computer.project',
+                fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
+            ))
             ->when($this->search !== '', fn ($q) => $q->whereHas('computer', fn ($c) => $c->where('hostname', 'like', "%{$this->search}%"))
                 ->orWhereHas('package', fn ($p) => $p->where('name', 'like', "%{$this->search}%")))
             ->when($this->status !== '', fn ($q) => $q->where('status', $this->status))

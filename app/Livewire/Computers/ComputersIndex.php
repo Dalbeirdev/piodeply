@@ -49,16 +49,23 @@ class ComputersIndex extends Component
     {
         $this->authorize('viewAny', Computer::class);
 
+        // Tenancy: client-bound users are locked to their own client.
+        $tenantId = auth()->user()->tenantClientId();
+
         return view('livewire.computers.computers-index', [
             'computers' => $computers->searchPaginated(
                 search: $this->search,
                 projectId: $this->projectId,
-                clientId: $this->clientId,
+                clientId: $tenantId ?? $this->clientId,
                 online: $this->connectivity === '' ? null : $this->connectivity === 'online',
-                withTrashed: $this->showTrashed,
+                withTrashed: $tenantId === null && $this->showTrashed,
             ),
-            'clients'  => \App\Models\Client::orderBy('company_name')->get(['id', 'company_name']),
-            'projects' => \App\Models\Project::orderBy('name')->get(['id', 'name', 'client_id']),
+            'clients'  => $tenantId === null
+                ? \App\Models\Client::orderBy('company_name')->get(['id', 'company_name'])
+                : collect(),
+            'projects' => \App\Models\Project::when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
+                ->orderBy('name')->get(['id', 'name', 'client_id']),
+            'isTenant' => $tenantId !== null,
         ])->layout('layouts.app');
     }
 }

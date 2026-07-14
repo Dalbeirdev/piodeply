@@ -42,13 +42,15 @@
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search project or client…" aria-label="Search projects"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-72">
-                <select wire:model.live="clientId" aria-label="Filter by client"
+                @unless ($isTenant ?? false)
+<select wire:model.live="clientId" aria-label="Filter by client"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All clients</option>
                     @foreach ($clients as $client)
                         <option value="{{ $client->id }}">{{ $client->company_name }}</option>
                     @endforeach
                 </select>
+@endunless
                 <select wire:model.live="status" aria-label="Filter by status"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All statuses</option>

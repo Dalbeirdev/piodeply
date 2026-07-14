@@ -42,11 +42,36 @@ class ManageUsers extends Component
         $this->dispatch('role-updated');
     }
 
+    public function setClient(int $userId, ?string $clientId): void
+    {
+        $target = User::findOrFail($userId);
+
+        abort_if($target->is(auth()->user()), 403, 'You cannot change your own client binding.');
+        $this->authorize('assignRole', $target);
+
+        $clientId = $clientId === null || $clientId === '' ? null : (int) $clientId;
+        if ($clientId !== null) {
+            abort_unless(\App\Models\Client::whereKey($clientId)->exists(), 422);
+        }
+
+        $previous = $target->client_id;
+        $target->forceFill(['client_id' => $clientId])->save();
+
+        activity('rbac')
+            ->causedBy(auth()->user())
+            ->performedOn($target)
+            ->withProperties(['from' => $previous, 'to' => $clientId])
+            ->log('client_assigned');
+
+        $this->dispatch('role-updated');
+    }
+
     public function render()
     {
         $this->authorize('viewAny', User::class);
 
         return view('livewire.admin.manage-users', [
+            'clients' => \App\Models\Client::orderBy('company_name')->get(['id', 'company_name']),
             'users' => User::with('roles')
                 ->when($this->search !== '', function ($query) {
                     $query->where(fn ($q) => $q

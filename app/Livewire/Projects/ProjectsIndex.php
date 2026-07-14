@@ -75,13 +75,17 @@ class ProjectsIndex extends Component
     {
         $this->authorize('viewAny', Project::class);
 
+        // Tenancy: client-bound users are locked to their own client.
+        $tenantId = auth()->user()->tenantClientId();
+
         return view('livewire.projects.projects-index', [
             'projects' => $projects->searchPaginated(
                 search: $this->search,
-                clientId: $this->clientId,
+                clientId: $tenantId ?? $this->clientId,
                 status: $this->status ?: null,
-                withTrashed: $this->showTrashed,
+                withTrashed: $tenantId === null && $this->showTrashed,
             ),
+            'isTenant' => $tenantId !== null,
             'clients'  => \App\Models\Client::orderBy('company_name')->get(['id', 'company_name']),
             'statuses' => \App\Enums\ProjectStatus::cases(),
         ])->layout('layouts.app');

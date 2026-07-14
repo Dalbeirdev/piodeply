@@ -6,6 +6,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Public agent download (the token is the secret; keys are never embedded).
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/download/agent/{token}', [\App\Http\Controllers\AgentDownloadController::class, 'script'])
+        ->name('agent.download');
+    Route::get('/download/agent/{token}/binary', [\App\Http\Controllers\AgentDownloadController::class, 'binary'])
+        ->name('agent.download.binary');
+});
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),

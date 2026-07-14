@@ -15,7 +15,8 @@ class ProjectPolicy
 
     public function view(User $user, Project $project): bool
     {
-        return $user->can(Permission::ProjectsView->value);
+        return $user->can(Permission::ProjectsView->value)
+            && ($user->tenantClientId() === null || $user->tenantClientId() === $project->client_id);
     }
 
     public function create(User $user): bool

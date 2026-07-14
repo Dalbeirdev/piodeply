@@ -39,6 +39,11 @@ class Project extends Model
         return $this->belongsTo(Client::class)->withTrashed();
     }
 
+    public function computers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Computer::class);
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(fn (Builder $q) => $q

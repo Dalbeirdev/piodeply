@@ -101,6 +101,12 @@ class Dashboard extends Component
 
     public function render()
     {
+        // Client-bound users get their own portal view, scoped to their data.
+        $tenantId = auth()->user()->tenantClientId();
+        if ($tenantId !== null) {
+            return $this->renderClientPortal($tenantId);
+        }
+
         $stats = [
             'online'    => Computer::online()->count(),
             'offline'   => Computer::offline()->count(),
@@ -120,6 +126,37 @@ class Dashboard extends Component
             'fleetByClient' => $this->fleetByClient(),
             'series'        => $this->deploymentsSeries(),
             'activity'      => Activity::with('causer')->latest()->limit(8)->get(),
+        ])->layout('layouts.app');
+    }
+
+    private function renderClientPortal(int $clientId)
+    {
+        $client = Client::findOrFail($clientId);
+
+        $projects = Project::where('client_id', $clientId)
+            ->withCount('computers')
+            ->orderBy('name')
+            ->get();
+
+        $computers = Computer::whereIn('project_id', $projects->pluck('id'));
+
+        $stats = [
+            'online'  => (clone $computers)->online()->count(),
+            'offline' => (clone $computers)->offline()->count(),
+            'pending' => DeploymentJob::whereIn('computer_id', (clone $computers)->pluck('id'))
+                ->whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])->count(),
+            'failed'  => DeploymentJob::whereIn('computer_id', (clone $computers)->pluck('id'))
+                ->where('status', JobStatus::Failed)->count(),
+        ];
+
+        return view('livewire.client-dashboard', [
+            'client'     => $client,
+            'projects'   => $projects,
+            'computers'  => (clone $computers)->orderBy('hostname')->limit(10)->get(),
+            'stats'      => $stats,
+            'recentJobs' => DeploymentJob::with(['computer', 'package'])
+                ->whereIn('computer_id', (clone $computers)->pluck('id'))
+                ->orderByDesc('id')->limit(8)->get(),
         ])->layout('layouts.app');
     }
 }

@@ -56,6 +56,21 @@ class User extends Authenticatable implements MustVerifyEmail
         'profile_photo_url',
     ];
 
+    public function client(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * Tenancy: a user bound to a client only sees that client's data.
+     * Staff users have no client binding and see everything their
+     * permissions allow.
+     */
+    public function tenantClientId(): ?int
+    {
+        return $this->client_id;
+    }
+
     /**
      * Local initials avatar (inline SVG) — the Jetstream default uses an
      * external avatar service, which breaks on offline/locked-down networks.
