@@ -162,7 +162,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Public self-registration is disabled: this is an MSP back office —
+        // accounts are created by admins on /admin/users.
+        // Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::updateProfileInformation(),

@@ -7,17 +7,81 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @if (session('status'))
+                <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700" role="status">
+                    {{ session('status') }}
+                </div>
+            @endif
+
             <div class="flex items-center justify-between">
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search name or email…" aria-label="Search users"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-80">
-                <span x-data="{ shown: false }"
-                      x-on:role-updated.window="shown = true; setTimeout(() => shown = false, 2000)"
-                      x-show="shown" x-transition
-                      class="text-sm text-green-600 font-medium" style="display:none">
-                    Role updated.
-                </span>
+                <div class="flex items-center gap-3">
+                    <span x-data="{ shown: false }"
+                          x-on:role-updated.window="shown = true; setTimeout(() => shown = false, 2000)"
+                          x-show="shown" x-transition
+                          class="text-sm text-green-600 font-medium" style="display:none">
+                        Role updated.
+                    </span>
+                    @can('create', \App\Models\User::class)
+                        <button type="button" wire:click="$toggle('showCreate')"
+                                class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
+                            Add user
+                        </button>
+                    @endcan
+                </div>
             </div>
+
+            @if ($showCreate)
+                @can('create', \App\Models\User::class)
+                    <form wire:submit="createUser" class="pd-card p-6 space-y-4">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">New user</h3>
+                        <p class="text-xs text-slate-500">
+                            Public self-registration is disabled — accounts are created here. The account is
+                            created verified; share the password securely and ask them to change it after
+                            first sign-in. Bind Client-role users to their client from the table below.
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                            <div>
+                                <x-label for="newName" value="Name" />
+                                <x-input id="newName" type="text" class="mt-1 block w-full" wire:model="newName" />
+                                <x-input-error for="newName" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-label for="newEmail" value="Email" />
+                                <x-input id="newEmail" type="email" class="mt-1 block w-full" wire:model="newEmail" />
+                                <x-input-error for="newEmail" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-label for="newPassword" value="Password" />
+                                <x-input id="newPassword" type="text" class="mt-1 block w-full" wire:model="newPassword"
+                                         placeholder="10+ chars, letters + numbers" autocomplete="off" />
+                                <x-input-error for="newPassword" class="mt-1" />
+                            </div>
+                            <div>
+                                <x-label for="newRole" value="Role" />
+                                <select id="newRole" wire:model="newRole"
+                                        class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                                    <option value="">— select role —</option>
+                                    @foreach ($roles as $role)
+                                        @continue($role === \App\Enums\Role::SuperAdmin->value)
+                                        <option value="{{ $role }}">{{ $role }}</option>
+                                    @endforeach
+                                </select>
+                                <x-input-error for="newRole" class="mt-1" />
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-3">
+                            <button type="button" wire:click="$set('showCreate', false)"
+                                    class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
+                                Cancel
+                            </button>
+                            <x-button>Create user</x-button>
+                        </div>
+                    </form>
+                @endcan
+            @endif
 
             <div class="pd-card">
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">

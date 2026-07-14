@@ -41,6 +41,8 @@ class NavigationService
                 'icon' => '<path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 5-6"/>'],
             ['label' => 'Notifications', 'route' => 'admin.notifications', 'active' => 'admin.notifications*', 'permission' => Permission::SettingsManage,
                 'icon' => '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'],
+            ['label' => 'Activity', 'route' => 'activity.index', 'active' => 'activity.*', 'permission' => Permission::ActivityView,
+                'icon' => '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'],
         ];
 
         return collect($definition)

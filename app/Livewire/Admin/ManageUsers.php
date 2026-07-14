@@ -13,9 +13,69 @@ class ManageUsers extends Component
 
     public string $search = '';
 
+    public bool $showCreate = false;
+
+    public string $newName = '';
+
+    public string $newEmail = '';
+
+    public string $newPassword = '';
+
+    public string $newRole = '';
+
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    /**
+     * Admin-created accounts replace public self-registration (disabled —
+     * this is an MSP back office). Created verified: the admin vouches.
+     */
+    public function createUser(): void
+    {
+        $this->authorize('create', User::class);
+
+        $validated = $this->validate([
+            'newName'     => ['required', 'string', 'max:255'],
+            'newEmail'    => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'newPassword' => ['required', 'string', \Illuminate\Validation\Rules\Password::default()],
+            'newRole'     => ['required', \Illuminate\Validation\Rule::in(RoleEnum::values())],
+        ], [], [
+            'newName' => 'name', 'newEmail' => 'email', 'newPassword' => 'password', 'newRole' => 'role',
+        ]);
+
+        // Only role managers may hand out roles; everyone else creates Viewers.
+        if (! auth()->user()->can(\App\Enums\Permission::RolesManage->value)
+            && $validated['newRole'] !== RoleEnum::Viewer->value) {
+            $this->addError('newRole', 'You may only create Viewer accounts.');
+
+            return;
+        }
+
+        // The Super Admin role is never assigned through this form.
+        if ($validated['newRole'] === RoleEnum::SuperAdmin->value) {
+            $this->addError('newRole', 'Super Admin cannot be assigned here.');
+
+            return;
+        }
+
+        $user = User::create([
+            'name'     => $validated['newName'],
+            'email'    => $validated['newEmail'],
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['newPassword']),
+        ]);
+        $user->forceFill(['email_verified_at' => now()])->save();
+        $user->assignRole($validated['newRole']);
+
+        activity('rbac')
+            ->causedBy(auth()->user())
+            ->performedOn($user)
+            ->withProperties(['role' => $validated['newRole']])
+            ->log('user_created');
+
+        $this->reset(['showCreate', 'newName', 'newEmail', 'newPassword', 'newRole']);
+        session()->flash('status', "User “{$user->name}” created.");
     }
 
     public function setRole(int $userId, string $role): void
