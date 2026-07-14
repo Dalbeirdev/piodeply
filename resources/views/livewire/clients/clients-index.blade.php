@@ -96,21 +96,19 @@
                                         'bg-yellow-50 text-yellow-700 border-yellow-200' => $client->status === \App\Enums\ClientStatus::Suspended,
                                     ])>{{ $client->status->label() }}</span>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-2">
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @if ($client->trashed())
                                         @can('restore', $client)
-                                            <button wire:click="restore({{ $client->id }})"
-                                                    class="pd-action">Restore</button>
+                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $client->id }})" />
                                         @endcan
                                     @else
                                         @can('update', $client)
-                                            <a href="{{ route('clients.edit', $client) }}"
-                                               class="pd-action">Edit</a>
+                                            <x-icon-button icon="edit" label="Edit" :href="route('clients.edit', $client)" />
                                         @endcan
                                         @can('delete', $client)
-                                            <button wire:click="delete({{ $client->id }})"
-                                                    wire:confirm="Delete client “{{ $client->company_name }}”? It can be restored later."
-                                                    class="pd-action-danger">Delete</button>
+                                            <x-icon-button icon="delete" variant="danger" label="Delete"
+                                                           wire:click="delete({{ $client->id }})"
+                                                           wire:confirm="Delete client “{{ $client->company_name }}”? It can be restored later." />
                                         @endcan
                                     @endif
                                 </td>

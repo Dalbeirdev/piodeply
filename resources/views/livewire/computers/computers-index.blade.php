@@ -89,21 +89,19 @@
                                         {{ $computer->last_seen_at?->diffForHumans() ?? 'never seen' }}
                                     </p>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-2">
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @if ($computer->trashed())
                                         @can('restore', $computer)
-                                            <button wire:click="restore({{ $computer->id }})"
-                                                    class="pd-action">Restore</button>
+                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $computer->id }})" />
                                         @endcan
                                     @else
                                         @can('update', $computer)
-                                            <a href="{{ route('computers.edit', $computer) }}"
-                                               class="pd-action">Reassign</a>
+                                            <x-icon-button icon="reassign" label="Reassign project" :href="route('computers.edit', $computer)" />
                                         @endcan
                                         @can('delete', $computer)
-                                            <button wire:click="delete({{ $computer->id }})"
-                                                    wire:confirm="Delete “{{ $computer->hostname }}”? If its agent reports again it will be revived automatically."
-                                                    class="pd-action-danger">Delete</button>
+                                            <x-icon-button icon="delete" variant="danger" label="Delete"
+                                                           wire:click="delete({{ $computer->id }})"
+                                                           wire:confirm="Delete “{{ $computer->hostname }}”? If its agent reports again it will be revived automatically." />
                                         @endcan
                                     @endif
                                 </td>

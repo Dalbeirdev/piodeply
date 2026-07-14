@@ -74,14 +74,14 @@
                                         <p class="text-xs text-red-500 max-w-xs truncate" title="{{ $job->failure_reason }}">{{ $job->failure_reason }}</p>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-2">
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @can('manage', $job)
                                         @if (in_array($job->status, [\App\Enums\JobStatus::Failed, \App\Enums\JobStatus::Cancelled], true))
-                                            <button wire:click="retry({{ $job->id }})" class="pd-action">Retry</button>
+                                            <x-icon-button icon="retry" label="Retry" wire:click="retry({{ $job->id }})" />
                                         @elseif (! $job->status->isTerminal())
-                                            <button wire:click="cancel({{ $job->id }})"
-                                                    wire:confirm="Cancel this job?"
-                                                    class="pd-action-danger">Cancel</button>
+                                            <x-icon-button icon="cancel" variant="danger" label="Cancel"
+                                                           wire:click="cancel({{ $job->id }})"
+                                                           wire:confirm="Cancel this job?" />
                                         @endif
                                     @endcan
                                 </td>

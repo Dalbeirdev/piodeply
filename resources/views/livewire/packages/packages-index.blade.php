@@ -110,22 +110,22 @@
                                         <span class="pd-badge pd-badge-slate"><span class="pd-dot"></span>inactive</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3.5 whitespace-nowrap text-right space-x-3">
+                                <td class="px-6 py-3.5 whitespace-nowrap text-right space-x-1">
                                     @if ($package->trashed())
                                         @can('restore', $package)
-                                            <button wire:click="restore({{ $package->id }})" class="pd-action">Restore</button>
+                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $package->id }})" />
                                         @endcan
                                     @else
                                         @can('update', $package)
-                                            <button wire:click="toggleActive({{ $package->id }})" class="pd-action-amber">
-                                                {{ $package->is_active ? 'Deactivate' : 'Activate' }}
-                                            </button>
-                                            <a href="{{ route('packages.edit', $package) }}" class="pd-action">Edit</a>
+                                            <x-icon-button icon="power" variant="amber"
+                                                           :label="$package->is_active ? 'Deactivate' : 'Activate'"
+                                                           wire:click="toggleActive({{ $package->id }})" />
+                                            <x-icon-button icon="edit" label="Edit" :href="route('packages.edit', $package)" />
                                         @endcan
                                         @can('delete', $package)
-                                            <button wire:click="delete({{ $package->id }})"
-                                                    wire:confirm="Delete package “{{ $package->name }}”? It can be restored later."
-                                                    class="pd-action-danger">Delete</button>
+                                            <x-icon-button icon="delete" variant="danger" label="Delete"
+                                                           wire:click="delete({{ $package->id }})"
+                                                           wire:confirm="Delete package “{{ $package->name }}”? It can be restored later." />
                                         @endcan
                                     @endif
                                 </td>

@@ -94,6 +94,35 @@
                focus:border-teal-500 focus:ring-teal-500;
     }
 
+    /* Icon action buttons with tooltip */
+    .pd-icon-btn {
+        @apply relative inline-grid place-content-center h-8 w-8 rounded-lg
+               text-slate-400 transition-colors;
+    }
+
+    .pd-icon-btn:hover {
+        @apply text-teal-700 bg-teal-50;
+    }
+
+    .pd-icon-btn-danger:hover {
+        @apply text-red-600 bg-red-50;
+    }
+
+    .pd-icon-btn-amber:hover {
+        @apply text-amber-600 bg-amber-50;
+    }
+
+    .pd-tooltip {
+        @apply absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap
+               rounded-md bg-slate-800 px-2 py-1 text-[11px] font-medium text-white
+               opacity-0 pointer-events-none transition-opacity duration-100 z-20;
+    }
+
+    .pd-icon-btn:hover .pd-tooltip,
+    .pd-icon-btn:focus-visible .pd-tooltip {
+        @apply opacity-100;
+    }
+
     /* Package/entity initial tile */
     .pd-tile {
         @apply h-9 w-9 rounded-lg grid place-content-center text-sm font-bold

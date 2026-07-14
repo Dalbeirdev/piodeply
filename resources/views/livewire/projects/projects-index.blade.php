@@ -103,26 +103,24 @@
                                         'bg-slate-100 text-slate-600 border-slate-200' => $project->status === \App\Enums\ProjectStatus::Archived,
                                     ])>{{ $project->status->label() }}</span>
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-2">
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @if ($project->trashed())
                                         @can('restore', $project)
-                                            <button wire:click="restore({{ $project->id }})"
-                                                    class="pd-action">Restore</button>
+                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $project->id }})" />
                                         @endcan
                                     @else
                                         @can('rotateApiKey', $project)
-                                            <button wire:click="rotateKey({{ $project->id }})"
-                                                    wire:confirm="Rotate the API key for “{{ $project->name }}”? Every agent using the old key stops authenticating immediately."
-                                                    class="pd-action-amber">Rotate key</button>
+                                            <x-icon-button icon="key" variant="amber" label="Rotate API key"
+                                                           wire:click="rotateKey({{ $project->id }})"
+                                                           wire:confirm="Rotate the API key for “{{ $project->name }}”? Every agent using the old key stops authenticating immediately." />
                                         @endcan
                                         @can('update', $project)
-                                            <a href="{{ route('projects.edit', $project) }}"
-                                               class="pd-action">Edit</a>
+                                            <x-icon-button icon="edit" label="Edit" :href="route('projects.edit', $project)" />
                                         @endcan
                                         @can('delete', $project)
-                                            <button wire:click="delete({{ $project->id }})"
-                                                    wire:confirm="Delete project “{{ $project->name }}”? It can be restored later."
-                                                    class="pd-action-danger">Delete</button>
+                                            <x-icon-button icon="delete" variant="danger" label="Delete"
+                                                           wire:click="delete({{ $project->id }})"
+                                                           wire:confirm="Delete project “{{ $project->name }}”? It can be restored later." />
                                         @endcan
                                     @endif
                                 </td>
