@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,11 +16,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call(RolesAndPermissionsSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Dev bootstrap account — change the password before any shared use.
+        $superAdmin = User::firstOrCreate(
+            ['email' => 'superadmin@piodeploy.local'],
+            [
+                'name'              => 'Super Admin',
+                'password'          => bcrypt('ChangeMe-Now!1'),
+                'email_verified_at' => now(),
+            ]
+        );
+        $superAdmin->syncRoles([Role::SuperAdmin->value]);
     }
 }

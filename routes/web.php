@@ -14,4 +14,8 @@ Route::middleware([
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
+
+    Route::get('/admin/users', \App\Livewire\Admin\ManageUsers::class)
+        ->middleware('permission:users.view')
+        ->name('admin.users');
 });
