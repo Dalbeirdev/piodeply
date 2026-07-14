@@ -9,6 +9,7 @@ Route::get('/pricing', [\App\Http\Controllers\MarketingController::class, 'prici
 Route::get('/contact', [\App\Http\Controllers\MarketingController::class, 'contact'])->name('contact');
 Route::get('/privacy', [\App\Http\Controllers\MarketingController::class, 'privacy'])->name('privacy');
 Route::get('/get-started', [\App\Http\Controllers\MarketingController::class, 'getStarted'])->name('get-started');
+Route::get('/brand', [\App\Http\Controllers\MarketingController::class, 'brand'])->name('brand');
 Route::post('/leads', [\App\Http\Controllers\MarketingController::class, 'storeLead'])
     ->middleware('throttle:6,1')->name('leads.store');
 

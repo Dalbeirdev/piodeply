@@ -13,7 +13,7 @@
     <header class="nav" id="siteNav">
         <div class="container nav-inner">
             <a href="{{ route('home') }}" class="brand">
-                <img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="40" height="40">
+                <img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="52" height="52">
                 <span>PioDeploy <span class="sub">· {{ $company }}</span></span>
             </a>
             <nav class="nav-links">
@@ -58,6 +58,7 @@
                 <div>
                     <h4>Legal</h4>
                     <a href="{{ route('privacy') }}">Privacy policy</a>
+                    <a href="{{ route('brand') }}">Brand &amp; logos</a>
                     <a href="{{ route('contact') }}">Support</a>
                 </div>
             </div>

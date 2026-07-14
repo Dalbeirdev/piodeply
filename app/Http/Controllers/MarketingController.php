@@ -20,6 +20,7 @@ class MarketingController extends Controller
     public function contact()    { return view('marketing.contact'); }
     public function privacy()    { return view('marketing.privacy'); }
     public function getStarted() { return view('marketing.get-started'); }
+    public function brand()      { return view('marketing.brand'); }
 
     public function storeLead(Request $request, NotificationService $notifications)
     {
