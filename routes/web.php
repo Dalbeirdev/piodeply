@@ -36,4 +36,11 @@ Route::middleware([
         Route::get('/computers/{computer}', \App\Livewire\Computers\ComputerShow::class)->name('computers.show');
         Route::get('/computers/{computer}/edit', \App\Livewire\Computers\ComputerEdit::class)->name('computers.edit');
     });
+
+    Route::middleware('permission:packages.view')->group(function () {
+        Route::get('/packages', \App\Livewire\Packages\PackagesIndex::class)->name('packages.index');
+        Route::get('/packages/create', \App\Livewire\Packages\PackageForm::class)->name('packages.create');
+        Route::get('/packages/{package}', \App\Livewire\Packages\PackageShow::class)->name('packages.show');
+        Route::get('/packages/{package}/edit', \App\Livewire\Packages\PackageForm::class)->name('packages.edit');
+    });
 });

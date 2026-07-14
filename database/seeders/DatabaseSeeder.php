@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(RolesAndPermissionsSeeder::class);
+        $this->call(PackagesSeeder::class);
 
         // Dev bootstrap account — change the password before any shared use.
         $superAdmin = User::firstOrCreate(
