@@ -45,6 +45,16 @@ class ClientPortalTest extends TestCase
         $this->acmeUser->assignRole(RoleEnum::Client->value);
     }
 
+    public function test_unbound_client_user_gets_a_friendly_dashboard_not_a_404(): void
+    {
+        $unbound = tap(User::factory()->create(['client_id' => null]),
+            fn (User $u) => $u->assignRole(RoleEnum::Client->value));
+
+        $this->actingAs($unbound)->get('/dashboard')
+            ->assertOk()
+            ->assertSee("isn't linked to a client yet", false);
+    }
+
     public function test_client_user_sees_only_their_computers(): void
     {
         Livewire::actingAs($this->acmeUser)

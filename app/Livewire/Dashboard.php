@@ -132,7 +132,12 @@ class Dashboard extends Component
 
     private function renderClientPortal(int $clientId)
     {
-        $client = Client::findOrFail($clientId);
+        // A Client-role account with no client binding (tenant id 0) has
+        // nothing to show — a friendly notice beats a 404.
+        $client = Client::find($clientId);
+        if ($client === null) {
+            return view('livewire.client-unbound')->layout('layouts.app');
+        }
 
         $projects = Project::where('client_id', $clientId)
             ->withCount('computers')
