@@ -51,8 +51,18 @@ class ComputerService
             return $existing->fresh();
         }
 
-        /** @var Computer */
-        return $this->computers->create($attributes + ['agent_uuid' => $agentUuid]);
+        /** @var Computer $computer */
+        $computer = $this->computers->create($attributes + ['agent_uuid' => $agentUuid]);
+
+        app(NotificationService::class)->notify('computer.registered', "New computer enrolled: {$computer->hostname}", [
+            'computer' => $computer->hostname,
+            'client'   => $computer->project->client->company_name,
+            'project'  => $computer->project->name,
+            'os'       => trim(($computer->os_name ?? '') . ' ' . ($computer->windows_build ?? '')),
+            'serial'   => $computer->serial_number,
+        ]);
+
+        return $computer;
     }
 
     public function heartbeat(Computer $computer, ?string $agentVersion = null): Computer
@@ -60,7 +70,9 @@ class ComputerService
         $computer->forceFill(array_filter([
             'last_seen_at'  => now(),
             'agent_version' => $agentVersion,
-        ]))->saveQuietly(); // heartbeats must not spam the activity log
+        ]) + [
+            'offline_notified_at' => null, // machine is back — re-arm the offline alert
+        ])->saveQuietly(); // heartbeats must not spam the activity log
 
         return $computer;
     }

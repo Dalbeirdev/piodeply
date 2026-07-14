@@ -15,4 +15,16 @@ return [
         'heartbeat_seconds'        => 60,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    | An "agent offline" alert fires after this many minutes of silence —
+    | deliberately far above the online threshold so short blips stay quiet.
+    */
+
+    'notifications' => [
+        'offline_after_minutes' => env('PIODEPLOY_OFFLINE_ALERT_MINUTES', 60),
+    ],
+
 ];

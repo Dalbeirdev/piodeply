@@ -29,6 +29,10 @@ Route::middleware([
         ->middleware('permission:roles.manage')
         ->name('admin.roles');
 
+    Route::get('/admin/notifications', \App\Livewire\Admin\NotificationChannels::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.notifications');
+
     Route::post('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'start'])
         ->middleware('role:Super Admin')
         ->name('impersonate.start');

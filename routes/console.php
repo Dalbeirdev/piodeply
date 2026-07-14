@@ -15,3 +15,10 @@ Artisan::command('inspire', function () {
 //   php artisan schedule:work   (or a Task Scheduler entry running
 //   `php artisan schedule:run` every minute)
 Schedule::command('policies:enforce')->everyFiveMinutes();
+
+// One alert per outage (heartbeats re-arm it); default trips after an
+// hour offline — see config/piodeploy.php.
+Schedule::command('agents:check-offline')->everyFifteenMinutes();
+
+// Morning compliance summary for subscribed channels.
+Schedule::command('policies:drift-digest')->dailyAt('08:00');

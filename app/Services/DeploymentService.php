@@ -87,6 +87,27 @@ class DeploymentService
      */
     public function reportResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null): DeploymentJob
     {
+        $job = $this->persistResult($job, $success, $exitCode, $log, $failureReason);
+
+        // Outside the transaction, fault-isolated: a notification failure
+        // must never make an agent re-report a result.
+        if ($job->status === JobStatus::Failed) {
+            app(\App\Services\NotificationService::class)->notify('job.failed', "Deployment failed: {$job->package->name} on {$job->computer->hostname}", [
+                'computer'       => $job->computer->hostname,
+                'client'         => $job->computer->project->client->company_name,
+                'package'        => $job->package->name,
+                'action'         => $job->action->label(),
+                'attempts'       => "{$job->attempts}/{$job->max_attempts}",
+                'exit_code'      => $exitCode,
+                'failure_reason' => $failureReason,
+            ]);
+        }
+
+        return $job;
+    }
+
+    private function persistResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null): DeploymentJob
+    {
         return DB::transaction(function () use ($job, $success, $exitCode, $log, $failureReason) {
             if ($success) {
                 $job->update([
