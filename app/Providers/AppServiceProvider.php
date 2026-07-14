@@ -28,6 +28,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Agent API: generous but bounded — one fleet key shouldn't starve others.
+        \Illuminate\Support\Facades\RateLimiter::for('agent', function (\Illuminate\Http\Request $request) {
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(240)
+                ->by(sha1((string) $request->header('X-Api-Key', $request->ip())));
+        });
+
         // Super Admin passes every ability check, including future ones.
         Gate::before(function (User $user, string $ability) {
             return $user->hasRole(Role::SuperAdmin->value) ? true : null;

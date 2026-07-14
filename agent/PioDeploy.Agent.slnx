@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PioDeploy.Agent/PioDeploy.Agent.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PioDeploy.Agent.Tests/PioDeploy.Agent.Tests.csproj" />
+  </Folder>
+</Solution>
