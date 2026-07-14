@@ -216,6 +216,58 @@ class ComputerManagementTest extends TestCase
         $this->assertNull($computer->fresh()->deleted_at);
     }
 
+    public function test_show_page_surfaces_health_warnings(): void
+    {
+        $computer = Computer::factory()->create([
+            'last_seen_at'     => now()->subDays(3),
+            'secure_boot'      => false,
+            'tpm_enabled'      => null,
+            'disk_total_bytes' => 500 * 1024 ** 3,
+            'disk_free_bytes'  => 20 * 1024 ** 3, // 4% free
+        ]);
+        \App\Models\DeploymentJob::factory()->failed()->create(['computer_id' => $computer->id]);
+
+        $this->actingAs($this->admin())
+            ->get("/computers/{$computer->id}")
+            ->assertOk()
+            ->assertSee('Attention required')
+            ->assertSee('Offline for')
+            ->assertSee('Low disk space')
+            ->assertSee('Secure Boot is disabled')
+            ->assertSee('TPM state unknown')
+            ->assertSee('failed deployment');
+    }
+
+    public function test_healthy_computer_shows_no_issues(): void
+    {
+        $computer = Computer::factory()->online()->create([
+            'secure_boot'      => true,
+            'tpm_enabled'      => true,
+            'disk_total_bytes' => 500 * 1024 ** 3,
+            'disk_free_bytes'  => 300 * 1024 ** 3,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get("/computers/{$computer->id}")
+            ->assertOk()
+            ->assertSee('No issues detected')
+            ->assertSee('40% used'); // disk meter
+    }
+
+    public function test_show_page_lists_recent_deployments_and_stats(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = \App\Models\Package::factory()->create(['name' => 'History Pkg']);
+        \App\Models\DeploymentJob::factory()->succeeded()->create(['computer_id' => $computer->id, 'package_id' => $package->id]);
+        \App\Models\DeploymentJob::factory()->create(['computer_id' => $computer->id]); // pending
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertViewHas('stats', fn ($stats) => $stats['succeeded'] === 1 && $stats['in_flight'] === 1)
+            ->assertSee('History Pkg')
+            ->assertSee('Recent deployments');
+    }
+
     public function test_menu_shows_computers_for_permitted_users(): void
     {
         $this->actingAs($this->admin())->get('/dashboard')->assertSee('Computers');
