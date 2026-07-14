@@ -6,11 +6,11 @@ use App\Models\Package;
 use App\Repositories\Contracts\PackageRepositoryInterface;
 use App\Services\PackageService;
 use Livewire\Component;
-use Livewire\WithPagination;
+use App\Livewire\Concerns\WithCompactPagination;
 
 class PackagesIndex extends Component
 {
-    use WithPagination;
+    use WithCompactPagination;
 
     public string $search = '';
 

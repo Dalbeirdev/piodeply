@@ -5,11 +5,11 @@ namespace App\Livewire\Admin;
 use App\Enums\Role as RoleEnum;
 use App\Models\User;
 use Livewire\Component;
-use Livewire\WithPagination;
+use App\Livewire\Concerns\WithCompactPagination;
 
 class ManageUsers extends Component
 {
-    use WithPagination;
+    use WithCompactPagination;
 
     public string $search = '';
 

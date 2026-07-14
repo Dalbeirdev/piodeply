@@ -5,11 +5,11 @@ namespace App\Livewire\Deployments;
 use App\Models\DeploymentJob;
 use App\Services\DeploymentService;
 use Livewire\Component;
-use Livewire\WithPagination;
+use App\Livewire\Concerns\WithCompactPagination;
 
 class DeploymentsIndex extends Component
 {
-    use WithPagination;
+    use WithCompactPagination;
 
     public string $search = '';
 

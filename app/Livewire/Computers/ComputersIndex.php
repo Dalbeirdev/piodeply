@@ -6,11 +6,11 @@ use App\Models\Computer;
 use App\Repositories\Contracts\ComputerRepositoryInterface;
 use App\Services\ComputerService;
 use Livewire\Component;
-use Livewire\WithPagination;
+use App\Livewire\Concerns\WithCompactPagination;
 
 class ComputersIndex extends Component
 {
-    use WithPagination;
+    use WithCompactPagination;
 
     public string $search = '';
 

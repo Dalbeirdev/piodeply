@@ -6,11 +6,11 @@ use App\Models\Project;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
 use App\Services\ProjectService;
 use Livewire\Component;
-use Livewire\WithPagination;
+use App\Livewire\Concerns\WithCompactPagination;
 
 class ProjectsIndex extends Component
 {
-    use WithPagination;
+    use WithCompactPagination;
 
     public string $search = '';
 

@@ -7,12 +7,12 @@ use App\Repositories\Contracts\ClientRepositoryInterface;
 use App\Services\ClientService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Livewire\WithPagination;
+use App\Livewire\Concerns\WithCompactPagination;
 
 class ClientsIndex extends Component
 {
     use WithFileUploads;
-    use WithPagination;
+    use WithCompactPagination;
 
     public string $search = '';
 

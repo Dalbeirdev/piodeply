@@ -28,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Compact pagination everywhere (Previous / Next + page summary).
+        \Illuminate\Pagination\Paginator::defaultView('pagination.compact');
+        \Illuminate\Pagination\Paginator::defaultSimpleView('pagination.compact');
+
         // Agent API: generous but bounded — one fleet key shouldn't starve others.
         \Illuminate\Support\Facades\RateLimiter::for('agent', function (\Illuminate\Http\Request $request) {
             return \Illuminate\Cache\RateLimiting\Limit::perMinute(240)
