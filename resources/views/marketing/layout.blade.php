@@ -40,8 +40,7 @@
             <div class="footer-grid">
                 <div>
                     <div class="brand"><span class="logo">P</span><span>PioDeploy</span></div>
-                    <p class="fdesc">Centralised software deployment, patch management and browser-policy
-                        enforcement for Windows fleets — built for MSPs by {{ $company }}.</p>
+                    <p class="fdesc">{{ $content->get('footer.tagline') }} Built for MSPs by {{ $company }}.</p>
                 </div>
                 <div>
                     <h4>Product</h4>

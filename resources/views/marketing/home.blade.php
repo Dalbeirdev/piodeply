@@ -6,9 +6,8 @@
         <div class="hero-grid">
             <div>
                 <span class="eyebrow">◆ MSP deployment platform</span>
-                <h1>Deploy software to your whole fleet. Silently.</h1>
-                <p class="lead">Install, update, patch and lock down software across every managed
-                    Windows machine — from one portal, with real-time compliance and zero user interruption.</p>
+                <h1>{{ $content->get('home.hero_title') }}</h1>
+                <p class="lead">{{ $content->get('home.hero_subtitle') }}</p>
                 <div class="hero-actions">
                     <a href="{{ route('get-started') }}" class="btn btn-primary btn-lg">Request access →</a>
                     <a href="{{ route('home') }}#how" class="btn btn-light btn-lg">See how it works</a>
@@ -114,8 +113,8 @@
 <section class="section">
     <div class="container">
         <div class="cta">
-            <h2>Ready to take control of your fleet?</h2>
-            <p>Request access and we'll get you set up with a trial tenant and the agent for your first project.</p>
+            <h2>{{ $content->get('home.cta_title') }}</h2>
+            <p>{{ $content->get('home.cta_text') }}</p>
             <a href="{{ route('get-started') }}" class="btn btn-primary btn-lg">Request access →</a>
         </div>
     </div>

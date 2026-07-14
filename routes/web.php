@@ -12,6 +12,13 @@ Route::get('/get-started', [\App\Http\Controllers\MarketingController::class, 'g
 Route::post('/leads', [\App\Http\Controllers\MarketingController::class, 'storeLead'])
     ->middleware('throttle:6,1')->name('leads.store');
 
+// Billing (Stripe Checkout). Webhook is CSRF-exempt (see bootstrap/app.php)
+// and HMAC-verified instead.
+Route::post('/billing/checkout', [\App\Http\Controllers\BillingController::class, 'checkout'])
+    ->middleware('throttle:12,1')->name('billing.checkout');
+Route::get('/billing/success', [\App\Http\Controllers\BillingController::class, 'success'])->name('billing.success');
+Route::post('/billing/webhook', [\App\Http\Controllers\BillingController::class, 'webhook'])->name('billing.webhook');
+
 // Public agent download (the token is the secret; keys are never embedded).
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/download/agent/{token}', [\App\Http\Controllers\AgentDownloadController::class, 'script'])
@@ -46,6 +53,14 @@ Route::middleware([
     Route::get('/admin/settings', \App\Livewire\Admin\SettingsPage::class)
         ->middleware('permission:settings.manage')
         ->name('admin.settings');
+
+    Route::get('/admin/content', \App\Livewire\Admin\ManageContent::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.content');
+
+    Route::get('/admin/billing', \App\Livewire\Admin\BillingSettings::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.billing');
 
     Route::post('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'start'])
         ->middleware('role:Super Admin')

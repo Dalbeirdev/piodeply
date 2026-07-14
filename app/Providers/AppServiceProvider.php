@@ -34,9 +34,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Shared branding for the public marketing site.
         \Illuminate\Support\Facades\View::composer('marketing.*', function ($view) {
+            $content = app(\App\Services\SiteContentService::class);
             $view->with([
                 'company' => app(\App\Services\SettingsService::class)->get('branding.company_name'),
-                'email'   => config('mail.from.address') ?: 'hello@piodeploy.app',
+                'email'   => $content->get('contact.email') ?: (config('mail.from.address') ?: 'hello@piodeploy.app'),
+                'content' => $content,
+                'billing' => app(\App\Services\BillingService::class),
             ]);
         });
 

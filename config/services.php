@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Stripe — international card payments. Keys live in .env, never the DB.
+    // Test keys start sk_test_ / pk_test_; go live by swapping in sk_live_ / pk_live_.
+    'stripe' => [
+        'key'            => env('STRIPE_KEY'),            // pk_… publishable (safe to expose)
+        'secret'         => env('STRIPE_SECRET'),         // sk_… secret (server only)
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'), // whsec_… for signature verification
+    ],
+
 ];

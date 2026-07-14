@@ -7,10 +7,7 @@
     <div class="container">
         <span class="eyebrow">Pricing</span>
         <h1>Pay for what you manage</h1>
-        <p class="muted" style="max-width:52ch;margin:1rem auto 0;font-size:1.15rem;">
-            Priced per endpoint under management. Every plan includes the complete platform —
-            no feature gates, no per-seat admin fees.
-        </p>
+        <p class="muted" style="max-width:52ch;margin:1rem auto 0;font-size:1.15rem;">{{ $content->get('pricing.intro') }}</p>
     </div>
 </section>
 

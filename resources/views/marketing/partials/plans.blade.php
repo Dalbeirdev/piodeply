@@ -20,9 +20,20 @@
                     <li>{!! $tick !!} <span>{{ $item }}</span></li>
                 @endforeach
             </ul>
-            <a href="{{ route('get-started') }}" class="btn {{ $featured ? 'btn-primary' : 'btn-ghost' }}" style="justify-content:center;">
-                {{ $name === 'Enterprise' ? 'Contact sales' : 'Get started' }}
-            </a>
+            @php $planKey = strtolower($name); @endphp
+            @if (isset($billing) && $billing->isConfigured() && array_key_exists($planKey, \App\Services\BillingService::PLANS))
+                <form method="POST" action="{{ route('billing.checkout') }}" style="display:flex;gap:8px;align-items:center;">
+                    @csrf
+                    <input type="hidden" name="plan" value="{{ $planKey }}">
+                    <input type="number" name="endpoints" value="50" min="1" aria-label="Endpoints"
+                           style="width:5.5rem;padding:.6rem;border:1px solid var(--slate-300);border-radius:10px;font-family:inherit;">
+                    <button class="btn {{ $featured ? 'btn-primary' : 'btn-ghost' }}" style="flex:1;justify-content:center;">Subscribe</button>
+                </form>
+            @else
+                <a href="{{ route('get-started') }}" class="btn {{ $featured ? 'btn-primary' : 'btn-ghost' }}" style="justify-content:center;">
+                    {{ $name === 'Enterprise' ? 'Contact sales' : 'Get started' }}
+                </a>
+            @endif
         </div>
     @endforeach
 </div>

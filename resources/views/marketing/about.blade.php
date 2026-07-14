@@ -7,10 +7,7 @@
     <div class="container">
         <span class="eyebrow">About us</span>
         <h1>Built by an MSP, for MSPs</h1>
-        <p class="muted" style="max-width:56ch;margin:1rem auto 0;font-size:1.15rem;">
-            We got tired of stitching together scripts, GPOs and half a dozen tools to keep client
-            fleets patched and compliant. So we built the platform we wanted.
-        </p>
+        <p class="muted" style="max-width:56ch;margin:1rem auto 0;font-size:1.15rem;">{{ $content->get('about.intro') }}</p>
     </div>
 </section>
 
