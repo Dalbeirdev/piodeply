@@ -104,6 +104,60 @@ class DeploymentJob extends Model
     }
 
     /**
+     * winget exit codes that mean "nothing needed doing". The agent treats
+     * these as success (see WingetInstaller.cs, which must stay in step), but
+     * "Succeeded" alone hides the difference between installing something and
+     * finding it already there.
+     */
+    private const WINGET_ALREADY_INSTALLED = -1978335189;            // 0x8A15002B
+
+    private const WINGET_NO_APPLICABLE_UPGRADE = -1978335188;        // 0x8A15002C
+
+    private const WINGET_ALREADY_INSTALLED_NO_UPGRADE = -1978335135; // 0x8A150061
+
+    /**
+     * Why this job is where it is, in words. Every branch reads from what was
+     * actually recorded — an unexplained outcome says so rather than
+     * inventing a reason.
+     */
+    public function reasonLabel(): string
+    {
+        return match ($this->status) {
+            JobStatus::Failed => $this->failure_reason ?? 'Failed without reporting a reason',
+
+            JobStatus::Cancelled => 'Cancelled before it ran',
+
+            JobStatus::Blocked => $this->depends_on_job_id !== null
+                ? "Waiting on job #{$this->depends_on_job_id} to succeed"
+                : 'Blocked',
+
+            JobStatus::Running => 'Running on the machine now',
+
+            JobStatus::Pending => $this->attempts > 0
+                ? 'Retrying after: ' . ($this->failure_reason ?? 'an unreported failure')
+                    . " (attempt {$this->attempts} of {$this->max_attempts})"
+                : 'Queued — waiting for the agent to check in',
+
+            JobStatus::Succeeded => $this->successReason(),
+        };
+    }
+
+    private function successReason(): string
+    {
+        return match ($this->exit_code) {
+            self::WINGET_ALREADY_INSTALLED,
+            self::WINGET_ALREADY_INSTALLED_NO_UPGRADE => 'Already installed — nothing was changed',
+            self::WINGET_NO_APPLICABLE_UPGRADE => 'Already up to date — no newer version offered',
+            default => match ($this->action) {
+                JobAction::Uninstall => 'Removed',
+                default => $this->installed_version_after !== null
+                    ? "Completed — now on {$this->installed_version_after}"
+                    : 'Completed',
+            },
+        };
+    }
+
+    /**
      * What this job does to the machine's version, in one string:
      * "138.0 → 141.0" when both ends are known, "138.0 → latest" while the
      * destination is still the agent's to resolve, a bare version for a

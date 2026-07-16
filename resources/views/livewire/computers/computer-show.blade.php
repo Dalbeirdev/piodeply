@@ -345,6 +345,68 @@
                 @endif
             </div>
 
+            {{-- Why software is, or is not, where it should be. Answers the
+                 question the job list cannot: nothing happened, and why. --}}
+            <div class="pd-card">
+                <div class="flex items-center justify-between px-6 pt-5 pb-2">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Software status
+                        <span class="ml-1 text-slate-400 font-normal normal-case">— what each policy wants here, and why</span>
+                    </h3>
+                    <a href="{{ route('policies.index') }}" class="text-sm pd-action">Policies →</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-100">
+                        <thead>
+                            <tr>
+                                <th class="pd-th">Package</th>
+                                <th class="pd-th">Policy wants</th>
+                                <th class="pd-th">Installed</th>
+                                <th class="pd-th">State</th>
+                                <th class="pd-th">Why</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @forelse ($policyExplanations as $row)
+                                @php
+                                    $badge = match ($row['status']) {
+                                        'compliant'     => 'pd-badge-green',
+                                        'non_compliant' => 'pd-badge-red',
+                                        'failed'        => 'pd-badge-red',
+                                        'pending'       => 'pd-badge-sky',
+                                        'scheduled'     => 'pd-badge-amber',
+                                        default         => 'pd-badge-slate',
+                                    };
+                                @endphp
+                                <tr>
+                                    <td class="px-6 py-3 whitespace-nowrap">
+                                        <a href="{{ route('packages.show', $row['policy']->package) }}"
+                                           class="pd-link text-sm">{{ $row['policy']->package->name }}</a>
+                                    </td>
+                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600">
+                                        {{ $row['policy']->action->label() }}
+                                        @if ($row['policy']->mode !== \App\Enums\PolicyMode::Enforce)
+                                            <span class="ml-1 text-xs text-slate-400">({{ $row['policy']->mode->label() }})</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500 font-mono text-[13px]">
+                                        {{ $row['installed_version'] ?? '—' }}
+                                    </td>
+                                    <td class="px-6 py-3 whitespace-nowrap">
+                                        <span class="pd-badge {{ $badge }}"><span class="pd-dot"></span>{{ str($row['status'])->replace('_', ' ')->ucfirst() }}</span>
+                                    </td>
+                                    <td class="px-6 py-3 text-sm text-slate-600">{{ $row['reason'] }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">
+                                    No software policies target this machine's project, so nothing is being enforced here.
+                                </td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {{-- Recent deployments --}}
             <div class="pd-card">
                 <div class="flex items-center justify-between px-6 pt-5 pb-2">
@@ -401,6 +463,71 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {{-- Deployment log: every attempt with the reason it ended that
+                 way, and the agent's own output behind it. --}}
+            <div class="pd-card">
+                <div class="px-6 pt-5 pb-2">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                        Deployment log
+                        <span class="ml-1 text-slate-400 font-normal normal-case">— every attempt and why it ended that way</span>
+                    </h3>
+                </div>
+                <ul class="divide-y divide-slate-100">
+                    @forelse ($jobLog as $job)
+                        @php
+                            $dot = match ($job->status) {
+                                \App\Enums\JobStatus::Succeeded => 'bg-green-500',
+                                \App\Enums\JobStatus::Failed    => 'bg-red-500',
+                                \App\Enums\JobStatus::Running   => 'bg-sky-500',
+                                \App\Enums\JobStatus::Blocked   => 'bg-amber-500',
+                                default                         => 'bg-slate-300',
+                            };
+                        @endphp
+                        <li class="px-6 py-3" x-data="{ open: false }">
+                            <div class="flex items-start gap-3">
+                                <span class="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 {{ $dot }}"></span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm text-slate-700">
+                                        <span class="font-medium">{{ $job->action->label() }}</span>
+                                        {{ $job->package->name }}
+                                        @if ($label = $job->versionLabel())
+                                            <span class="text-xs text-slate-400 font-mono">({{ $label }})</span>
+                                        @endif
+                                    </p>
+                                    <p class="text-sm text-slate-500">{{ $job->reasonLabel() }}</p>
+
+                                    @if ($job->output_log || $job->exit_code !== null)
+                                        <button type="button" @click="open = ! open"
+                                                class="mt-1 text-xs pd-link" :aria-expanded="open ? 'true' : 'false'">
+                                            <span x-text="open ? 'Hide agent output' : 'Show agent output'">Show agent output</span>
+                                            @if ($job->exit_code !== null)
+                                                <span class="text-slate-400 font-mono">· exit {{ $job->exit_code }}</span>
+                                            @endif
+                                        </button>
+                                        <pre x-show="open" x-cloak x-collapse
+                                             class="mt-2 bg-slate-900 text-slate-100 rounded-lg p-3 overflow-x-auto text-xs whitespace-pre-wrap break-words max-h-72">{{ $job->output_log ?: '(the agent reported no output)' }}</pre>
+                                    @endif
+                                </div>
+                                <time class="text-xs text-slate-400 whitespace-nowrap shrink-0"
+                                      datetime="{{ ($job->finished_at ?? $job->created_at)->toIso8601String() }}">
+                                    {{ ($job->finished_at ?? $job->created_at)->diffForHumans() }}
+                                </time>
+                            </div>
+                        </li>
+                    @empty
+                        <li class="px-6 py-8 text-center text-slate-400">
+                            Nothing has been deployed to this machine yet, so there is nothing to explain.
+                        </li>
+                    @endforelse
+                </ul>
+                @if ($jobLog->count() >= 30)
+                    <p class="px-6 py-2 text-xs text-slate-400 border-t border-slate-100">
+                        Showing the 30 most recent attempts —
+                        <a href="{{ route('deployments.index') }}" class="pd-link">Deployments</a> has the full history.
+                    </p>
+                @endif
             </div>
         </div>
     </div>

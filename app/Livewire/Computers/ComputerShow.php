@@ -6,6 +6,7 @@ use App\Enums\JobAction;
 use App\Enums\JobStatus;
 use App\Models\Computer;
 use App\Models\DeploymentJob;
+use App\Services\PolicyService;
 use Livewire\Component;
 use Spatie\Activitylog\Models\Activity;
 
@@ -113,6 +114,14 @@ class ComputerShow extends Component
                 ->withRepeatCount()
                 ->onlyLatestPerTask()
                 ->orderByDesc('id')->limit(8)->get(),
+            // Why each policy is or is not acting here — the answer to
+            // "so why isn't it installed?" when there is no job to point at.
+            'policyExplanations' => app(PolicyService::class)->explainFor($this->computer),
+            'jobLog' => DeploymentJob::with(['package'])
+                ->where('computer_id', $this->computer->id)
+                ->orderByDesc('id')
+                ->limit(30)
+                ->get(),
             'recentActivity' => Activity::where('subject_type', Computer::class)
                 ->where('subject_id', $this->computer->id)
                 ->latest()->limit(5)->get(),

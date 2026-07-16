@@ -246,50 +246,91 @@ class PolicyService
         $excluded = $policy->excludedComputers()->pluck('computers.id')->flip();
 
         return $policy->project->computers()->orderBy('hostname')->get()
-            ->map(function (Computer $computer) use ($policy, $excluded) {
-                $state = $this->installedStateOn($policy->package, $computer);
+            ->map(fn (Computer $computer) => $this->evaluate($policy, $computer, $excluded->has($computer->id)));
+    }
 
-                if ($excluded->has($computer->id)) {
-                    return $this->row($computer, 'excluded', $state['version'], 'Excluded from this policy');
+    /**
+     * Why each of the project's policies is — or is not — acting on this one
+     * machine. The computer-centric inverse of complianceFor(): same
+     * reasoning, asked from the other end, for "why is this not installed?".
+     *
+     * @return Collection<int, array{policy: SoftwarePolicy, status: string, reason: string, installed_version: ?string}>
+     */
+    public function explainFor(Computer $computer): Collection
+    {
+        return SoftwarePolicy::with('package')
+            ->where('project_id', $computer->project_id)
+            ->get()
+            ->map(function (SoftwarePolicy $policy) use ($computer) {
+                // Two reasons nothing will ever happen, which the compliance
+                // evaluation does not model because it never sees them.
+                if (! $policy->package->is_active) {
+                    $row = $this->row($computer, 'disabled', null, 'Package is not active in the catalogue — no jobs will run');
+                } elseif ($policy->mode === \App\Enums\PolicyMode::Disabled) {
+                    $row = $this->row($computer, 'disabled', null, 'Policy is disabled');
+                } else {
+                    $row = $this->evaluate(
+                        $policy,
+                        $computer,
+                        $policy->excludedComputers()->whereKey($computer->id)->exists()
+                    );
                 }
 
-                $remediation = $this->remediationFor($policy, $computer);
+                return ['policy' => $policy] + $row;
+            })
+            ->sortBy(fn (array $row) => $row['policy']->package->name)
+            ->values();
+    }
 
-                if ($remediation === null) {
-                    return $this->row($computer, 'compliant', $state['version'], $this->compliantReason($policy, $state));
-                }
+    /**
+     * One policy against one machine: its status and, in words, why.
+     *
+     * @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string}
+     */
+    private function evaluate(SoftwarePolicy $policy, Computer $computer, bool $excluded): array
+    {
+        $state = $this->installedStateOn($policy->package, $computer);
 
-                // Routine latest-updates: a recent success means "current
-                // as of the last run", not drift.
-                if ($policy->action === PolicyAction::Update
-                    && $policy->version_mode === PolicyVersionMode::Latest
-                    && $this->hasRecentSuccess($policy, $computer, JobAction::Update)) {
-                    return $this->row($computer, 'compliant', $state['version'], 'Updated within the last ' . $policy->frequency->label() . ' run');
-                }
+        if ($excluded) {
+            return $this->row($computer, 'excluded', $state['version'], 'Excluded from this policy');
+        }
 
-                if ($this->hasJobInFlight($policy, $computer)) {
-                    return $this->row($computer, 'pending', $state['version'], 'Remediation job queued or running');
-                }
+        $remediation = $this->remediationFor($policy, $computer);
 
-                // Drift exists but the schedule holds it back.
-                if (! $this->ringEligible($policy, $computer)) {
-                    $eligibleAt = $policy->ringEligibleAt($computer->ring);
+        if ($remediation === null) {
+            return $this->row($computer, 'compliant', $state['version'], $this->compliantReason($policy, $state));
+        }
 
-                    return $this->row($computer, 'scheduled', $state['version'],
-                        "{$computer->ring->label()} ring eligible {$eligibleAt->diffForHumans()}");
-                }
+        // Routine latest-updates: a recent success means "current as of the
+        // last run", not drift.
+        if ($policy->action === PolicyAction::Update
+            && $policy->version_mode === PolicyVersionMode::Latest
+            && $this->hasRecentSuccess($policy, $computer, JobAction::Update)) {
+            return $this->row($computer, 'compliant', $state['version'], 'Updated within the last ' . $policy->frequency->label() . ' run');
+        }
 
-                if (! $policy->isInWindow()) {
-                    return $this->row($computer, 'scheduled', $state['version'],
-                        "Waiting for maintenance window ({$policy->windowLabel()})");
-                }
+        if ($this->hasJobInFlight($policy, $computer)) {
+            return $this->row($computer, 'pending', $state['version'], 'Remediation job queued or running');
+        }
 
-                if ($this->lastAttemptFailed($policy, $computer)) {
-                    return $this->row($computer, 'failed', $state['version'], 'Last attempt failed or was cancelled — backing off');
-                }
+        // Drift exists but the schedule holds it back.
+        if (! $this->ringEligible($policy, $computer)) {
+            $eligibleAt = $policy->ringEligibleAt($computer->ring);
 
-                return $this->row($computer, 'non_compliant', $state['version'], $this->driftReason($policy, $state));
-            });
+            return $this->row($computer, 'scheduled', $state['version'],
+                "{$computer->ring->label()} ring eligible {$eligibleAt->diffForHumans()}");
+        }
+
+        if (! $policy->isInWindow()) {
+            return $this->row($computer, 'scheduled', $state['version'],
+                "Waiting for maintenance window ({$policy->windowLabel()})");
+        }
+
+        if ($this->lastAttemptFailed($policy, $computer)) {
+            return $this->row($computer, 'failed', $state['version'], 'Last attempt failed or was cancelled — backing off');
+        }
+
+        return $this->row($computer, 'non_compliant', $state['version'], $this->driftReason($policy, $state));
     }
 
     /**
