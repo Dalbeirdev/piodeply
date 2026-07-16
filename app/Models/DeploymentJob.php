@@ -15,7 +15,7 @@ class DeploymentJob extends Model
 
     protected $fillable = [
         'computer_id', 'package_id', 'package_version_id', 'target_version',
-        'installed_version_before',
+        'installed_version_before', 'installed_version_after',
         'action', 'status', 'priority', 'depends_on_job_id',
         'attempts', 'max_attempts', 'created_by',
         'claimed_at', 'finished_at', 'exit_code', 'output_log', 'failure_reason',
@@ -81,14 +81,19 @@ class DeploymentJob extends Model
 
     /**
      * What this job does to the machine's version, in one string:
-     * "138.0 → 141.0" when both ends are known, "138.0 → latest" when the
-     * agent resolves the target, a bare version for a fresh install, and
-     * null when nothing useful is knowable (binary packages).
+     * "138.0 → 141.0" when both ends are known, "138.0 → latest" while the
+     * destination is still the agent's to resolve, a bare version for a
+     * fresh install, and null when nothing is knowable (binary packages).
+     *
+     * Once the agent reports back, the destination is what was actually
+     * found installed rather than what was asked for — an "→ latest" job
+     * resolves to a real number, and a target that did not take is visible
+     * instead of being assumed.
      */
     public function versionLabel(): ?string
     {
         $from = $this->installed_version_before;
-        $to = $this->intendedVersion();
+        $to = $this->installed_version_after ?? $this->intendedVersion();
 
         // Removal has no destination version.
         if ($this->action === JobAction::Uninstall) {

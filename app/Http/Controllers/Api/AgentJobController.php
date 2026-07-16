@@ -45,6 +45,9 @@ class AgentJobController extends Controller
             'exit_code'      => ['nullable', 'integer'],
             'output_log'     => ['nullable', 'string', 'max:65535'],
             'failure_reason' => ['nullable', 'string', 'max:255'],
+            // Agent 1.3.0+ reports what it found installed afterwards.
+            // Optional, so older agents keep working unchanged.
+            'installed_version' => ['nullable', 'string', 'max:100'],
         ]);
 
         $job = $this->deployments->reportResult(
@@ -53,6 +56,7 @@ class AgentJobController extends Controller
             $validated['exit_code'] ?? null,
             $validated['output_log'] ?? null,
             $validated['failure_reason'] ?? null,
+            $validated['installed_version'] ?? null,
         );
 
         return response()->json(['status' => $job->status->value]);

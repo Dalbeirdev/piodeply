@@ -169,6 +169,12 @@ public sealed class Worker : BackgroundService
 
                 var result = await _engine.ExecuteAsync(job, ct);
 
+                // A job changes what is installed, so re-read the machine
+                // rather than leave the server on an inventory up to an hour
+                // stale — it is what "already installed" is judged against.
+                // One scan answers both questions.
+                var software = await TryCollectSoftwareAsync(ct);
+
                 await _api.ReportJobResultAsync(job.JobId, new JobResultRequest
                 {
                     AgentUuid = _identity.GetAgentUuid(),
@@ -176,8 +182,31 @@ public sealed class Worker : BackgroundService
                     ExitCode = result.ExitCode,
                     OutputLog = Truncate(result.Log, 60_000),
                     FailureReason = result.FailureReason,
+                    InstalledVersion = software is null
+                        ? null
+                        : InstalledVersionResolver.Resolve(software, job),
                 }, ct);
+
+                if (software is not null)
+                {
+                    await SendSoftwareAsync(ct, software);
+                }
             }
+        }
+    }
+
+    /// <summary>Collecting inventory must never turn a completed job into an
+    /// unreported one — the result matters more than the version beside it.</summary>
+    private async Task<IReadOnlyList<SoftwareEntry>?> TryCollectSoftwareAsync(CancellationToken ct)
+    {
+        try
+        {
+            return await _software.CollectAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Post-job software scan failed; reporting result without a version");
+            return null;
         }
     }
 
@@ -239,11 +268,14 @@ public sealed class Worker : BackgroundService
         }
     }
 
-    private async Task SendSoftwareAsync(CancellationToken ct)
+    /// <summary>Sends the software inventory, reusing an already-collected
+    /// list when the caller has one (a scan is slow — winget export shells
+    /// out — so a job should not pay for it twice).</summary>
+    private async Task SendSoftwareAsync(CancellationToken ct, IReadOnlyList<SoftwareEntry>? collected = null)
     {
         try
         {
-            var software = await _software.CollectAsync(ct);
+            var software = collected ?? await _software.CollectAsync(ct);
 
             var ok = await _api.SendSoftwareAsync(new SoftwareRequest
             {

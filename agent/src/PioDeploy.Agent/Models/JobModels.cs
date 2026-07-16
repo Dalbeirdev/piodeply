@@ -30,6 +30,11 @@ public sealed class JobResultRequest
     [JsonPropertyName("exit_code")] public int? ExitCode { get; set; }
     [JsonPropertyName("output_log")] public string? OutputLog { get; set; }
     [JsonPropertyName("failure_reason")] public string? FailureReason { get; set; }
+
+    /// <summary>What the package reports as installed once the job finished.
+    /// Null when the package manager has no row for it (an uninstall, or a
+    /// failed install) or the package carries no matchable id.</summary>
+    [JsonPropertyName("installed_version")] public string? InstalledVersion { get; set; }
 }
 
 public sealed class SoftwareEntry

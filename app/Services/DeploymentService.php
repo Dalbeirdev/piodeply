@@ -166,9 +166,9 @@ class DeploymentService
      * returns to Pending; otherwise it is terminal. Success releases any
      * jobs waiting on it.
      */
-    public function reportResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null): DeploymentJob
+    public function reportResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null, ?string $installedVersion = null): DeploymentJob
     {
-        $job = $this->persistResult($job, $success, $exitCode, $log, $failureReason);
+        $job = $this->persistResult($job, $success, $exitCode, $log, $failureReason, $installedVersion);
 
         // Outside the transaction, fault-isolated: a notification failure
         // must never make an agent re-report a result.
@@ -187,9 +187,15 @@ class DeploymentService
         return $job;
     }
 
-    private function persistResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null): DeploymentJob
+    private function persistResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null, ?string $installedVersion = null): DeploymentJob
     {
-        return DB::transaction(function () use ($job, $success, $exitCode, $log, $failureReason) {
+        return DB::transaction(function () use ($job, $success, $exitCode, $log, $failureReason, $installedVersion) {
+            // Agents older than 1.3.0 send no version; keep whatever an
+            // earlier attempt recorded rather than blanking it.
+            $observed = $installedVersion !== null
+                ? ['installed_version_after' => $installedVersion]
+                : [];
+
             if ($success) {
                 $job->update([
                     'status'         => JobStatus::Succeeded,
@@ -197,6 +203,7 @@ class DeploymentService
                     'output_log'     => $log,
                     'failure_reason' => null,
                     'finished_at'    => now(),
+                    ...$observed,
                 ]);
                 $this->releaseDependents($job);
             } elseif ($job->canRetry()) {
@@ -207,6 +214,7 @@ class DeploymentService
                     'output_log'     => $log,
                     'failure_reason' => $failureReason,
                     'claimed_at'     => null,
+                    ...$observed,
                 ]);
             } else {
                 $job->update([
@@ -215,6 +223,7 @@ class DeploymentService
                     'output_log'     => $log,
                     'failure_reason' => $failureReason,
                     'finished_at'    => now(),
+                    ...$observed,
                 ]);
                 $this->failDependents($job);
             }
