@@ -260,15 +260,16 @@
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
                         Installed software
                         <span class="ml-1 text-slate-400 font-normal normal-case">
-                            ({{ $softwareManaged }} managed · {{ $softwareTotal }} detected)
+                            ({{ $softwareDeployed }} by PioDeploy · {{ $softwareManaged }} managed · {{ $softwareTotal }} detected)
                         </span>
                     </h3>
                     <div class="flex items-center gap-4">
-                        <label class="flex items-center gap-2 text-sm text-slate-600 whitespace-nowrap">
-                            <input type="checkbox" wire:model.live="softwareManagedOnly"
-                                   class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
-                            Managed only
-                        </label>
+                        <select wire:model.live="softwareFilter" aria-label="Filter software"
+                                class="border-slate-300 rounded-md shadow-sm text-sm py-1.5">
+                            <option value="managed">In catalogue</option>
+                            <option value="deployed">Deployed by PioDeploy</option>
+                            <option value="all">All software</option>
+                        </select>
                         <input type="search" wire:model.live.debounce.300ms="softwareSearch"
                                placeholder="Search software…" aria-label="Search installed software"
                                class="pd-input w-64 py-1.5">
@@ -283,6 +284,7 @@
                                 <th class="pd-th">Publisher</th>
                                 <th class="pd-th">Source</th>
                                 <th class="pd-th">Catalogue</th>
+                                <th class="pd-th">Installed by</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -302,13 +304,34 @@
                                             <span class="text-xs text-slate-300">—</span>
                                         @endif
                                     </td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap">
+                                        @if ($deployedNames->contains($item->name))
+                                            <span class="pd-badge pd-badge-sky"
+                                                  title="A PioDeploy job installed this on {{ $computer->hostname }}">PioDeploy</span>
+                                        @else
+                                            {{-- Absence of a job is not proof it predates us, so say
+                                                 nothing rather than claim "pre-existing". --}}
+                                            <span class="text-xs text-slate-300" title="No PioDeploy install job for this package on this machine">—</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">
+                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">
                                     @if ($softwareTotal === 0)
                                         No software inventory reported yet — it arrives with the agent's next report.
-                                    @elseif ($softwareManagedOnly && $softwareSearch === '')
-                                        No managed catalogue software detected — untick “Managed only” to see all {{ $softwareTotal }} entries.
+                                    @elseif ($softwareSearch !== '')
+                                        No software matches your search.
+                                    @elseif ($softwareFilter === 'deployed')
+                                        No PioDeploy installs recorded on this machine yet.
+                                    @elseif ($softwareFilter === 'managed')
+                                        No catalogue software detected out of {{ $softwareTotal }} entries — switch to
+                                        <b>All software</b> to see them.
+                                        @if ($computer->agent_version && version_compare($computer->agent_version, '1.3.1', '<'))
+                                            <span class="block mt-2 text-amber-600">
+                                                <b>This agent is {{ $computer->agent_version }}.</b>
+                                                <span>Agents before 1.3.1 cannot scan winget as SYSTEM, so nothing matches the catalogue — upgrade the agent.</span>
+                                            </span>
+                                        @endif
                                     @else
                                         No software matches your search.
                                     @endif

@@ -15,8 +15,12 @@ class ComputerShow extends Component
 
     public string $softwareSearch = '';
 
-    /** Default view: only software matching managed catalogue packages. */
-    public bool $softwareManagedOnly = true;
+    /**
+     * managed  — matches a catalogue package (the default; the rest is noise)
+     * deployed — PioDeploy put it here: there is a succeeded install/update
+     * all      — everything the machine reported
+     */
+    public string $softwareFilter = 'managed';
 
     public function mount(Computer $computer): void
     {
@@ -80,6 +84,20 @@ class ComputerShow extends Component
         // Exact winget-id match -> the software is a managed catalogue package.
         $managedPackages = \App\Models\Package::whereNotNull('winget_id')->pluck('id', 'winget_id');
 
+        // "PioDeploy put this here" = we have a succeeded install/update for
+        // the package on this machine. Anything else that is merely in the
+        // catalogue arrived some other way, which is the distinction an MSP
+        // wants when auditing what it introduced to a client's estate.
+        $deployedPackageIds = DeploymentJob::where('computer_id', $this->computer->id)
+            ->whereIn('action', [JobAction::Install, JobAction::Update])
+            ->where('status', JobStatus::Succeeded)
+            ->distinct()
+            ->pluck('package_id');
+
+        $deployedNames = $managedPackages
+            ->filter(fn (int $packageId) => $deployedPackageIds->contains($packageId))
+            ->keys();
+
         return view('livewire.computers.computer-show', [
             'health' => $this->healthChecks(),
             'stats'  => [
@@ -102,10 +120,15 @@ class ComputerShow extends Component
             'softwareTotal'   => $this->computer->software()->count(),
             'softwareManaged' => $this->computer->software()
                 ->where('source', 'winget')->whereIn('name', $managedPackages->keys())->count(),
+            'softwareDeployed' => $this->computer->software()
+                ->where('source', 'winget')->whereIn('name', $deployedNames)->count(),
             'softwareItems'   => $this->computer->software()
-                ->when($this->softwareManagedOnly, fn ($q) => $q
+                ->when($this->softwareFilter === 'managed', fn ($q) => $q
                     ->where('source', 'winget')
                     ->whereIn('name', $managedPackages->keys()))
+                ->when($this->softwareFilter === 'deployed', fn ($q) => $q
+                    ->where('source', 'winget')
+                    ->whereIn('name', $deployedNames))
                 ->when($this->softwareSearch !== '', fn ($q) => $q->where(fn ($w) => $w
                     ->where('name', 'like', "%{$this->softwareSearch}%")
                     ->orWhere('publisher', 'like', "%{$this->softwareSearch}%")))
@@ -113,6 +136,7 @@ class ComputerShow extends Component
                 ->limit(150)
                 ->get(),
             'managedPackages' => $managedPackages,
+            'deployedNames'   => $deployedNames,
             'browserPolicyRows' => \App\Models\BrowserPolicy::query()
                 ->where('project_id', $this->computer->project_id)
                 ->where('status', 'active')

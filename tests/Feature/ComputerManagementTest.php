@@ -283,17 +283,93 @@ class ComputerManagementTest extends TestCase
             ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
             ->assertSee('Installed software')
             ->assertSee('1 managed · 2 detected')
-            // Managed-only is the default view:
+            // Catalogue-only is the default view:
             ->assertSee('Git.Git')
             ->assertSee('managed')
             ->assertDontSee('Random Tool')
-            // Toggling off reveals the full inventory:
-            ->set('softwareManagedOnly', false)
+            // Switching to All reveals the full inventory:
+            ->set('softwareFilter', 'all')
             ->assertSee('Random Tool')
             ->assertSee('Git.Git')
             ->set('softwareSearch', 'Random')
             ->assertSee('Random Tool')
             ->assertDontSee('Git.Git');
+    }
+
+    public function test_software_can_be_filtered_to_what_piodeploy_installed(): void
+    {
+        $computer = Computer::factory()->create();
+
+        $deployed = \App\Models\Package::factory()->create(['winget_id' => 'Google.Chrome']);
+        $notDeployed = \App\Models\Package::factory()->create(['winget_id' => 'Mozilla.Firefox']);
+
+        foreach (['Google.Chrome', 'Mozilla.Firefox'] as $id) {
+            \App\Models\ComputerSoftware::factory()->create([
+                'computer_id' => $computer->id, 'name' => $id, 'source' => 'winget',
+            ]);
+        }
+
+        // Only Chrome has a succeeded job — Firefox is in the catalogue but
+        // arrived some other way.
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $computer->id,
+            'package_id'  => $deployed->id,
+            'action'      => \App\Enums\JobAction::Install,
+            'status'      => \App\Enums\JobStatus::Succeeded,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertSee('1 by PioDeploy · 2 managed · 2 detected')
+            ->set('softwareFilter', 'deployed')
+            ->assertSee('Google.Chrome')
+            ->assertDontSee('Mozilla.Firefox');
+    }
+
+    public function test_a_failed_job_does_not_claim_piodeploy_installed_it(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = \App\Models\Package::factory()->create(['winget_id' => 'Google.Chrome']);
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Google.Chrome', 'source' => 'winget',
+        ]);
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $computer->id,
+            'package_id'  => $package->id,
+            'action'      => \App\Enums\JobAction::Install,
+            'status'      => \App\Enums\JobStatus::Failed,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertSee('0 by PioDeploy')
+            ->set('softwareFilter', 'deployed')
+            ->assertSee('No PioDeploy installs recorded on this machine yet');
+    }
+
+    /** The exact trap this fleet hit: an old agent reports no winget rows. */
+    public function test_an_empty_catalogue_view_blames_an_old_agent_when_that_is_the_cause(): void
+    {
+        $computer = Computer::factory()->create(['agent_version' => '1.2.0']);
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Some App', 'source' => 'registry',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertSee('Agents before 1.3.1 cannot scan winget as SYSTEM');
+    }
+
+    public function test_a_current_agent_is_not_blamed_for_an_empty_catalogue(): void
+    {
+        $computer = Computer::factory()->create(['agent_version' => '1.3.1']);
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Some App', 'source' => 'registry',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertDontSee('Agents before 1.3.1 cannot scan winget as SYSTEM');
     }
 
     public function test_menu_shows_computers_for_permitted_users(): void
