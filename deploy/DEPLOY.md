@@ -148,9 +148,35 @@ Open `https://piodeploy.com` (marketing site) and `https://piodeploy.com/login`.
 ## Redeploys later
 
 ```bash
-cd /var/www/piodeploy && git pull
-composer install --no-dev --optimize-autoloader && npm ci && npm run build
+cd /var/www/piodeploy && sudo bash deploy/deploy.sh
+```
+
+That is the whole thing. It pulls, runs `composer`/`npm` only when those files
+actually changed, migrates behind maintenance mode, rebuilds every cache,
+restarts the worker, hands `storage/` back to `www-data`, and finishes with
+`security:check`. Re-running it with nothing to pull just rebuilds the caches.
+If a step fails it brings the site back up rather than leaving customers on the
+maintenance page.
+
+Override the defaults with env vars if needed:
+```bash
+APP_DIR=/srv/piodeploy BRANCH=main sudo -E bash deploy/deploy.sh
+```
+
+### If you are doing it by hand
+
+Run all three cache rebuilds — **`route:cache` is the one that gets forgotten**.
+`config:cache` and `view:cache` do not touch the route cache, so a commit that
+*adds a route* keeps 404ing until you rebuild it. That is invisible until the
+first deploy that introduces a new page.
+
+```bash
+cd /var/www/piodeploy
+git pull origin master
 php artisan migrate --force
-php artisan config:cache && php artisan route:cache && php artisan view:cache
-systemctl restart piodeploy-queue
+php artisan config:clear && php artisan config:cache
+php artisan route:clear  && php artisan route:cache     # <- this one
+php artisan view:clear   && php artisan view:cache
+php artisan queue:restart
+chown -R www-data:www-data storage bootstrap/cache      # artisan ran as root
 ```
