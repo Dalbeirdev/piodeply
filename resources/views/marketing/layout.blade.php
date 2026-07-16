@@ -50,6 +50,7 @@
                     <a href="{{ route('home') }}#features">Features</a>
                     <a href="{{ route('pricing') }}">Pricing</a>
                     <a href="{{ route('home') }}#how">How it works</a>
+                    <a href="{{ asset('PioDeploy-User-Guide.pdf') }}" target="_blank" rel="noopener">User guide (PDF)</a>
                     <a href="{{ url('/login') }}">Log in</a>
                 </div>
                 <div>
