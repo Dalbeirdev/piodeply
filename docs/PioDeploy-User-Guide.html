@@ -102,8 +102,10 @@
     <li>5. Installing the agent
       <ol>
         <li>5.1 What the agent is</li>
-        <li>5.2 Test install on one machine</li>
-        <li>5.3 Zero-touch rollout (GPO / Intune / RMM)</li>
+        <li>5.2 The Enrolment page — get your script</li>
+        <li>5.3 Test on one machine first</li>
+        <li>5.4 Zero-touch rollout with Group Policy</li>
+        <li>5.5 Intune and RMM</li>
       </ol>
     </li>
     <li>6. Deploying software (policies)</li>
@@ -215,24 +217,36 @@
   <h3>5.1 What the agent is</h3>
   <p>The agent is a small <b>.NET Windows service</b> that runs as <b>LocalSystem</b>. It registers the machine, sends hardware/software inventory, and carries out deployments — all <b>silently in the background</b>. Nothing appears on the user's screen; no prompts, no windows, no interruption.</p>
 
-  <h3>5.2 Test install on one machine</h3>
-  <p>Good for verifying before a fleet rollout. On the target Windows PC, open <b>PowerShell as Administrator</b> and run (using your project's real download URL and API key):</p>
-  <pre><span class="c"># download the installer for this project</span>
-irm "https://piodeploy.com/download/agent/&lt;token&gt;" -OutFile install-agent.ps1
-
-<span class="c"># install + start the service</span>
-.\install-agent.ps1 -ApiKey "pio_your-project-key"</pre>
-  <p>Within a minute the machine appears under <b>Computers</b>, online.</p>
-
-  <h3>5.3 Zero-touch rollout across the fleet</h3>
-  <p>You do <b>not</b> install machine-by-machine at scale. Push the agent once through the tooling you already run — it executes as SYSTEM with no user interaction. The whole install is a single command:</p>
-  <pre>powershell -ExecutionPolicy Bypass -Command "iwr 'https://piodeploy.com/download/agent/&lt;token&gt;' -OutFile $env:TEMP\pio.ps1 -UseBasicParsing; &amp; $env:TEMP\pio.ps1 -ApiKey '&lt;KEY&gt;'"</pre>
+  <h3>5.2 The Enrolment page — get your script</h3>
+  <p>You do not write the rollout script yourself. Go to <b>Projects</b> and click the <b>⤓ Enrol machines</b> icon on the project you want machines to join. Paste the project's <b>API key</b> into the box at the top and the scripts below fill themselves in, ready to copy.</p>
+  <div class="callout"><b>About that key:</b> PioDeploy stores only a hash of it, so it is shown <b>once</b> — when the project is created or the key is rotated. It cannot be looked up later. If you no longer have it, rotate the key (⚿ on the Projects list) and copy the new one immediately. Rotating stops every agent still using the old key, so rotate before a rollout, not during one.</div>
+  <p>Pick the tab that matches how you already manage the estate:</p>
   <table>
-    <tr><th>Method</th><th>Where it goes</th></tr>
-    <tr><td>Group Policy (domain)</td><td>Computer Configuration → Startup script. Runs as SYSTEM at boot.</td></tr>
-    <tr><td>Microsoft Intune (cloud)</td><td>Devices → Platform scripts. Set "run using logged-on credentials: No".</td></tr>
-    <tr><td>Your RMM</td><td>A single "run script" job across a device group.</td></tr>
+    <tr><th>Tab</th><th>Use it when</th></tr>
+    <tr><td><b>Group Policy (Active Directory)</b></td><td>Machines are domain-joined. The most common case.</td></tr>
+    <tr><td><b>Intune / Entra</b></td><td>Machines are cloud-managed through Microsoft Intune.</td></tr>
+    <tr><td><b>RMM / one-liner</b></td><td>You run NinjaOne, Datto, Atera, Action1, ConnectWise…</td></tr>
+    <tr><td><b>Single machine</b></td><td>One-off, by hand — testing or a special case.</td></tr>
   </table>
+
+  <h3>5.3 Test on one machine first</h3>
+  <p>Before pointing a policy at hundreds of machines, prove the script on one. Copy the <b>Single machine</b> command, open <b>PowerShell as Administrator</b> on a test PC, and run it. Within a minute the machine appears under <b>Computers</b>, online.</p>
+  <p>Then run the very same script a <b>second</b> time. It should finish in about a second and do nothing, reporting that the agent is already current. That is the behaviour that makes it safe to attach to a policy that fires at every boot — verify it before you roll out.</p>
+
+  <h3>5.4 Zero-touch rollout with Group Policy</h3>
+  <p>At scale you never touch machines individually. A <b>computer startup script</b> runs as <b>SYSTEM at boot, before anyone logs in</b> — exactly the account the agent needs, with nobody to interrupt.</p>
+  <ol>
+    <li>Copy the script from the <b>Group Policy</b> tab and save it where every domain computer can read it, e.g. <code>\\yourdomain.local\NETLOGON\PioDeploy\Install-PioDeployAgent.ps1</code>. NETLOGON is readable by Domain Computers by default.</li>
+    <li>Open <b>Group Policy Management</b> (<code>gpmc.msc</code>).</li>
+    <li>Right-click the OU holding the target computers → <b>Create a GPO in this domain, and Link it here…</b> → name it <i>Deploy PioDeploy Agent</i>.</li>
+    <li>Right-click the new GPO → <b>Edit</b> → <b>Computer Configuration</b> → Policies → Windows Settings → <b>Scripts (Startup/Shutdown)</b> → <b>Startup</b> → <b>PowerShell Scripts</b> tab → <b>Add</b> → browse to the UNC path.</li>
+    <li>On the machines: <code>gpupdate /force</code>, then <b>reboot</b> — startup scripts only run at boot.</li>
+  </ol>
+  <div class="callout"><b>Safe to run at every boot.</b> The generated script is version-aware, not just idempotent: it exits in milliseconds when the agent is already current, and <b>upgrades it when it is not</b>. So one GPO both enrols new machines and keeps the whole fleet on the current agent — link it once and leave it. A failure never blocks a boot; it is logged to <code>C:\Windows\Temp\PioDeploy-Enrollment.log</code> and retried at the next restart.</div>
+
+  <h3>5.5 Intune and RMM</h3>
+  <p>The <b>Intune</b> tab's script goes to <i>Devices → Scripts and remediations → Platform scripts</i>. Set <b>Run this script using the logged on credentials: No</b> — that is what makes it run as SYSTEM — and <b>Run script in 64 bit PowerShell host: Yes</b>. Assign it to the device group.</p>
+  <p>The <b>RMM</b> tab's script pastes straight into a "run script" job targeted at a device group; RMM agents already run as SYSTEM. Both carry the same version check, so re-running them is harmless.</p>
   <div class="callout"><b>Result:</b> every targeted machine enrols silently in the background, and from then on all deployments are invisible to users. This is how you reach thousands of endpoints with zero interruption.</div>
 </section>
 
@@ -340,7 +354,9 @@ curl -X POST https://piodeploy.com/api/v1/deployments \
   <table>
     <tr><th>Symptom</th><th>Cause / fix</th></tr>
     <tr><td>Machine doesn't appear under Computers</td><td>Agent not installed or wrong API key. Re-run the installer as Administrator with the correct <code>-ApiKey</code>.</td></tr>
-    <tr><td>Deployment failed: "Win32Exception … start process"</td><td>Agent couldn't find winget as SYSTEM. Ensure the agent is v1.2.0+ (re-run the installer to upgrade), then retry the job.</td></tr>
+    <tr><td>Deployment failed: "Win32Exception … start process"</td><td>Agent couldn't find winget as SYSTEM. Ensure the agent is <b>v1.3.1+</b> (re-run the enrolment script to upgrade), then retry the job.</td></tr>
+    <tr><td>Installed software says <b>"0 managed"</b> though the machine clearly has managed apps</td><td>The agent's winget scan is failing, so no package ids reach the server and the catalogue cannot match anything. Upgrade the agent to <b>v1.3.1+</b>; the count fills in on the next check-in.</td></tr>
+    <tr><td>The same package installs over and over, always "Succeeded"</td><td>Same cause as above: the server cannot see the app, so the policy keeps asking for it and winget keeps replying "already installed". Upgrade the agent to <b>v1.3.1+</b> and the loop stops by itself.</td></tr>
     <tr><td>Install script warns "no agent bundle published"</td><td>The server hasn't got the agent bundle. Your administrator publishes it once; then re-download the script.</td></tr>
     <tr><td>Browser policy shows "pending restart"</td><td>The browser was open when the policy applied — it takes effect on next browser restart.</td></tr>
     <tr><td>Client user sees "account isn't linked to a client"</td><td>The Client-role account has no client binding. Admin: Users → set its Client binding, or change the role.</td></tr>
