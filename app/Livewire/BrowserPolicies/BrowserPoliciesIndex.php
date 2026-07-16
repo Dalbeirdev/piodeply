@@ -50,8 +50,11 @@ class BrowserPoliciesIndex extends Component
                 'project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
             ))
-            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', "%{$this->search}%")
-                ->orWhereHas('project', fn ($p) => $p->where('name', 'like', "%{$this->search}%")))
+            // Grouped, or the project branch escapes the tenancy filter above
+            // (AND binds tighter than OR) and leaks another client's policies.
+            ->when($this->search !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('name', 'like', "%{$this->search}%")
+                ->orWhereHas('project', fn ($p) => $p->where('name', 'like', "%{$this->search}%"))))
             ->when($this->projectFilter !== '', fn ($q) => $q->where('project_id', $this->projectFilter))
             ->orderByDesc('status')
             ->orderBy('id')

@@ -75,22 +75,56 @@ class ProjectEnrollmentTest extends TestCase
 
     public function test_a_key_cannot_break_out_of_the_powershell_literal(): void
     {
-        // A bare quote would close the string and let the rest run as code.
-        $scripts = app(EnrollmentScriptService::class)
-            ->all($this->project, "pio_x'; Remove-Item C:\\ -Recurse; '");
+        // Anything that is not key-shaped never reaches the script at all.
+        $attacks = [
+            "pio_x'; Remove-Item C:\\ -Recurse; '",   // ASCII quote
+            "pio_a\nRemove-Item C:\\",                 // newline ends a statement
+            "pio_x\u{2019}; Write-Output PWNED; \u{2018}x", // U+2019/U+2018 close a PS literal
+            "pio_x\u{201A}; Write-Output PWNED; \u{201B}x", // U+201A/U+201B likewise
+            "pio_x`; Write-Output PWNED",              // backtick
+            "pio_x\x00; Write-Output PWNED",           // null byte
+        ];
 
-        // Every quote is doubled, so the whole thing stays one inert literal
-        // rather than a string followed by a command.
-        $this->assertStringContainsString(
-            "\$apiKey      = 'pio_x''; Remove-Item C:\\ -Recurse; '''",
-            $scripts['gpo']['body']
-        );
+        foreach ($attacks as $attack) {
+            $body = app(EnrollmentScriptService::class)->all($this->project, $attack)['gpo']['body'];
 
-        // And a newline cannot end the statement either.
-        $withNewline = app(EnrollmentScriptService::class)
-            ->all($this->project, "pio_a\nRemove-Item C:\\")['gpo']['body'];
+            $this->assertStringContainsString(EnrollmentScriptService::KEY_PLACEHOLDER, $body, 'rejected key should fall back to the placeholder');
+            $this->assertStringNotContainsString('PWNED', $body);
+            $this->assertStringNotContainsString('Remove-Item C:\\', $body);
+        }
+    }
 
-        $this->assertStringContainsString("\$apiKey      = 'pio_aRemove-Item C:\\'", $withNewline);
+    /**
+     * PowerShell ends a single-quoted string on four Unicode quotes as well as
+     * the ASCII one, so escaping by doubling ' was not enough.
+     */
+    public function test_a_unicode_quote_cannot_close_the_powershell_literal(): void
+    {
+        foreach (["\u{2018}", "\u{2019}", "\u{201A}", "\u{201B}", "'"] as $quote) {
+            $this->assertFalse(
+                EnrollmentScriptService::looksLikeAKey("pio_abc{$quote}rest"),
+                "a key containing {$quote} must be rejected"
+            );
+        }
+    }
+
+    public function test_a_real_key_is_accepted(): void
+    {
+        $this->assertTrue(EnrollmentScriptService::looksLikeAKey('pio_gTwGgtN0ZqZjS2abcdef1234567890'));
+        $this->assertTrue(EnrollmentScriptService::looksLikeAKey('pio_with-dashes_and_underscores'));
+
+        $this->assertFalse(EnrollmentScriptService::looksLikeAKey('short'));
+        $this->assertFalse(EnrollmentScriptService::looksLikeAKey(str_repeat('a', 129)));
+        $this->assertFalse(EnrollmentScriptService::looksLikeAKey('has spaces in it'));
+    }
+
+    public function test_the_page_says_a_key_was_rejected_rather_than_quietly_ignoring_it(): void
+    {
+        $this->page()
+            ->set('apiKey', "pio_x\u{2019}; Write-Output PWNED; \u{2018}x")
+            ->assertViewHas('keyRejected', true)
+            ->assertSee('does not look like a project key')
+            ->assertDontSee('PWNED');
     }
 
     public function test_a_project_name_cannot_close_the_comment_banner(): void

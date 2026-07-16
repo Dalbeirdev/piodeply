@@ -73,17 +73,27 @@ class EnrollmentScriptService
     }
 
     /**
-     * A single-quoted PowerShell literal: doubling the quote is the only
-     * escape it has, so a pasted key cannot close the string and run.
+     * A project key is an opaque token, so this whitelists rather than
+     * escapes. Escaping was the wrong tool: PowerShell ends a single-quoted
+     * string on four Unicode quotes as well as the ASCII one (U+2018, U+2019,
+     * U+201A, U+201B), so doubling ' let a crafted key close the literal and
+     * run as SYSTEM on every machine the script reached. Enumerating the
+     * characters that can hurt is a losing game; accepting only the ones a
+     * real key contains is not.
      */
+    public static function looksLikeAKey(string $candidate): bool
+    {
+        return preg_match('/^[A-Za-z0-9_\-]{8,128}$/', $candidate) === 1;
+    }
+
+    /** Substituted into a single-quoted PowerShell literal by the templates. */
     private function key(?string $apiKey): string
     {
-        $key = $apiKey !== null && trim($apiKey) !== '' ? trim($apiKey) : self::KEY_PLACEHOLDER;
+        $key = trim((string) $apiKey);
 
-        // A newline would end the statement regardless of quoting.
-        $key = str_replace(["\r", "\n"], '', $key);
-
-        return str_replace("'", "''", $key);
+        // Anything unrecognisable becomes the placeholder: a script that
+        // visibly will not run beats one that runs something unintended.
+        return $key !== '' && self::looksLikeAKey($key) ? $key : self::KEY_PLACEHOLDER;
     }
 
     /**

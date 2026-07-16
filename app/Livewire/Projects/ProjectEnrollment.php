@@ -40,11 +40,16 @@ class ProjectEnrollment extends Component
         // A stale method in the URL should not fatal the page.
         $method = array_key_exists($this->method, $all) ? $this->method : 'gpo';
 
+        $typed = trim($this->apiKey);
+
         return view('livewire.projects.project-enrollment', [
             'methods'  => $all,
             'current'  => $all[$method],
             'selected' => $method,
-            'hasKey'   => trim($this->apiKey) !== '',
+            'hasKey'   => $typed !== '',
+            // Silently swapping in the placeholder would look like the key
+            // simply did not take. Say which it is.
+            'keyRejected' => $typed !== '' && ! EnrollmentScriptService::looksLikeAKey($typed),
         ])->layout('layouts.app');
     }
 }

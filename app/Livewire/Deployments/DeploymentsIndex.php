@@ -60,8 +60,12 @@ class DeploymentsIndex extends Component
                 'computer.project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
             ))
-            ->when($this->search !== '', fn ($q) => $q->whereHas('computer', fn ($c) => $c->where('hostname', 'like', "%{$this->search}%"))
-                ->orWhereHas('package', fn ($p) => $p->where('name', 'like', "%{$this->search}%")))
+            // The two search branches must be grouped: ungrouped, AND binds
+            // tighter than OR and the package branch escapes the tenancy
+            // filter above, showing a client another client's machines.
+            ->when($this->search !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->whereHas('computer', fn ($c) => $c->where('hostname', 'like', "%{$this->search}%"))
+                ->orWhereHas('package', fn ($p) => $p->where('name', 'like', "%{$this->search}%"))))
             ->when($this->status !== '', fn ($q) => $q->where('status', $this->status))
             ->when($this->action !== '', fn ($q) => $q->where('action', $this->action))
             ->orderByDesc('id')
