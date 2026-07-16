@@ -7,6 +7,7 @@ use App\Models\Computer;
 use App\Models\DeploymentJob;
 use App\Models\Package;
 use App\Services\DeploymentService;
+use App\Services\InstalledStateService;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -23,6 +24,9 @@ class DeployToComputer extends Component
 
     public int $priority = 5;
 
+    /** Optional pinned version (winget/choco `--version`). */
+    public ?string $target_version = null;
+
     /** Deploy anyway when the machine already satisfies the request. */
     public bool $force = false;
 
@@ -31,14 +35,29 @@ class DeployToComputer extends Component
         $this->computer = $computer;
     }
 
+    /**
+     * The action deliberately does not follow the installed state. Flipping
+     * to Update when a package is present would invite a job winget answers
+     * with "no applicable upgrade" — the same pointless row this set of
+     * changes exists to remove. Install stays the default; the button says
+     * when it would do nothing.
+     */
+    private function targetVersion(): ?string
+    {
+        return $this->target_version !== null && trim($this->target_version) !== ''
+            ? trim($this->target_version)
+            : null;
+    }
+
     public function queue(DeploymentService $service): void
     {
         $this->authorize('create', DeploymentJob::class);
 
         $validated = $this->validate([
-            'package_id' => ['required', 'integer', Rule::exists('packages', 'id')->where('is_active', true)],
-            'action'     => ['required', Rule::in(JobAction::values())],
-            'priority'   => ['required', 'integer', 'between:1,10'],
+            'package_id'     => ['required', 'integer', Rule::exists('packages', 'id')->where('is_active', true)],
+            'action'         => ['required', Rule::in(JobAction::values())],
+            'priority'       => ['required', 'integer', 'between:1,10'],
+            'target_version' => ['nullable', 'string', 'max:100'],
         ]);
 
         $result = $service->queueIfNeeded(
@@ -47,19 +66,65 @@ class DeployToComputer extends Component
             action: JobAction::from($validated['action']),
             priority: $validated['priority'],
             createdBy: auth()->id(),
+            targetVersion: $this->targetVersion(),
             force: $this->force,
         );
 
-        $this->reset(['package_id', 'force']);
+        $this->reset(['package_id', 'target_version', 'force']);
         $this->dispatch('job-queued');
         session()->flash('status', $result->message);
     }
 
-    public function render()
+    public function render(InstalledStateService $installedState)
     {
+        $package = $this->package_id !== null
+            ? Package::active()->find($this->package_id)
+            : null;
+
+        $action = JobAction::tryFrom($this->action);
+        $state = $package !== null ? $installedState->stateOf($package, $this->computer) : null;
+
+        $satisfied = $state !== null && $action !== null
+            && $installedState->isSatisfiedBy($state, $action, $this->targetVersion());
+
         return view('livewire.deployments.deploy-to-computer', [
-            'packages' => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
-            'actions'  => JobAction::cases(),
+            'packages'  => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
+            'actions'   => JobAction::cases(),
+            'package'   => $package,
+            'state'     => $state,
+            'satisfied' => $satisfied,
+            'canQueue'  => ! $satisfied || $this->force,
+            'label'     => $this->buttonLabel($package, $state, $action, $satisfied),
+            // Only package managers report a version we can trust.
+            'versionKnown' => $package?->installer_type->requiresPackageManagerId() ?? false,
         ]);
+    }
+
+    /**
+     * The button states the outcome before it is clicked, rather than
+     * queueing first and reporting "nothing to do" afterwards.
+     *
+     * @param  array{present: bool, version: ?string}|null  $state
+     */
+    private function buttonLabel(?Package $package, ?array $state, ?JobAction $action, bool $satisfied): string
+    {
+        if ($package === null || $state === null || $action === null) {
+            return 'Queue';
+        }
+
+        if ($satisfied && ! $this->force) {
+            return $action === JobAction::Uninstall ? 'Not installed' : 'Up to date';
+        }
+
+        $from = $state['version'];
+        $to = $this->targetVersion();
+
+        return match (true) {
+            $action === JobAction::Install && $state['present'] && $from !== null && $to !== null
+                => "Upgrade {$from} → {$to}",
+            $action === JobAction::Install && $state['present'] => 'Reinstall',
+            $action === JobAction::Update && $from !== null => "Update from {$from}",
+            default => $action->label(),
+        };
     }
 }
