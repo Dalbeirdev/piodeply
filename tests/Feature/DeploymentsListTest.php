@@ -50,6 +50,25 @@ class DeploymentsListTest extends TestCase
             ->assertSee('×6');
     }
 
+    /** The computer page had its own flat list, which kept showing the mess. */
+    public function test_a_computers_recent_deployments_panel_collapses_too(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create(['name' => 'Google Chrome', 'winget_id' => 'Google.Chrome']);
+
+        DeploymentJob::factory()->count(8)->create([
+            'computer_id' => $computer->id,
+            'package_id'  => $package->id,
+            'action'      => JobAction::Install,
+            'status'      => JobStatus::Succeeded,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->assertViewHas('recentJobs', fn ($jobs) => $jobs->count() === 1 && $jobs->first()->repeat_count === 8)
+            ->assertSee('×8');
+    }
+
     public function test_full_history_shows_every_attempt(): void
     {
         $computer = Computer::factory()->create();

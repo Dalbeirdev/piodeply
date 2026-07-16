@@ -63,6 +63,30 @@ class DeploymentJob extends Model
             ->orderBy('id');            // FIFO within a priority
     }
 
+    /**
+     * A "task" is one computer + package + action. The same task asked for
+     * repeatedly is one thing that happened N times, not N things.
+     */
+    private const SAME_TASK = 'x.computer_id = deployment_jobs.computer_id
+                               and x.package_id = deployment_jobs.package_id
+                               and x.action = deployment_jobs.action';
+
+    /** Adds repeat_count: how many times this task has been queued. */
+    public function scopeWithRepeatCount(Builder $query): Builder
+    {
+        return $query
+            ->select('deployment_jobs.*')
+            ->selectRaw('(select count(*) from deployment_jobs x where '.self::SAME_TASK.') as repeat_count');
+    }
+
+    /** Keeps only the newest job of each task — the current-state view. */
+    public function scopeOnlyLatestPerTask(Builder $query): Builder
+    {
+        return $query->whereRaw(
+            'deployment_jobs.id = (select max(x.id) from deployment_jobs x where '.self::SAME_TASK.')'
+        );
+    }
+
     public function canRetry(): bool
     {
         return $this->attempts < $this->max_attempts;

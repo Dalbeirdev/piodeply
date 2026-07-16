@@ -32,11 +32,18 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
 
     private readonly IProcessRunner _processRunner;
     private readonly ILogger<WindowsSoftwareCollector> _logger;
+    private readonly Func<string> _wingetPath;
 
-    public WindowsSoftwareCollector(IProcessRunner processRunner, ILogger<WindowsSoftwareCollector> logger)
+    /// <param name="wingetPath">Overridable so tests can assert what is run;
+    /// production resolves the real winget.exe.</param>
+    public WindowsSoftwareCollector(
+        IProcessRunner processRunner,
+        ILogger<WindowsSoftwareCollector> logger,
+        Func<string>? wingetPath = null)
     {
         _processRunner = processRunner;
         _logger = logger;
+        _wingetPath = wingetPath ?? WingetLocator.Resolve;
     }
 
     public async Task<IReadOnlyList<SoftwareEntry>> CollectAsync(CancellationToken ct)
@@ -56,12 +63,18 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
             }
         });
 
+        var wingetEntries = 0;
+
         await ProbeAsync("winget export", async () =>
         {
             var exportPath = Path.Combine(Path.GetTempPath(), $"piodeploy-winget-{Guid.NewGuid():N}.json");
             try
             {
-                var result = await _processRunner.RunAsync("winget",
+                // Resolve the real winget.exe: the bare alias is not on the
+                // PATH of the LocalSystem account this service runs under, so
+                // "winget" fails, the probe swallows it, and the machine looks
+                // like it has no package-managed software at all.
+                var result = await _processRunner.RunAsync(_wingetPath(),
                     ["export", "-o", exportPath, "--include-versions", "--accept-source-agreements", "--disable-interactivity"],
                     TimeSpan.FromMinutes(3), ct);
 
@@ -69,7 +82,16 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
                 // unavailable in sources — the file is still written.
                 if (File.Exists(exportPath))
                 {
-                    entries.AddRange(ParseWingetExport(await File.ReadAllTextAsync(exportPath, ct)));
+                    var parsed = ParseWingetExport(await File.ReadAllTextAsync(exportPath, ct));
+                    wingetEntries = parsed.Count;
+                    entries.AddRange(parsed);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "winget export wrote no file (exit {Exit}). Catalogue matching needs package ids, " +
+                        "so the server will believe this machine has no managed software. Output: {Output}",
+                        result.ExitCode, Truncate(result.Output));
                 }
             }
             finally
@@ -77,6 +99,15 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
                 try { File.Delete(exportPath); } catch { /* best effort */ }
             }
         });
+
+        // Silence here is what turned a broken probe into a policy that
+        // reinstalled the same package every hour: say so out loud.
+        if (wingetEntries == 0)
+        {
+            _logger.LogWarning(
+                "No winget packages detected. If this machine does have winget apps, the export failed — " +
+                "the catalogue matches on package id, so policies cannot see them.");
+        }
 
         return entries
             .Where(e => !string.IsNullOrWhiteSpace(e.Name))
@@ -186,6 +217,9 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
 
         return entries;
     }
+
+    private static string Truncate(string? value)
+        => value is null ? string.Empty : value.Length <= 500 ? value : value[..500];
 
     private void Probe(string what, Action probe)
     {

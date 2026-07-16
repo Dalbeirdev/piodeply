@@ -344,8 +344,19 @@
                                 <tr>
                                     <td class="px-6 py-3 whitespace-nowrap">
                                         <a href="{{ route('packages.show', $job->package) }}" class="pd-link text-sm">{{ $job->package->name }}</a>
+                                        @if ($label = $job->versionLabel())
+                                            <span class="block text-xs text-slate-400 font-mono">{{ $label }}</span>
+                                        @endif
                                     </td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600">{{ $job->action->label() }}</td>
+                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-600">
+                                        {{ $job->action->label() }}
+                                        @if ($job->repeat_count > 1)
+                                            <span class="ml-1 text-xs text-slate-400"
+                                                  title="Requested {{ $job->repeat_count }} times — showing the latest">
+                                                ×{{ $job->repeat_count }}
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-3 whitespace-nowrap">
                                         @php
                                             $badge = match ($job->status) {

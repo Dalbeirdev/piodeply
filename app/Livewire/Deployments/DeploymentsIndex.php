@@ -52,20 +52,10 @@ class DeploymentsIndex extends Component
         // Tenancy: client-bound users see only their own machines' jobs.
         $tenantId = auth()->user()->tenantClientId();
 
-        // "Same task" = same computer, package and action. Keeping only the
-        // newest id per group collapses repeats; the count tells the
-        // operator how many times it was asked for.
-        $sameTask = 'x.computer_id = deployment_jobs.computer_id
-                     and x.package_id = deployment_jobs.package_id
-                     and x.action = deployment_jobs.action';
-
         $jobs = DeploymentJob::query()
             ->with(['computer', 'package', 'packageVersion'])
-            ->select('deployment_jobs.*')
-            ->selectRaw("(select count(*) from deployment_jobs x where {$sameTask}) as repeat_count")
-            ->unless($this->history, fn ($q) => $q->whereRaw(
-                "deployment_jobs.id = (select max(x.id) from deployment_jobs x where {$sameTask})"
-            ))
+            ->withRepeatCount()
+            ->unless($this->history, fn ($q) => $q->onlyLatestPerTask())
             ->when($tenantId !== null, fn ($q) => $q->whereHas(
                 'computer.project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)

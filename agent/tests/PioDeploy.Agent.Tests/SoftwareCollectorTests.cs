@@ -9,8 +9,48 @@ file sealed class NoopProcessRunner : IProcessRunner
         => Task.FromResult(new ProcessResult(1, string.Empty, false)); // choco/winget "not available"
 }
 
+/// <summary>Records what was actually executed, so we can assert the collector
+/// does not shell out to a bare alias.</summary>
+file sealed class RecordingProcessRunner : IProcessRunner
+{
+    public List<string> Commands { get; } = [];
+
+    public Task<ProcessResult> RunAsync(string fileName, IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken ct)
+    {
+        Commands.Add(fileName);
+        return Task.FromResult(new ProcessResult(1, string.Empty, false));
+    }
+}
+
 public class SoftwareCollectorTests
 {
+    /// <summary>
+    /// Regression: the collector used to run the bare "winget" alias, which
+    /// does not exist on LocalSystem's PATH. The export failed, the probe
+    /// swallowed it, and the machine reported zero package-managed software —
+    /// so policies reinstalled packages that were already there, hourly.
+    /// </summary>
+    [Fact]
+    public async Task WingetExport_Runs_The_Resolved_Executable_Not_The_Bare_Alias()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return; // the collector is Windows-only
+        }
+
+        const string resolved = @"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.24_x64__8wekyb3d8bbwe\winget.exe";
+
+        var runner = new RecordingProcessRunner();
+        var collector = new WindowsSoftwareCollector(
+            runner, NullLogger<WindowsSoftwareCollector>.Instance, wingetPath: () => resolved);
+
+        await collector.CollectAsync(CancellationToken.None);
+
+        // The resolved path is used verbatim; the bare alias never is.
+        Assert.Contains(resolved, runner.Commands);
+        Assert.DoesNotContain("winget", runner.Commands);
+    }
+
     [Fact]
     public void Parses_Choco_Limit_Output()
     {

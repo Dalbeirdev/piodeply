@@ -88,8 +88,12 @@ class ComputerShow extends Component
                 'failed'      => (clone $jobs)->where('status', JobStatus::Failed)->count(),
                 'last_deploy' => (clone $jobs)->where('status', JobStatus::Succeeded)->max('finished_at'),
             ],
-            'recentJobs' => DeploymentJob::with(['package'])
+            // One row per task, newest first — a package deployed hourly is
+            // one line with a count, not eight identical ones.
+            'recentJobs' => DeploymentJob::with(['package', 'packageVersion'])
                 ->where('computer_id', $this->computer->id)
+                ->withRepeatCount()
+                ->onlyLatestPerTask()
                 ->orderByDesc('id')->limit(8)->get(),
             'recentActivity' => Activity::where('subject_type', Computer::class)
                 ->where('subject_id', $this->computer->id)
