@@ -23,6 +23,9 @@ class DeployToComputer extends Component
 
     public int $priority = 5;
 
+    /** Deploy anyway when the machine already satisfies the request. */
+    public bool $force = false;
+
     public function mount(Computer $computer): void
     {
         $this->computer = $computer;
@@ -38,17 +41,18 @@ class DeployToComputer extends Component
             'priority'   => ['required', 'integer', 'between:1,10'],
         ]);
 
-        $service->queue(
+        $result = $service->queueIfNeeded(
             computer: $this->computer,
             package: Package::findOrFail($validated['package_id']),
             action: JobAction::from($validated['action']),
             priority: $validated['priority'],
             createdBy: auth()->id(),
+            force: $this->force,
         );
 
-        $this->reset('package_id');
+        $this->reset(['package_id', 'force']);
         $this->dispatch('job-queued');
-        session()->flash('status', 'Deployment queued.');
+        session()->flash('status', $result->message);
     }
 
     public function render()

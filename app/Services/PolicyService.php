@@ -23,6 +23,7 @@ class PolicyService
 {
     public function __construct(
         private readonly DeploymentService $deployments,
+        private readonly InstalledStateService $installedState,
     ) {
     }
 
@@ -230,25 +231,7 @@ class PolicyService
      */
     public function installedStateOn(Package $package, Computer $computer): array
     {
-        if ($package->installer_type->requiresPackageManagerId()) {
-            $id = $package->winget_id ?? $package->choco_id;
-            $source = $package->winget_id !== null ? 'winget' : 'choco';
-
-            $row = $computer->software()
-                ->where('source', $source)
-                ->where('name', $id)
-                ->first();
-
-            return ['present' => $row !== null, 'version' => $row?->version];
-        }
-
-        $present = DeploymentJob::where('computer_id', $computer->id)
-            ->where('package_id', $package->id)
-            ->whereIn('action', [JobAction::Install, JobAction::Update])
-            ->where('status', JobStatus::Succeeded)
-            ->exists();
-
-        return ['present' => $present, 'version' => null];
+        return $this->installedState->stateOf($package, $computer);
     }
 
     /* ─────────────────────────── Compliance ──────────────────────────── */

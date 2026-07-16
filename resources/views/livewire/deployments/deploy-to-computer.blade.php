@@ -30,5 +30,11 @@
             </select>
             <x-button type="submit">Queue</x-button>
         </div>
+
+        <label class="md:col-span-4 flex items-center gap-2 text-xs text-slate-500 select-none">
+            <input type="checkbox" wire:model="force"
+                   class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+            Deploy even if the machine already has it (repairs a broken install)
+        </label>
     </form>
 </div>

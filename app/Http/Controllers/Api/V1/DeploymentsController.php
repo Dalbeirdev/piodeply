@@ -45,21 +45,36 @@ class DeploymentsController extends IntegrationController
             'action'      => ['required', Rule::in(JobAction::values())],
             'priority'    => ['sometimes', 'integer', 'between:1,10'],
             'target_version' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'force'       => ['sometimes', 'boolean'],
         ]);
 
         $computer = Computer::findOrFail($validated['computer_id']);
         abort_unless($request->user()->can('view', $computer), 404); // tenancy
 
-        $job = $service->queue(
+        $result = $service->queueIfNeeded(
             computer: $computer,
             package: Package::findOrFail($validated['package_id']),
             action: JobAction::from($validated['action']),
             priority: $validated['priority'] ?? 5,
             createdBy: $request->user()->id,
             targetVersion: $validated['target_version'] ?? null,
+            force: (bool) ($validated['force'] ?? false),
         );
 
-        return (new DeploymentJobResource($job->load(['computer', 'package'])))
+        // Nothing to do is a success, not an error: 200 + the reason, so a
+        // caller looping over a fleet is not punished for machines that are
+        // already where they should be. A new job still answers 201.
+        if (! $result->queued()) {
+            return response()->json([
+                'outcome' => $result->outcome->value,
+                'message' => $result->message,
+                'data'    => $result->job !== null
+                    ? new DeploymentJobResource($result->job->load(['computer', 'package']))
+                    : null,
+            ], 200);
+        }
+
+        return (new DeploymentJobResource($result->job->load(['computer', 'package'])))
             ->response()
             ->setStatusCode(201);
     }

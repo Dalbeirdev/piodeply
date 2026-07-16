@@ -29,6 +29,12 @@
                         <option value="{{ $a->value }}">{{ $a->label() }}</option>
                     @endforeach
                 </select>
+
+                <label class="flex items-center gap-2 text-sm text-slate-600 select-none ml-auto">
+                    <input type="checkbox" wire:model.live="history"
+                           class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                    Show full history
+                </label>
             </div>
 
             <div class="pd-card">
@@ -53,9 +59,19 @@
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-700">
                                     {{ $job->package->name }}
-                                    <span class="text-xs text-slate-400">{{ $job->packageVersion?->version }}</span>
+                                    @if ($label = $job->versionLabel())
+                                        <span class="block text-xs text-slate-400 font-mono">{{ $label }}</span>
+                                    @endif
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->action->label() }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">
+                                    {{ $job->action->label() }}
+                                    @if (! $history && $job->repeat_count > 1)
+                                        <span class="ml-1 text-xs text-slate-400"
+                                              title="Requested {{ $job->repeat_count }} times — showing the latest">
+                                            ×{{ $job->repeat_count }}
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->priority }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->attempts }}/{{ $job->max_attempts }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap">

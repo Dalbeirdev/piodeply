@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\JobAction;
 use App\Enums\JobStatus;
+use App\Enums\QueueOutcome;
 use App\Models\Computer;
 use App\Models\DeploymentJob;
 use App\Models\Package;
@@ -12,9 +13,18 @@ use Illuminate\Support\Facades\DB;
 
 class DeploymentService
 {
+    public function __construct(
+        private readonly InstalledStateService $installedState,
+    ) {
+    }
+
     /**
      * Queue a job for a computer. A job with a dependency starts Blocked
      * and is released to Pending when the dependency succeeds.
+     *
+     * This is the unguarded writer: it queues whatever it is told to. Call
+     * queueIfNeeded() for operator-driven requests, which skips work that
+     * would change nothing.
      */
     public function queue(
         Computer $computer,
@@ -35,6 +45,10 @@ class DeploymentService
             'package_id'         => $package->id,
             'package_version_id' => $packageVersionId,
             'target_version'     => $targetVersion,
+            // Snapshot for the audit trail: what was on the machine when we
+            // decided to act. One extra query, and only when a job is really
+            // created, so evaluation loops are unaffected.
+            'installed_version_before' => $this->installedState->stateOf($package, $computer)['version'],
             'action'             => $action,
             'status'             => $status,
             'priority'           => max(1, min(10, $priority)),
@@ -43,6 +57,71 @@ class DeploymentService
             'depends_on_job_id'  => $dependsOn?->id,
             'created_by'         => $createdBy,
         ]);
+    }
+
+    /**
+     * Queue only if it would change something. Guards against the two ways
+     * an operator produces noise: asking twice while a job is still in
+     * flight, and asking for software the machine already has.
+     *
+     * $force queues regardless (repairing a broken install is legitimate),
+     * but still collapses onto an in-flight duplicate.
+     */
+    public function queueIfNeeded(
+        Computer $computer,
+        Package $package,
+        JobAction $action,
+        int $priority = 5,
+        ?int $createdBy = null,
+        ?string $targetVersion = null,
+        bool $force = false,
+    ): QueueResult {
+        $inFlight = DeploymentJob::where('computer_id', $computer->id)
+            ->where('package_id', $package->id)
+            ->where('action', $action)
+            ->whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])
+            ->orderByDesc('id')
+            ->first();
+
+        if ($inFlight !== null) {
+            return new QueueResult(
+                QueueOutcome::AlreadyQueued,
+                $inFlight,
+                "{$package->name} is already queued on {$computer->hostname} ({$inFlight->status->label()}).",
+            );
+        }
+
+        $state = $this->installedState->stateOf($package, $computer);
+
+        if (! $force && $this->installedState->isSatisfiedBy($state, $action, $targetVersion)) {
+            return new QueueResult(
+                QueueOutcome::AlreadySatisfied,
+                null,
+                $this->satisfiedMessage($package, $computer, $action, $state['version']),
+            );
+        }
+
+        $job = $this->queue(
+            computer: $computer,
+            package: $package,
+            action: $action,
+            priority: $priority,
+            createdBy: $createdBy,
+            targetVersion: $targetVersion,
+        );
+
+        return new QueueResult(QueueOutcome::Queued, $job, "{$package->name} queued on {$computer->hostname}.");
+    }
+
+    private function satisfiedMessage(Package $package, Computer $computer, JobAction $action, ?string $version): string
+    {
+        if ($action === JobAction::Uninstall) {
+            return "{$package->name} is not installed on {$computer->hostname} — nothing to remove.";
+        }
+
+        $at = $version !== null ? " ({$version})" : '';
+
+        return "{$package->name}{$at} is already installed on {$computer->hostname} — nothing to do.";
     }
 
     public function pendingCountFor(Computer $computer): int
