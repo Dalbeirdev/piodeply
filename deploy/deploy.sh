@@ -47,12 +47,20 @@ restore() {
 }
 trap restore EXIT INT TERM
 
+# A deployed tree legitimately has different permissions from the repo —
+# setup.sh chmods storage and bootstrap/cache — and git reports that
+# executable bit as a modification. Left on, eleven phantom edits bury the one
+# real one and the check below is noise nobody reads.
+git config core.fileMode false
+
 # A hand-edit on the server survives every future deploy and silently drifts
 # from the repo. --ff-only only catches it when the same file is incoming.
 if ! git diff --quiet || ! git diff --cached --quiet; then
     fail "The working tree has local changes. Someone edited this server directly.
   Review with: git status && git diff
-  Then stash or commit them before deploying."
+  Then back up anything you need OUTSIDE the repo and restore it:
+    git checkout -- <file>
+  Do not commit deploy/setup.sh — it holds the passwords you typed at install."
 fi
 
 log "At $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
