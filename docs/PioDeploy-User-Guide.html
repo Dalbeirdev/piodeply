@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PioDeploy — User Guide</title>
+<style>
+  @page { size: A4; margin: 20mm 16mm; }
+  :root{
+    --teal:#0d9488; --teal-d:#0f766e; --sky:#0ea5e9; --ink:#0f172a; --slate:#475569;
+    --slate-l:#64748b; --line:#e2e8f0; --bg:#f8fafc; --amber:#b45309; --amberbg:#fffbeb;
+  }
+  * { box-sizing:border-box; }
+  body{ font-family:'Segoe UI',system-ui,Arial,sans-serif; color:#1e293b; line-height:1.55; font-size:11pt; margin:0; }
+  h1,h2,h3,h4{ color:var(--ink); line-height:1.2; }
+  h1{ font-size:20pt; margin:0 0 6pt; }
+  h2{ font-size:15pt; border-bottom:2px solid var(--teal); padding-bottom:4pt; margin:0 0 10pt; }
+  h3{ font-size:12.5pt; color:var(--teal-d); margin:14pt 0 4pt; }
+  h4{ font-size:11pt; margin:10pt 0 3pt; }
+  p{ margin:0 0 7pt; }
+  a{ color:var(--teal-d); text-decoration:none; }
+  code{ font-family:Consolas,'Courier New',monospace; background:#f1f5f9; padding:1px 4px; border-radius:3px; font-size:9.5pt; color:#0f172a; }
+  pre{ background:#0f172a; color:#e2e8f0; padding:10pt 12pt; border-radius:6px; font-family:Consolas,monospace; font-size:9pt; line-height:1.5; overflow:auto; white-space:pre-wrap; word-break:break-word; page-break-inside:avoid; }
+  pre .c{ color:#7dd3fc; }
+  ul,ol{ margin:0 0 8pt; padding-left:18pt; }
+  li{ margin:2pt 0; }
+  .muted{ color:var(--slate-l); }
+  table{ width:100%; border-collapse:collapse; margin:6pt 0 10pt; font-size:10pt; page-break-inside:avoid; }
+  th,td{ border:1px solid var(--line); padding:5pt 8pt; text-align:left; vertical-align:top; }
+  th{ background:var(--bg); color:var(--slate); font-size:9pt; text-transform:uppercase; letter-spacing:.03em; }
+  .callout{ border-left:4px solid var(--teal); background:#f0fdfa; padding:8pt 12pt; border-radius:0 6px 6px 0; margin:8pt 0; page-break-inside:avoid; }
+  .warn{ border-left-color:#f59e0b; background:var(--amberbg); }
+  .warn b{ color:var(--amber); }
+  .step{ counter-reset:none; }
+  .num{ display:inline-block; width:20px; height:20px; background:var(--teal); color:#fff; border-radius:50%; text-align:center; font-weight:700; font-size:10pt; line-height:20px; margin-right:6px; }
+  section{ page-break-before:always; }
+  section.cover, section.intro{ page-break-before:avoid; }
+  .cover{ text-align:center; padding-top:60mm; }
+  .cover .logo{ width:120px; height:120px; margin:0 auto 20px; }
+  .cover h1{ font-size:34pt; letter-spacing:-1px; }
+  .cover .sub{ font-size:14pt; color:var(--slate); margin-top:6px; }
+  .cover .meta{ margin-top:40px; color:var(--slate-l); font-size:10pt; }
+  .toc a{ color:#1e293b; }
+  .toc ol{ list-style:none; padding-left:0; }
+  .toc > ol > li{ font-weight:600; margin:6pt 0 2pt; }
+  .toc ol ol{ padding-left:16pt; font-weight:400; }
+  .pill{ display:inline-block; background:#e0f2fe; color:#075985; border-radius:999px; padding:1px 8px; font-size:8.5pt; font-weight:600; }
+  .kv td:first-child{ width:34%; color:var(--slate); font-weight:600; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ COVER ══════════ -->
+<section class="cover">
+  <svg class="logo" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="64" cy="118" rx="30" ry="6" fill="#0f172a" opacity="0.12"/>
+    <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M50 42 C46 30 44 24 43 13 M46 30 C41 28 37 26 32 22" stroke="#12100f" stroke-width="12"/>
+      <path d="M78 42 C82 30 84 24 85 13 M82 30 C87 28 91 26 96 22" stroke="#12100f" stroke-width="12"/>
+      <path d="M50 42 C46 30 44 24 43 13 M46 30 C41 28 37 26 32 22" stroke="#e8974e" stroke-width="6"/>
+      <path d="M78 42 C82 30 84 24 85 13 M82 30 C87 28 91 26 96 22" stroke="#e8974e" stroke-width="6"/>
+    </g>
+    <g stroke="#12100f" stroke-width="4">
+      <ellipse cx="39" cy="53" rx="9" ry="14" transform="rotate(-28 39 53)" fill="#14b8a6"/>
+      <ellipse cx="89" cy="53" rx="9" ry="14" transform="rotate(28 89 53)" fill="#14b8a6"/>
+    </g>
+    <path d="M48 44 C50 36 78 36 80 44 C83 56 82 66 76 80 C72 90 68 94 64 95 C60 94 56 90 52 80 C46 66 45 56 48 44 Z" fill="#14b8a6" stroke="#12100f" stroke-width="4" stroke-linejoin="round"/>
+    <ellipse cx="64" cy="82" rx="12.5" ry="13" fill="#fdeecb"/>
+    <path d="M64 80 C60 80 57.5 82.5 57.5 85 C57.5 88 61.5 90 64 91 C66.5 90 70.5 88 70.5 85 C70.5 82.5 68 80 64 80 Z" fill="#1f2937"/>
+    <g stroke="#12100f" stroke-width="3"><circle cx="54" cy="59" r="7" fill="#fff"/><circle cx="74" cy="59" r="7" fill="#fff"/></g>
+    <circle cx="55.5" cy="60" r="3.4" fill="#12100f"/><circle cx="75.5" cy="60" r="3.4" fill="#12100f"/>
+  </svg>
+  <h1>PioDeploy</h1>
+  <div class="sub">User Guide &amp; Getting-Started Manual</div>
+  <div class="sub muted" style="font-size:12pt;">Software deployment &amp; policy management for Windows fleets</div>
+  <div class="meta">
+    Covers: requesting access · subscribing · signing in · setting up clients &amp; projects ·<br>
+    installing the agent · deploying software · browser policies · viewing compliance · administration<br><br>
+    Version 1.0 &nbsp;·&nbsp; TechPio &nbsp;·&nbsp; https://piodeploy.com
+  </div>
+</section>
+
+<!-- ══════════ TOC ══════════ -->
+<section class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li>1. Introduction</li>
+    <li>2. Getting started
+      <ol>
+        <li>2.1 Requesting access</li>
+        <li>2.2 Choosing a plan &amp; subscribing (buying)</li>
+        <li>2.3 Signing in</li>
+      </ol>
+    </li>
+    <li>3. The portal at a glance</li>
+    <li>4. Setting up your fleet
+      <ol>
+        <li>4.1 Create a client</li>
+        <li>4.2 Create a project</li>
+        <li>4.3 The software catalogue</li>
+      </ol>
+    </li>
+    <li>5. Installing the agent
+      <ol>
+        <li>5.1 What the agent is</li>
+        <li>5.2 Test install on one machine</li>
+        <li>5.3 Zero-touch rollout (GPO / Intune / RMM)</li>
+      </ol>
+    </li>
+    <li>6. Deploying software (policies)</li>
+    <li>7. Browser policies</li>
+    <li>8. Viewing your fleet (dashboard, compliance, reports)</li>
+    <li>9. Notifications</li>
+    <li>10. Administration (users, roles, settings, billing)</li>
+    <li>11. Integration API</li>
+    <li>12. Troubleshooting &amp; FAQ</li>
+  </ol>
+</section>
+
+<!-- 1 INTRO -->
+<section>
+  <h2>1. Introduction</h2>
+  <p><b>PioDeploy</b> is a centralised software-deployment and policy-management platform for Windows fleets, built for MSPs and IT teams. From one web portal you can install, update, patch, pin, and remove software, and lock down browser settings, across every managed machine — silently, with real-time compliance.</p>
+  <h3>How it works, in one picture</h3>
+  <table class="kv">
+    <tr><td>The portal</td><td>A website (e.g. <code>https://piodeploy.com</code>) where you define what your machines should look like — packages, policies, browser rules — and see compliance.</td></tr>
+    <tr><td>The agent</td><td>A tiny Windows service installed once per machine. It runs as <b>SYSTEM</b>, checks in over HTTPS, and carries out deployments <b>silently</b> — the end user sees nothing.</td></tr>
+    <tr><td>Desired state</td><td>You set a rule once ("Chrome always latest", "remove AnyDesk"). Machines that drift are corrected automatically.</td></tr>
+  </table>
+  <div class="callout"><b>Key idea:</b> you never touch machines one by one. You describe the desired state in the portal; the agents make it so and keep it that way — invisibly, without interrupting anyone's work.</div>
+</section>
+
+<!-- 2 GETTING STARTED -->
+<section>
+  <h2>2. Getting started</h2>
+
+  <h3>2.1 Requesting access</h3>
+  <p>PioDeploy is a back-office tool, so there is <b>no public self-registration</b> — accounts are provisioned for you. To get started:</p>
+  <p><span class="num">1</span> Go to <code>https://piodeploy.com</code> and click <b>Get started</b> (or <b>Request access</b>).</p>
+  <p><span class="num">2</span> Fill in the form — name, work email, company, and approximate number of machines — and submit.</p>
+  <p><span class="num">3</span> The PioDeploy team receives your request and sets up your tenant and first admin login, then emails you the details.</p>
+  <div class="callout warn"><b>Note:</b> if you run your own PioDeploy instance, your administrator creates accounts from <b>Users → Add user</b> instead. Either way, you receive a login email and password.</div>
+
+  <h3>2.2 Choosing a plan &amp; subscribing (buying)</h3>
+  <p>Pricing is <b>per machine under management</b>, billed monthly, on a graduated schedule that gets cheaper at scale:</p>
+  <table>
+    <tr><th>Machines</th><th>Price each / month</th></tr>
+    <tr><td>First 20</td><td>$0.80</td></tr>
+    <tr><td>Next 480 (21–500)</td><td>$0.40</td></tr>
+    <tr><td>500 and above</td><td>$0.20</td></tr>
+  </table>
+  <p><b>To subscribe:</b></p>
+  <p><span class="num">1</span> Open the <b>Pricing</b> page on the website.</p>
+  <p><span class="num">2</span> Drag the <b>slider</b> (or type a number) to your machine count — the monthly total and per-machine average update live. Example: 250 machines = <b>$108/month</b>.</p>
+  <p><span class="num">3</span> Click <b>Subscribe</b>. You are taken to a secure <b>Stripe</b> checkout page.</p>
+  <p><span class="num">4</span> Enter your card details and confirm. Stripe supports 135+ currencies for international cards.</p>
+  <p><span class="num">5</span> You land on a confirmation page; a receipt is emailed to you and your subscription appears under <b>Admin → Billing</b>.</p>
+  <div class="callout"><b>Test cards:</b> if the instance is in Stripe test mode, use card <code>4242 4242 4242 4242</code>, any future expiry and any CVC. No real money is charged.</div>
+  <p class="muted">Enterprise / unlimited / custom volumes: use the <b>Contact</b> page to reach sales for a tailored quote.</p>
+
+  <h3>2.3 Signing in</h3>
+  <p><span class="num">1</span> Go to <code>https://piodeploy.com/login</code>.</p>
+  <p><span class="num">2</span> Enter the email and password from your welcome email.</p>
+  <p><span class="num">3</span> (Recommended) enable <b>two-factor authentication</b> from your profile menu for extra security.</p>
+  <div class="callout"><b>Forgot your password?</b> Click "Forgot your password?" on the login page to receive a reset link by email.</div>
+</section>
+
+<!-- 3 PORTAL TOUR -->
+<section>
+  <h2>3. The portal at a glance</h2>
+  <p>The left sidebar is your map. What you see depends on your role.</p>
+  <table>
+    <tr><th>Section</th><th>What it's for</th></tr>
+    <tr><td>Dashboard</td><td>Fleet health at a glance — online/offline, pending &amp; failed deployments, compliance.</td></tr>
+    <tr><td>Clients</td><td>Your customer organisations (each customer is a client).</td></tr>
+    <tr><td>Projects</td><td>A group of machines under a client. Agents enrol into a project.</td></tr>
+    <tr><td>Computers</td><td>Every enrolled machine, its hardware/software inventory and health.</td></tr>
+    <tr><td>Packages</td><td>The approved software catalogue (winget / Chocolatey / MSI / EXE …).</td></tr>
+    <tr><td>Deployments</td><td>The live queue and history of install/update/remove jobs.</td></tr>
+    <tr><td>Policies</td><td>Desired-state software rules (install / update / pin / remove).</td></tr>
+    <tr><td>Browser Policies</td><td>Lock down incognito, guest mode, password saving, dev tools.</td></tr>
+    <tr><td>Reports</td><td>Compliance, deployment activity and fleet health — with CSV export.</td></tr>
+    <tr><td>Users / Roles</td><td>Team accounts and what each role may do.</td></tr>
+    <tr><td>Notifications</td><td>Email/webhook alerts on failures, offline agents, drift.</td></tr>
+    <tr><td>Website / Billing / Settings</td><td>Edit the marketing site, manage payments, tune platform defaults.</td></tr>
+  </table>
+</section>
+
+<!-- 4 SETUP -->
+<section>
+  <h2>4. Setting up your fleet</h2>
+  <p>Structure is <b>Client → Project → Machines</b>. Do this once before enrolling machines.</p>
+
+  <h3>4.1 Create a client</h3>
+  <p><span class="num">1</span> Sidebar → <b>Clients</b> → <b>New client</b>.</p>
+  <p><span class="num">2</span> Enter the company name (e.g. <i>Acme Corporation</i>) and status <b>Active</b>. Save.</p>
+
+  <h3>4.2 Create a project</h3>
+  <p><span class="num">1</span> Sidebar → <b>Projects</b> → <b>New project</b>.</p>
+  <p><span class="num">2</span> Pick the client, name it (e.g. <i>Acme HQ Laptops</i>), save.</p>
+  <p><span class="num">3</span> On creation you are shown two things <b>once</b>:</p>
+  <table class="kv">
+    <tr><td>Agent API key</td><td><code>pio_xxxxxxxxxxxxxxxxxxxx</code> — machines use this to authenticate. Copy and store it safely.</td></tr>
+    <tr><td>Agent download URL</td><td><code>https://piodeploy.com/download/agent/&lt;token&gt;</code> — the installer script for this project.</td></tr>
+  </table>
+  <div class="callout warn"><b>Lost the API key?</b> Open the project and click <b>Rotate key</b> to generate a new one (the old one stops working). The download URL is always visible on the project's edit page.</div>
+
+  <h3>4.3 The software catalogue</h3>
+  <p><b>Packages</b> lists the software you can deploy — pre-seeded with ~120 popular titles (Chrome, 7-Zip, Firefox, VLC, Notepad++, …), each with its winget/Chocolatey id. To add your own, click <b>New Package</b> and provide the name, type (winget / choco / MSI / EXE / MSIX / ZIP) and identifier or installer URL.</p>
+</section>
+
+<!-- 5 AGENT -->
+<section>
+  <h2>5. Installing the agent</h2>
+
+  <h3>5.1 What the agent is</h3>
+  <p>The agent is a small <b>.NET Windows service</b> that runs as <b>LocalSystem</b>. It registers the machine, sends hardware/software inventory, and carries out deployments — all <b>silently in the background</b>. Nothing appears on the user's screen; no prompts, no windows, no interruption.</p>
+
+  <h3>5.2 Test install on one machine</h3>
+  <p>Good for verifying before a fleet rollout. On the target Windows PC, open <b>PowerShell as Administrator</b> and run (using your project's real download URL and API key):</p>
+  <pre><span class="c"># download the installer for this project</span>
+irm "https://piodeploy.com/download/agent/&lt;token&gt;" -OutFile install-agent.ps1
+
+<span class="c"># install + start the service</span>
+.\install-agent.ps1 -ApiKey "pio_your-project-key"</pre>
+  <p>Within a minute the machine appears under <b>Computers</b>, online.</p>
+
+  <h3>5.3 Zero-touch rollout across the fleet</h3>
+  <p>You do <b>not</b> install machine-by-machine at scale. Push the agent once through the tooling you already run — it executes as SYSTEM with no user interaction. The whole install is a single command:</p>
+  <pre>powershell -ExecutionPolicy Bypass -Command "iwr 'https://piodeploy.com/download/agent/&lt;token&gt;' -OutFile $env:TEMP\pio.ps1 -UseBasicParsing; &amp; $env:TEMP\pio.ps1 -ApiKey '&lt;KEY&gt;'"</pre>
+  <table>
+    <tr><th>Method</th><th>Where it goes</th></tr>
+    <tr><td>Group Policy (domain)</td><td>Computer Configuration → Startup script. Runs as SYSTEM at boot.</td></tr>
+    <tr><td>Microsoft Intune (cloud)</td><td>Devices → Platform scripts. Set "run using logged-on credentials: No".</td></tr>
+    <tr><td>Your RMM</td><td>A single "run script" job across a device group.</td></tr>
+  </table>
+  <div class="callout"><b>Result:</b> every targeted machine enrols silently in the background, and from then on all deployments are invisible to users. This is how you reach thousands of endpoints with zero interruption.</div>
+</section>
+
+<!-- 6 POLICIES -->
+<section>
+  <h2>6. Deploying software (policies)</h2>
+  <p>A <b>policy</b> is a desired-state rule applied to every machine in a project. The agent enforces it automatically on check-in and heals any drift.</p>
+  <h3>Create a software policy</h3>
+  <p><span class="num">1</span> Sidebar → <b>Policies</b> → <b>New policy</b>.</p>
+  <p><span class="num">2</span> Choose the <b>project</b> and <b>package</b> (e.g. Google Chrome).</p>
+  <p><span class="num">3</span> Pick the <b>rule</b>:</p>
+  <table>
+    <tr><th>Rule</th><th>Meaning</th></tr>
+    <tr><td>Install</td><td>Put it on machines that don't have it.</td></tr>
+    <tr><td>Auto update</td><td>Keep it current on machines that have it.</td></tr>
+    <tr><td>Force update</td><td>Reinstall the desired version even if current.</td></tr>
+    <tr><td>Remove</td><td>Uninstall wherever it's found.</td></tr>
+    <tr><td>Block</td><td>Forbidden software — removed whenever detected.</td></tr>
+  </table>
+  <p><span class="num">4</span> Optionally set a <b>version</b> (Latest / Exact e.g. <code>24.09</code> / Minimum / Freeze), <b>priority</b>, <b>maintenance window</b> (e.g. Sat 02:00–05:00), <b>frequency</b>, and <b>deployment rings</b> (Pilot first, Production after N days).</p>
+  <p><span class="num">5</span> Choose the <b>mode</b>: <b>Enforce</b> (queues jobs) or <b>Audit only</b> (reports compliance, changes nothing). Save.</p>
+  <div class="callout"><b>Tip:</b> open a policy to see its compliance drill-down — every machine's status (Protected / Pending / Failed / Scheduled) with reasons, plus per-machine <b>Exclude</b> for exceptions like a CEO laptop.</div>
+  <h3>One-off deploy to a single machine</h3>
+  <p>Open <b>Computers → a machine</b>, use <b>Quick deploy</b> to queue an install/update/remove immediately without a policy.</p>
+</section>
+
+<!-- 7 BROWSER POLICIES -->
+<section>
+  <h2>7. Browser policies</h2>
+  <p>Lock down browsers like enterprise Group Policy — without a domain. Supported: Chrome, Edge, Firefox, Brave (Opera reports "unsupported").</p>
+  <p><span class="num">1</span> Sidebar → <b>Browser Policies</b> → <b>New policy</b>.</p>
+  <p><span class="num">2</span> Name it, pick the project, and choose the restriction:</p>
+  <ul>
+    <li><b>Disable incognito / private browsing</b></li>
+    <li><b>Disable guest mode</b></li>
+    <li><b>Disable password saving</b></li>
+    <li><b>Disable developer tools</b></li>
+  </ul>
+  <p><span class="num">3</span> Choose browsers (or <b>All</b>) and set <b>Active</b>. Save.</p>
+  <p>The agent applies the corresponding registry values (Chrome/Edge/Brave) or <code>policies.json</code> (Firefox) silently. Browsers already open show "pending restart" until reopened. Deleting the policy rolls the setting back automatically.</p>
+  <div class="callout"><b>Example:</b> "Block incognito — all browsers" on <i>Acme HQ Laptops</i> disables private browsing across every Chromium browser and Firefox on every machine in that project.</div>
+</section>
+
+<!-- 8 VIEWING -->
+<section>
+  <h2>8. Viewing your fleet</h2>
+  <h3>Dashboard</h3>
+  <p>Online vs offline machines, pending &amp; failed deployments, software counts, and a browser-policy compliance widget.</p>
+  <h3>Computers</h3>
+  <p>Click any machine to see hardware, installed software, health checks (disk, secure boot, last check-in), its deployment history and browser-policy status.</p>
+  <h3>Deployments</h3>
+  <p>The live job queue and history — filter by status/action, retry failed jobs, cancel pending ones.</p>
+  <h3>Reports (with CSV export)</h3>
+  <table>
+    <tr><th>Report</th><th>Shows</th></tr>
+    <tr><td>Policy compliance</td><td>Every policy's % compliant with drill-down.</td></tr>
+    <tr><td>Deployment activity</td><td>Jobs over a date range, success rate, failures.</td></tr>
+    <tr><td>Fleet health</td><td>Every machine: ring, agent state, last seen, disk pressure.</td></tr>
+  </table>
+  <p>Each report has an <b>Export CSV</b> button (for users with the export permission).</p>
+</section>
+
+<!-- 9 NOTIFICATIONS -->
+<section>
+  <h2>9. Notifications</h2>
+  <p>Get alerted when things need attention. Sidebar → <b>Notifications</b> → <b>Add channel</b>.</p>
+  <table>
+    <tr><th>Channel</th><th>Use</th></tr>
+    <tr><td>Email</td><td>Any address, via the configured mail server.</td></tr>
+    <tr><td>Webhook</td><td>Posts JSON with a Slack/Discord-compatible message — paste a Slack incoming-webhook URL as-is.</td></tr>
+  </table>
+  <p>Subscribe each channel to events: <b>deployment failed</b>, <b>new computer enrolled</b>, <b>agent offline</b>, <b>daily compliance drift digest</b>, <b>browser policy failed</b>. Use <b>Send test</b> to verify.</p>
+</section>
+
+<!-- 10 ADMIN -->
+<section>
+  <h2>10. Administration</h2>
+  <h3>Users &amp; roles</h3>
+  <p><b>Users → Add user</b> creates a team account with a role. Roles (Super Admin, Admin, Manager, Technician, Client, Viewer) are permission sets you can edit on the <b>Roles</b> matrix — tick a box to grant a permission to a role. <b>Client</b> users are scoped to their own client's data only.</p>
+  <h3>Settings</h3>
+  <p>Company name, agent online threshold, offline-alert delay, default job retries, policy backoff, and activity-log retention — all editable, no redeploy.</p>
+  <h3>Website content &amp; Billing</h3>
+  <p><b>Website</b> edits the public marketing copy (hero, pricing intro, contact). <b>Billing</b> shows your Stripe connection status, currency, and recent payments.</p>
+  <h3>Impersonation ("Login as")</h3>
+  <p>A Super Admin can click the <b>→</b> on a user row to log in as them (in a new tab) for support — every start/stop is audit-logged, and a banner shows you're impersonating. Click <b>Return to my account</b> to exit.</p>
+</section>
+
+<!-- 11 API -->
+<section>
+  <h2>11. Integration API</h2>
+  <p>Automate PioDeploy from your own tools. Create a token from your <b>profile menu → API Tokens</b>, choosing abilities <b>read</b> and/or <b>deploy</b>.</p>
+  <pre><span class="c"># list computers</span>
+curl -H "Authorization: Bearer &lt;token&gt;" https://piodeploy.com/api/v1/computers
+
+<span class="c"># queue a deployment</span>
+curl -X POST https://piodeploy.com/api/v1/deployments \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -d computer_id=12 -d package_id=7 -d action=install</pre>
+  <p>Endpoints cover clients, projects, computers, packages, deployments and policies (read), and queuing deployments (deploy). Everything respects your role permissions and data scope.</p>
+</section>
+
+<!-- 12 TROUBLESHOOTING -->
+<section>
+  <h2>12. Troubleshooting &amp; FAQ</h2>
+  <table>
+    <tr><th>Symptom</th><th>Cause / fix</th></tr>
+    <tr><td>Machine doesn't appear under Computers</td><td>Agent not installed or wrong API key. Re-run the installer as Administrator with the correct <code>-ApiKey</code>.</td></tr>
+    <tr><td>Deployment failed: "Win32Exception … start process"</td><td>Agent couldn't find winget as SYSTEM. Ensure the agent is v1.2.0+ (re-run the installer to upgrade), then retry the job.</td></tr>
+    <tr><td>Install script warns "no agent bundle published"</td><td>The server hasn't got the agent bundle. Your administrator publishes it once; then re-download the script.</td></tr>
+    <tr><td>Browser policy shows "pending restart"</td><td>The browser was open when the policy applied — it takes effect on next browser restart.</td></tr>
+    <tr><td>Client user sees "account isn't linked to a client"</td><td>The Client-role account has no client binding. Admin: Users → set its Client binding, or change the role.</td></tr>
+  </table>
+  <h3>Is it really silent?</h3>
+  <p>Yes. The agent runs as a SYSTEM service in session 0; every installer runs quietly (winget <code>--silent</code>, MSI <code>/qn</code>, etc.) with no window. Users are never interrupted.</p>
+  <h3>Do I need a domain?</h3>
+  <p>No. The agent works on standalone and domain-joined machines alike. Push it via GPO, Intune, your RMM, or install manually.</p>
+  <h3>Getting help</h3>
+  <p>Use the <b>Contact</b> page on the website, or email your PioDeploy administrator. Include the machine hostname and the deployment job id when reporting a failure.</p>
+  <div class="callout" style="margin-top:16pt;text-align:center;"><b>You're all set.</b> Define desired state once, push the agent silently, and let PioDeploy keep your fleet compliant — invisibly.</div>
+</section>
+
+</body>
+</html>
