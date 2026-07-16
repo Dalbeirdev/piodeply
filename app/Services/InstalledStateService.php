@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\InstallerType;
 use App\Enums\JobAction;
 use App\Enums\JobStatus;
 use App\Models\Computer;
@@ -26,10 +27,20 @@ class InstalledStateService
      */
     public function stateOf(Package $package, Computer $computer): array
     {
-        if ($package->installer_type->requiresPackageManagerId()) {
-            $id = $package->winget_id ?? $package->choco_id;
-            $source = $package->winget_id !== null ? 'winget' : 'choco';
+        // Match on the manager that actually installed it, not on whichever
+        // id happens to be filled in. A choco package may carry a winget_id
+        // too (Chrome has both); looking for a winget row would never find
+        // the choco one, the package would read as absent, and the policy
+        // would reinstall it on every pass, forever.
+        $source = match ($package->installer_type) {
+            InstallerType::Winget => 'winget',
+            InstallerType::Choco => 'choco',
+            default => null,
+        };
 
+        $id = $source === 'winget' ? $package->winget_id : $package->choco_id;
+
+        if ($source !== null && $id !== null) {
             $row = $computer->software()
                 ->where('source', $source)
                 ->where('name', $id)
@@ -38,6 +49,10 @@ class InstalledStateService
             return ['present' => $row !== null, 'version' => $row?->version];
         }
 
+        // Binary packages, and a package-manager package missing the id for
+        // its own type: the inventory cannot answer, so fall back to whether
+        // we ever installed it. Claiming "absent" here would be the reinstall
+        // loop again, just from a misconfigured catalogue entry.
         $present = DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $package->id)
             ->whereIn('action', [JobAction::Install, JobAction::Update])

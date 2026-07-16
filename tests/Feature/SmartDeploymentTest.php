@@ -59,6 +59,78 @@ class SmartDeploymentTest extends TestCase
         ]);
     }
 
+    /**
+     * The source must follow the installer type, not whichever id is filled
+     * in. Chrome legitimately has both ids; a choco package looked up as
+     * winget reads as absent on every pass, and the policy reinstalls it
+     * forever — the exact loop this whole change set exists to kill.
+     */
+    public function test_a_choco_package_that_also_has_a_winget_id_is_found_by_its_choco_row(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create([
+            'name'           => 'Google Chrome',
+            'installer_type' => 'choco',
+            'winget_id'      => 'Google.Chrome',  // also set, and irrelevant
+            'choco_id'       => 'googlechrome',
+        ]);
+
+        ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id,
+            'name'        => 'googlechrome',
+            'version'     => '141.0',
+            'source'      => 'choco',
+        ]);
+
+        $state = app(\App\Services\InstalledStateService::class)->stateOf($package, $computer);
+
+        $this->assertTrue($state['present']);
+        $this->assertSame('141.0', $state['version']);
+
+        // And the guard therefore does not queue a redundant install.
+        $this->assertSame(
+            QueueOutcome::AlreadySatisfied,
+            $this->service()->queueIfNeeded($computer, $package, JobAction::Install)->outcome
+        );
+    }
+
+    public function test_a_winget_package_is_not_matched_against_a_choco_row(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create([
+            'installer_type' => 'winget',
+            'winget_id'      => 'Google.Chrome',
+            'choco_id'       => 'googlechrome',
+        ]);
+
+        ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'googlechrome', 'source' => 'choco',
+        ]);
+
+        $this->assertFalse(app(\App\Services\InstalledStateService::class)->stateOf($package, $computer)['present']);
+    }
+
+    /** A misconfigured entry must not read as absent and loop forever. */
+    public function test_a_package_missing_the_id_for_its_own_type_falls_back_to_job_history(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create([
+            'installer_type' => 'winget', 'winget_id' => null, 'choco_id' => 'googlechrome',
+        ]);
+
+        $state = app(\App\Services\InstalledStateService::class)->stateOf($package, $computer);
+        $this->assertFalse($state['present']); // nothing installed yet
+
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id,
+            'package_id'  => $package->id,
+            'action'      => JobAction::Install,
+            'status'      => JobStatus::Succeeded,
+        ]);
+
+        $this->assertTrue(app(\App\Services\InstalledStateService::class)->stateOf($package, $computer)['present']);
+    }
+
     public function test_install_is_skipped_when_the_package_is_already_installed(): void
     {
         $computer = Computer::factory()->create(['hostname' => 'SUSHMITA-L11']);

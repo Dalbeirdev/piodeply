@@ -13,10 +13,25 @@ class ProjectPolicy
         return $user->can(Permission::ProjectsView->value);
     }
 
+    /**
+     * A user bound to a client acts only on that client's projects. Tenancy
+     * belongs on every ability, not just the read ones: a permission answers
+     * "may this user rotate keys?", never "whose keys?".
+     *
+     * tenantClientId() returns null for unbound staff (no restriction) and 0
+     * for a Client-role account with no client set, which matches no project —
+     * unbound means locked out, not waved through.
+     */
+    private function withinTenant(User $user, Project $project): bool
+    {
+        return $user->tenantClientId() === null
+            || $user->tenantClientId() === $project->client_id;
+    }
+
     public function view(User $user, Project $project): bool
     {
         return $user->can(Permission::ProjectsView->value)
-            && ($user->tenantClientId() === null || $user->tenantClientId() === $project->client_id);
+            && $this->withinTenant($user, $project);
     }
 
     public function create(User $user): bool
@@ -26,22 +41,26 @@ class ProjectPolicy
 
     public function update(User $user, Project $project): bool
     {
-        return $user->can(Permission::ProjectsUpdate->value);
+        return $user->can(Permission::ProjectsUpdate->value)
+            && $this->withinTenant($user, $project);
     }
 
     /** Key rotation invalidates the fleet's credentials — treat as update. */
     public function rotateApiKey(User $user, Project $project): bool
     {
-        return $user->can(Permission::ProjectsUpdate->value);
+        return $user->can(Permission::ProjectsUpdate->value)
+            && $this->withinTenant($user, $project);
     }
 
     public function delete(User $user, Project $project): bool
     {
-        return $user->can(Permission::ProjectsDelete->value);
+        return $user->can(Permission::ProjectsDelete->value)
+            && $this->withinTenant($user, $project);
     }
 
     public function restore(User $user, Project $project): bool
     {
-        return $user->can(Permission::ProjectsDelete->value);
+        return $user->can(Permission::ProjectsDelete->value)
+            && $this->withinTenant($user, $project);
     }
 }

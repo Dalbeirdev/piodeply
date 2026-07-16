@@ -8,6 +8,11 @@ namespace PioDeploy.Agent.Services;
 /// <c>C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_…</c>.</summary>
 public static class WingetLocator
 {
+    /// <summary>What Resolve() returns when it cannot find the real thing:
+    /// correct for an interactive session, useless for a service. Callers
+    /// compare against this to say so rather than fail silently.</summary>
+    public const string PathFallback = "winget";
+
     public static string Resolve()
     {
         try
@@ -35,7 +40,7 @@ public static class WingetLocator
             // Enumeration can fail without SYSTEM rights — fall back to PATH.
         }
 
-        return "winget"; // interactive sessions, or when resolution fails
+        return PathFallback; // interactive sessions, or when resolution fails
     }
 
     /// <summary>Picks winget.exe from the highest DesktopAppInstaller version

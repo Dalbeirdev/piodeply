@@ -11,11 +11,20 @@ public static class InstalledVersionResolver
 {
     public static string? Resolve(IReadOnlyList<SoftwareEntry> software, JobPayload job)
     {
-        var (id, source) = job.WingetId is not null
-            ? (job.WingetId, "winget")
-            : (job.ChocoId, "choco");
+        // Key off the type that chose the installer, not on whichever id is
+        // populated: a choco package may carry a winget_id as well (Chrome
+        // has both), and looking for a winget row would never find the choco
+        // one that was actually installed.
+        var source = job.InstallerType?.ToLowerInvariant() switch
+        {
+            "winget" => "winget",
+            "choco" => "choco",
+            _ => null, // msi/exe/zip/... are inventoried by display name
+        };
 
-        if (string.IsNullOrWhiteSpace(id))
+        var id = source == "winget" ? job.WingetId : job.ChocoId;
+
+        if (source is null || string.IsNullOrWhiteSpace(id))
         {
             return null;
         }

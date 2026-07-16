@@ -160,38 +160,85 @@ public sealed class Worker : BackgroundService
                 return;
             }
 
+            IReadOnlyList<SoftwareEntry>? software = null;
+
             foreach (var job in jobs)
             {
                 if (ct.IsCancellationRequested)
                 {
-                    return;
+                    break; // still send the inventory gathered so far
                 }
 
                 var result = await _engine.ExecuteAsync(job, ct);
 
                 // A job changes what is installed, so re-read the machine
-                // rather than leave the server on an inventory up to an hour
-                // stale — it is what "already installed" is judged against.
-                // One scan answers both questions.
-                var software = await TryCollectSoftwareAsync(ct);
+                // rather than leave the server judging "already installed"
+                // against an inventory up to an hour stale. Best-effort: a
+                // version is nice, the result is not optional.
+                software = await TryCollectSoftwareAsync(ct);
 
-                await _api.ReportJobResultAsync(job.JobId, new JobResultRequest
-                {
-                    AgentUuid = _identity.GetAgentUuid(),
-                    Success = result.Success,
-                    ExitCode = result.ExitCode,
-                    OutputLog = Truncate(result.Log, 60_000),
-                    FailureReason = result.FailureReason,
-                    InstalledVersion = software is null
-                        ? null
-                        : InstalledVersionResolver.Resolve(software, job),
-                }, ct);
+                await ReportResultAsync(job, result, software);
 
-                if (software is not null)
-                {
-                    await SendSoftwareAsync(ct, software);
-                }
+                // Scanning and installing are slow, and this loop runs inside
+                // the heartbeat cycle — without this the agent stops checking
+                // in and the portal shows it offline exactly while it is
+                // busiest. Cheap, and it keeps last_seen_at honest.
+                await SafeHeartbeatAsync(ct);
             }
+
+            // Once per batch, not once per job: each send supersedes the last,
+            // and a full inventory is up to 2500 rows.
+            if (software is not null)
+            {
+                await SendSoftwareAsync(ct, software);
+            }
+        }
+    }
+
+    /// <summary>Reports an outcome. The work already happened on the machine,
+    /// so this deliberately does not honour the shutdown token: losing the
+    /// result strands the job in Running with nothing to reap it. Bounded so
+    /// a hung server cannot block service stop indefinitely.</summary>
+    private async Task ReportResultAsync(JobPayload job, InstallResult result, IReadOnlyList<SoftwareEntry>? software)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        try
+        {
+            await _api.ReportJobResultAsync(job.JobId, new JobResultRequest
+            {
+                AgentUuid = _identity.GetAgentUuid(),
+                Success = result.Success,
+                ExitCode = result.ExitCode,
+                OutputLog = Truncate(result.Log, 60_000),
+                FailureReason = result.FailureReason,
+                InstalledVersion = software is null
+                    ? null
+                    : InstalledVersionResolver.Resolve(software, job),
+            }, timeout.Token);
+        }
+        catch (Exception ex)
+        {
+            // Nothing more we can do: the server will show it Running until
+            // an operator requeues it. Say so loudly rather than silently.
+            _logger.LogError(ex, "Job {JobId} finished but its result could not be reported", job.JobId);
+        }
+    }
+
+    /// <summary>A heartbeat that never disturbs job processing.</summary>
+    private async Task SafeHeartbeatAsync(CancellationToken ct)
+    {
+        try
+        {
+            await _api.HeartbeatAsync(new HeartbeatRequest
+            {
+                AgentUuid = _identity.GetAgentUuid(),
+                AgentVersion = AgentVersion,
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Mid-batch heartbeat failed; the next cycle will catch up");
         }
     }
 
@@ -202,6 +249,10 @@ public sealed class Worker : BackgroundService
         try
         {
             return await _software.CollectAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return null; // a service stop is not a fault worth shouting about
         }
         catch (Exception ex)
         {

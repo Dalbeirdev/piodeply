@@ -9,16 +9,16 @@ use Livewire\Component;
 /**
  * Ready-to-run enrollment scripts for a project.
  *
- * The API key is typed in by the operator and only ever lives in the
- * component's request state — it is hashed in the database and cannot be
- * read back, so there is nothing to pre-fill and nothing here stores it.
+ * The API key is never a property of this component. Livewire serialises
+ * public properties into the page and round-trips them on every update, so
+ * binding the key here would put a live fleet credential in the DOM and post
+ * it on each keystroke. The scripts render with a placeholder and the browser
+ * substitutes the key locally — it never reaches the server, which is also
+ * why there is nothing here to store.
  */
 class ProjectEnrollment extends Component
 {
     public Project $project;
-
-    /** Pasted by the operator; never persisted. */
-    public string $apiKey = '';
 
     public string $method = 'gpo';
 
@@ -35,21 +35,17 @@ class ProjectEnrollment extends Component
 
     public function render(EnrollmentScriptService $scripts)
     {
-        $all = $scripts->all($this->project, $this->apiKey);
+        $all = $scripts->all($this->project, null);
 
         // A stale method in the URL should not fatal the page.
         $method = array_key_exists($this->method, $all) ? $this->method : 'gpo';
 
-        $typed = trim($this->apiKey);
-
         return view('livewire.projects.project-enrollment', [
-            'methods'  => $all,
-            'current'  => $all[$method],
-            'selected' => $method,
-            'hasKey'   => $typed !== '',
-            // Silently swapping in the placeholder would look like the key
-            // simply did not take. Say which it is.
-            'keyRejected' => $typed !== '' && ! EnrollmentScriptService::looksLikeAKey($typed),
+            'methods'     => $all,
+            'current'     => $all[$method],
+            'selected'    => $method,
+            'placeholder' => EnrollmentScriptService::KEY_PLACEHOLDER,
+            'keyPattern'  => EnrollmentScriptService::KEY_PATTERN,
         ])->layout('layouts.app');
     }
 }

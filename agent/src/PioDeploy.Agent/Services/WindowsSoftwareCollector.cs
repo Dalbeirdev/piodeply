@@ -74,7 +74,23 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
                 // PATH of the LocalSystem account this service runs under, so
                 // "winget" fails, the probe swallows it, and the machine looks
                 // like it has no package-managed software at all.
-                var result = await _processRunner.RunAsync(_wingetPath(),
+                var winget = _wingetPath();
+
+                // The fallback is correct for an interactive session but wrong
+                // for this service, and it is silent — which is how the bug it
+                // replaced went unnoticed. WindowsApps grants SYSTEM full
+                // control by default, so reaching here usually means its ACLs
+                // were changed on this machine.
+                if (winget == WingetLocator.PathFallback)
+                {
+                    _logger.LogWarning(
+                        "Could not resolve winget.exe under WindowsApps; falling back to the PATH alias, " +
+                        "which does not exist for the LocalSystem service. Any winget packages on this " +
+                        "machine will go undetected. Check the permissions on {Root}.",
+                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WindowsApps"));
+                }
+
+                var result = await _processRunner.RunAsync(winget,
                     ["export", "-o", exportPath, "--include-versions", "--accept-source-agreements", "--disable-interactivity"],
                     TimeSpan.FromMinutes(3), ct);
 

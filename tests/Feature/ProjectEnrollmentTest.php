@@ -58,15 +58,24 @@ class ProjectEnrollmentTest extends TestCase
         $this->page()->assertSee(route('agent.download', $this->project->download_token));
     }
 
-    public function test_a_pasted_key_lands_in_the_script(): void
+    /**
+     * Livewire serialises public properties into the page and posts them on
+     * every update, so the key is not one. The server renders a placeholder
+     * and the browser substitutes locally.
+     */
+    public function test_the_api_key_is_never_a_component_property(): void
     {
+        $this->assertFalse(
+            property_exists(ProjectEnrollment::class, 'apiKey'),
+            'binding the key to Livewire would put a live fleet credential in the DOM'
+        );
+
         $this->page()
-            ->set('apiKey', 'pio_realkey123')
-            ->assertSee("-ApiKey \$apiKey", false)
-            ->assertSee("pio_realkey123");
+            ->assertSee(EnrollmentScriptService::KEY_PLACEHOLDER)
+            ->assertSee('never sent to the server');
     }
 
-    public function test_without_a_key_the_script_carries_a_placeholder_and_says_so(): void
+    public function test_the_rendered_script_always_carries_the_placeholder(): void
     {
         $this->page()
             ->assertSee(EnrollmentScriptService::KEY_PLACEHOLDER)
@@ -118,13 +127,16 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertFalse(EnrollmentScriptService::looksLikeAKey('has spaces in it'));
     }
 
-    public function test_the_page_says_a_key_was_rejected_rather_than_quietly_ignoring_it(): void
+    public function test_the_browser_is_given_the_same_rule_the_server_enforces(): void
     {
+        // The substitution happens client-side, so the two must agree on what
+        // a key is — a looser rule in the browser would reopen the injection.
         $this->page()
-            ->set('apiKey', "pio_x\u{2019}; Write-Output PWNED; \u{2018}x")
-            ->assertViewHas('keyRejected', true)
-            ->assertSee('does not look like a project key')
-            ->assertDontSee('PWNED');
+            ->assertViewHas('keyPattern', EnrollmentScriptService::KEY_PATTERN)
+            ->assertSee('does not look like a project key');
+
+        $this->assertTrue(EnrollmentScriptService::looksLikeAKey('pio_abcdefgh12345678'));
+        $this->assertFalse(EnrollmentScriptService::looksLikeAKey("pio_abcdefgh\u{2019}; calc"));
     }
 
     public function test_a_project_name_cannot_close_the_comment_banner(): void

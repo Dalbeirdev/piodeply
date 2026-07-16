@@ -23,6 +23,13 @@ class EnrollmentScriptService
     /** Shown when the operator has not pasted their key yet. */
     public const KEY_PLACEHOLDER = 'pio_PASTE_YOUR_PROJECT_API_KEY_HERE';
 
+    /**
+     * What a project key may contain. Shared with the browser, which does the
+     * substitution locally so the key never reaches the server — both ends
+     * must agree on what they will accept.
+     */
+    public const KEY_PATTERN = '^[A-Za-z0-9_\\-]{8,128}$';
+
     /** @return array<string, array{label: string, filename: string, language: string, body: string}> */
     public function all(Project $project, ?string $apiKey): array
     {
@@ -83,7 +90,7 @@ class EnrollmentScriptService
      */
     public static function looksLikeAKey(string $candidate): bool
     {
-        return preg_match('/^[A-Za-z0-9_\-]{8,128}$/', $candidate) === 1;
+        return preg_match('/'.self::KEY_PATTERN.'/', $candidate) === 1;
     }
 
     /** Substituted into a single-quoted PowerShell literal by the templates. */
