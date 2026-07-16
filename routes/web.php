@@ -79,6 +79,8 @@ Route::middleware([
         Route::get('/projects', \App\Livewire\Projects\ProjectsIndex::class)->name('projects.index');
         Route::get('/projects/create', \App\Livewire\Projects\ProjectForm::class)->name('projects.create');
         Route::get('/projects/{project}/edit', \App\Livewire\Projects\ProjectForm::class)->name('projects.edit');
+        Route::get('/projects/{project}/enrollment', \App\Livewire\Projects\ProjectEnrollment::class)
+            ->name('projects.enrollment');
     });
 
     Route::middleware('permission:computers.view')->group(function () {

@@ -116,6 +116,8 @@
                                                            wire:click="rotateKey({{ $project->id }})"
                                                            wire:confirm="Rotate the API key for “{{ $project->name }}”? Every agent using the old key stops authenticating immediately." />
                                         @endcan
+                                        <x-icon-button icon="download" label="Enrol machines"
+                                                       :href="route('projects.enrollment', $project)" />
                                         @can('update', $project)
                                             <x-icon-button icon="edit" label="Edit" :href="route('projects.edit', $project)" />
                                         @endcan
