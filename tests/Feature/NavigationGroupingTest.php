@@ -91,4 +91,36 @@ class NavigationGroupingTest extends TestCase
             ->assertSee('Software')
             ->assertSee('Administration');
     }
+
+    /** A collapsed sidebar must still show you where you are. */
+    public function test_the_section_holding_the_current_page_opens_itself(): void
+    {
+        $this->actingAs($this->userWithRole(RoleEnum::Admin))
+            ->get(route('computers.index'))
+            ->assertOk()
+            ->assertSee('data-nav-section="fleet" data-holds-current-page="true"', false)
+            ->assertSee('data-nav-section="software" data-holds-current-page="false"', false);
+    }
+
+    public function test_sections_start_collapsed_elsewhere(): void
+    {
+        $response = $this->actingAs($this->userWithRole(RoleEnum::Admin))
+            ->get(route('dashboard'))
+            ->assertOk();
+
+        // Dashboard belongs to no section, so nothing is forced open.
+        foreach (['fleet', 'software', 'insights', 'administration'] as $slug) {
+            $response->assertSee('data-nav-section="'.$slug.'" data-holds-current-page="false"', false);
+        }
+    }
+
+    /** Collapsing hides items visually; it must not remove them from the page. */
+    public function test_a_collapsed_section_still_contains_its_links(): void
+    {
+        $this->actingAs($this->userWithRole(RoleEnum::Admin))
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee(route('packages.index'))
+            ->assertSee(route('admin.settings'));
+    }
 }

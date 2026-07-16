@@ -30,35 +30,51 @@
     {{-- Navigation --}}
     <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary">
         @foreach (app(\App\Services\NavigationService::class)->groups(Auth::user()) as $group)
-            {{-- A labelled section is a <ul> under its heading, so screen
-                 readers get the same grouping the eye does. --}}
-            <div @class(['mt-5' => ! $loop->first])>
-                @if ($group['label'])
-                    <h3 id="nav-{{ Str::slug($group['label']) }}"
-                        class="px-3 mb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
-                        {{ __($group['label']) }}
-                    </h3>
-                @endif
+            @php
+                $slug = $group['label'] ? Str::slug($group['label']) : null;
+                // The section holding the current page always opens: a collapsed
+                // sidebar must still be able to show you where you are.
+                $holdsCurrentPage = collect($group['items'])
+                    ->contains(fn (array $i) => request()->routeIs($i['active']));
+            @endphp
 
-                <ul class="space-y-1" @if ($group['label']) aria-labelledby="nav-{{ Str::slug($group['label']) }}" @endif>
+            {{-- An ungrouped item (Dashboard) has nothing to collapse. --}}
+            @if ($slug === null)
+                <ul class="space-y-1">
                     @foreach ($group['items'] as $item)
-                        @php $active = request()->routeIs($item['active']); @endphp
-                        <li>
-                            <a href="{{ route($item['route']) }}"
-                               @if ($active) aria-current="page" @endif
-                               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-colors
-                                      {{ $active
-                                          ? 'bg-teal-50 text-teal-800'
-                                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900' }}">
-                                <svg class="h-[18px] w-[18px] shrink-0 {{ $active ? 'text-teal-700' : 'text-slate-400' }}"
-                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $item['icon'] !!}</svg>
-                                {{ __($item['label']) }}
-                            </a>
-                        </li>
+                        @include('partials.sidebar-link', ['item' => $item])
                     @endforeach
                 </ul>
-            </div>
+            @else
+                <div class="mt-4"
+                     data-nav-section="{{ $slug }}" data-holds-current-page="{{ $holdsCurrentPage ? 'true' : 'false' }}"
+                     x-data="{
+                         open: {{ $holdsCurrentPage ? 'true' : 'false' }}
+                               || localStorage.getItem('nav-{{ $slug }}') === 'open',
+                         toggle() {
+                             this.open = ! this.open;
+                             localStorage.setItem('nav-{{ $slug }}', this.open ? 'open' : 'closed');
+                         },
+                     }">
+                    <button type="button" @click="toggle()"
+                            :aria-expanded="open ? 'true' : 'false'" aria-controls="nav-{{ $slug }}"
+                            class="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg
+                                   text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400
+                                   hover:text-slate-600 hover:bg-slate-50 transition-colors">
+                        <span>{{ __($group['label']) }}</span>
+                        <svg class="h-3 w-3 shrink-0 transition-transform duration-150"
+                             :class="open && 'rotate-90'"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+
+                    <ul id="nav-{{ $slug }}" x-show="open" x-cloak x-collapse class="space-y-1 mt-1">
+                        @foreach ($group['items'] as $item)
+                            @include('partials.sidebar-link', ['item' => $item])
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
         @endforeach
     </nav>
 
