@@ -2,7 +2,11 @@
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-slate-800 leading-tight">
             {{ __('Enquiries') }}
-            @if ($openCount > 0)
+            @if ($unreadCount > 0)
+                <span class="ml-2 inline-flex items-center rounded-full bg-teal-600 text-white text-xs font-bold px-2 py-0.5">
+                    {{ $unreadCount }} unread
+                </span>
+            @elseif ($openCount > 0)
                 <span class="ml-1 text-sm font-normal text-slate-400">{{ $openCount }} open</span>
             @endif
         </h2>
@@ -28,64 +32,94 @@
                 </label>
             </div>
 
-            <div class="pd-card">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-100">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="pd-th">From</th>
-                                <th class="pd-th">Type</th>
-                                <th class="pd-th">Fleet</th>
-                                <th class="pd-th">Message</th>
-                                <th class="pd-th">When</th>
-                                <th class="px-6 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-slate-100">
-                            @forelse ($leads as $lead)
-                                <tr class="{{ $lead->handled_at ? 'opacity-55' : '' }}">
-                                    <td class="px-6 py-3">
-                                        <div class="text-sm font-medium text-slate-800">{{ $lead->name }}</div>
-                                        <a href="mailto:{{ $lead->email }}" class="pd-link text-xs">{{ $lead->email }}</a>
-                                        @if ($lead->company)
-                                            <div class="text-xs text-slate-400">{{ $lead->company }}</div>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-3 whitespace-nowrap">
-                                        <span class="pd-badge {{ $lead->type === 'access_request' ? 'pd-badge-teal' : 'pd-badge-slate' }}">
-                                            {{ $lead->type === 'access_request' ? 'Access request' : 'Contact' }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500">{{ $lead->fleet_size ?: '—' }}</td>
-                                    <td class="px-6 py-3 text-sm text-slate-600 max-w-md">
-                                        {{ $lead->message ?: '—' }}
-                                    </td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500"
-                                        title="{{ $lead->created_at }}">
-                                        {{ $lead->created_at->diffForHumans() }}
-                                        @if ($lead->handled_at)
-                                            <div class="text-xs text-green-600">handled {{ $lead->handled_at->diffForHumans() }}</div>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-3 whitespace-nowrap text-right">
-                                        <button type="button" wire:click="markHandled({{ $lead->id }})"
-                                                class="text-xs pd-link">
-                                            {{ $lead->handled_at ? 'Reopen' : 'Mark handled' }}
-                                        </button>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">
-                                    @if ($openOnly && $search === '' && $type === '')
-                                        Nothing waiting — every enquiry has been handled.
-                                    @else
-                                        No enquiries match those filters.
+            <div class="pd-card divide-y divide-slate-100">
+                @forelse ($leads as $lead)
+                    @php $open = $viewingId === $lead->id; @endphp
+                    <div class="{{ $lead->handled_at ? 'opacity-70' : '' }} {{ $lead->isUnread() ? 'border-l-2 border-teal-500' : 'border-l-2 border-transparent' }}">
+
+                        {{-- The row. Clicking it opens the full enquiry and marks it read. --}}
+                        <div class="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-slate-50/70 transition-colors"
+                             wire:click="view({{ $lead->id }})">
+                            <span class="w-2 h-2 rounded-full shrink-0 {{ $lead->isUnread() ? 'bg-teal-500' : 'bg-transparent' }}"></span>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm {{ $lead->isUnread() ? 'font-bold text-slate-900' : 'font-medium text-slate-700' }}">{{ $lead->name }}</span>
+                                    <span class="pd-badge {{ $lead->type === 'access_request' ? 'pd-badge-teal' : 'pd-badge-slate' }}">
+                                        {{ $lead->type === 'access_request' ? 'Access request' : 'Contact' }}
+                                    </span>
+                                    @if ($lead->handled_at)
+                                        <span class="text-xs text-green-600">✓ handled</span>
                                     @endif
-                                </td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                </div>
+                                <p class="text-sm text-slate-500 truncate mt-0.5">
+                                    <span class="text-slate-400">{{ $lead->company ?: $lead->email }}</span>
+                                    @if ($lead->message) — {{ $lead->message }} @endif
+                                </p>
+                            </div>
+
+                            <span class="text-xs text-slate-400 whitespace-nowrap shrink-0" title="{{ $lead->created_at }}">
+                                {{ $lead->created_at->diffForHumans() }}
+                            </span>
+                            <svg class="w-4 h-4 text-slate-300 shrink-0 transition-transform {{ $open ? 'rotate-90' : '' }}"
+                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                        </div>
+
+                        {{-- Expanded detail. --}}
+                        @if ($open)
+                            <div class="px-6 pb-5 pt-1 bg-slate-50/50">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mb-4">
+                                    <div>
+                                        <div class="text-xs text-slate-400">Email</div>
+                                        <a href="mailto:{{ $lead->email }}" class="pd-link">{{ $lead->email }}</a>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-slate-400">Company</div>
+                                        <div class="text-slate-700">{{ $lead->company ?: '—' }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-slate-400">Fleet size</div>
+                                        <div class="text-slate-700">{{ $lead->fleet_size ?: '—' }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-slate-400">Submitted</div>
+                                        <div class="text-slate-700" title="IP {{ $lead->ip ?? 'unknown' }}">{{ $lead->created_at->format('j M Y, H:i') }}</div>
+                                    </div>
+                                </div>
+
+                                @if ($lead->message)
+                                    <div class="rounded-lg bg-white border border-slate-200 p-4 text-sm text-slate-700 whitespace-pre-wrap mb-4">{{ $lead->message }}</div>
+                                @endif
+
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <a href="{{ $lead->replyMailto() }}"
+                                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700">
+                                        ✉ Reply
+                                    </a>
+                                    <x-secondary-button type="button" wire:click="markHandled({{ $lead->id }})">
+                                        {{ $lead->handled_at ? 'Reopen' : 'Mark handled' }}
+                                    </x-secondary-button>
+                                    <x-secondary-button type="button" wire:click="toggleRead({{ $lead->id }})">
+                                        {{ $lead->isUnread() ? 'Mark read' : 'Mark unread' }}
+                                    </x-secondary-button>
+                                    <button type="button" wire:click="delete({{ $lead->id }})"
+                                            wire:confirm="Delete this enquiry from {{ $lead->name }}? This cannot be undone."
+                                            class="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold text-red-600 hover:bg-red-50">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                @empty
+                    <div class="px-6 py-10 text-center text-slate-500">
+                        @if ($openOnly && $search === '' && $type === '')
+                            Nothing waiting — every enquiry has been handled.
+                        @else
+                            No enquiries match those filters.
+                        @endif
+                    </div>
+                @endforelse
             </div>
 
             {{ $leads->links() }}

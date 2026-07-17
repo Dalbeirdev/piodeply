@@ -46,13 +46,14 @@ class LeadsIndexTest extends TestCase
     /** The point of the page: a submission is visible with no email at all. */
     public function test_an_enquiry_is_visible_without_any_notification_being_sent(): void
     {
-        $this->lead();
+        $lead = $this->lead();
 
         Livewire::actingAs($this->admin())
             ->test(LeadsIndex::class)
-            ->assertSee('Jane Rivera')
-            ->assertSee('jane@acme.test')
+            ->assertSee('Jane Rivera')          // the row
             ->assertSee('Acme IT')
+            ->call('view', $lead->id)           // open the detail
+            ->assertSee('jane@acme.test')
             ->assertSee('400 endpoints');
     }
 
@@ -63,9 +64,12 @@ class LeadsIndexTest extends TestCase
             'company' => 'Fleet Co', 'fleet_size' => '250', 'redirect_to' => 'get-started',
         ])->assertRedirect();
 
+        $lead = \App\Models\Lead::where('name', 'Sam Okafor')->sole();
+
         Livewire::actingAs($this->admin())
             ->test(LeadsIndex::class)
             ->assertSee('Sam Okafor')
+            ->call('view', $lead->id)
             ->assertSee('250');
     }
 
@@ -153,6 +157,110 @@ class LeadsIndexTest extends TestCase
         }
 
         $this->assertNull($lead->fresh()->handled_at);
+    }
+
+    /* ─────────── read / delete / reply ─────────── */
+
+    public function test_opening_an_enquiry_marks_it_read(): void
+    {
+        $lead = $this->lead();
+        $this->assertTrue($lead->isUnread());
+
+        Livewire::actingAs($this->admin())
+            ->test(LeadsIndex::class)
+            ->call('view', $lead->id)
+            ->assertSet('viewingId', $lead->id);
+
+        $this->assertNotNull($lead->fresh()->read_at);
+    }
+
+    public function test_the_header_counts_unread(): void
+    {
+        $this->lead(['name' => 'One']);
+        $this->lead(['name' => 'Two', 'read_at' => now()]);
+
+        Livewire::actingAs($this->admin())
+            ->test(LeadsIndex::class)
+            ->assertViewHas('unreadCount', 1);
+
+        // The header slot renders through the layout, so assert the badge on a
+        // real request rather than the isolated component.
+        $this->actingAs($this->admin())->get(route('admin.leads'))->assertSee('1 unread');
+    }
+
+    public function test_read_can_be_toggled_back_to_unread(): void
+    {
+        $lead = $this->lead(['read_at' => now()]);
+
+        Livewire::actingAs($this->admin())
+            ->test(LeadsIndex::class)
+            ->call('toggleRead', $lead->id);
+
+        $this->assertNull($lead->fresh()->read_at);
+    }
+
+    public function test_handling_an_enquiry_also_marks_it_read(): void
+    {
+        $lead = $this->lead();
+
+        Livewire::actingAs($this->admin())
+            ->test(LeadsIndex::class)
+            ->call('markHandled', $lead->id);
+
+        $lead->refresh();
+        $this->assertNotNull($lead->handled_at);
+        $this->assertNotNull($lead->read_at);
+    }
+
+    public function test_an_enquiry_can_be_deleted(): void
+    {
+        $lead = $this->lead();
+
+        Livewire::actingAs($this->admin())
+            ->test(LeadsIndex::class)
+            ->call('delete', $lead->id);
+
+        $this->assertModelMissing($lead);
+    }
+
+    public function test_the_reply_link_is_addressed_and_subject_lined(): void
+    {
+        $lead = $this->lead(['name' => 'Jane Rivera', 'email' => 'jane@acme.test']);
+
+        $mailto = $lead->replyMailto();
+
+        $this->assertStringStartsWith('mailto:jane@acme.test', $mailto);
+        $this->assertStringContainsString('subject=', $mailto);
+        $this->assertStringContainsString(rawurlencode('access request'), $mailto);
+        $this->assertStringContainsString(rawurlencode('Hi Jane'), $mailto);
+    }
+
+    /** Reading is not handling: an unread but pressing enquiry is still work. */
+    public function test_reading_does_not_close_the_open_list(): void
+    {
+        $lead = $this->lead();
+
+        Livewire::actingAs($this->admin())
+            ->test(LeadsIndex::class)   // openOnly is true by default
+            ->call('view', $lead->id)
+            ->assertSee('Jane Rivera'); // still shown; read, not handled
+    }
+
+    public function test_a_viewer_cannot_delete_an_enquiry(): void
+    {
+        $lead = $this->lead();
+        $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));
+
+        $this->actingAs($viewer);
+
+        try {
+            app(LeadsIndex::class)->delete($lead->id);
+            $this->fail('a viewer must not delete enquiries');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            $this->assertSame(403, $e->getStatusCode());
+        }
+
+        $this->assertModelExists($lead);
     }
 
     public function test_it_appears_in_the_admin_section_of_the_nav(): void

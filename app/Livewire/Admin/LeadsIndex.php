@@ -27,6 +27,9 @@ class LeadsIndex extends Component
     /** Open work first — a handled lead is history. */
     public bool $openOnly = true;
 
+    /** The row expanded to full detail; opening it marks the enquiry read. */
+    public ?int $viewingId = null;
+
     public function updating($name, $value): void
     {
         if (in_array($name, ['search', 'type', 'openOnly'], true)) {
@@ -34,12 +37,54 @@ class LeadsIndex extends Component
         }
     }
 
+    /** Expand a row (or collapse it), marking it read the first time. */
+    public function view(int $leadId): void
+    {
+        abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
+
+        if ($this->viewingId === $leadId) {
+            $this->viewingId = null;
+
+            return;
+        }
+
+        $this->viewingId = $leadId;
+
+        $lead = Lead::findOrFail($leadId);
+        if ($lead->read_at === null) {
+            $lead->forceFill(['read_at' => now()])->save();
+        }
+    }
+
+    public function toggleRead(int $leadId): void
+    {
+        abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
+
+        $lead = Lead::findOrFail($leadId);
+        $lead->forceFill(['read_at' => $lead->read_at === null ? now() : null])->save();
+    }
+
     public function markHandled(int $leadId): void
     {
         abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
 
         $lead = Lead::findOrFail($leadId);
-        $lead->forceFill(['handled_at' => $lead->handled_at === null ? now() : null])->save();
+        // Handling something implies you have read it.
+        $lead->forceFill([
+            'handled_at' => $lead->handled_at === null ? now() : null,
+            'read_at'    => $lead->read_at ?? now(),
+        ])->save();
+    }
+
+    public function delete(int $leadId): void
+    {
+        abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
+
+        Lead::findOrFail($leadId)->delete();
+        if ($this->viewingId === $leadId) {
+            $this->viewingId = null;
+        }
+        session()->flash('status', 'Enquiry deleted.');
     }
 
     public function render()
@@ -56,7 +101,8 @@ class LeadsIndex extends Component
                     ->orWhere('company', 'like', "%{$this->search}%")))
                 ->latest()
                 ->paginate(20),
-            'openCount' => Lead::whereNull('handled_at')->count(),
+            'openCount'   => Lead::whereNull('handled_at')->count(),
+            'unreadCount' => Lead::whereNull('read_at')->count(),
         ])->layout('layouts.app');
     }
 }
