@@ -20,21 +20,6 @@ class Dashboard extends Component
      * pinned latest version. Only computable where a latest version is
      * pinned (binary packages); winget entries resolve latest at install.
      */
-    private function outdatedSoftwareCount(): int
-    {
-        return ComputerSoftware::query()
-            ->join('packages', function ($join) {
-                $join->on('packages.winget_id', '=', 'computer_software.name')
-                    ->where('computer_software.source', 'winget');
-            })
-            ->join('package_versions', function ($join) {
-                $join->on('package_versions.package_id', '=', 'packages.id')
-                    ->where('package_versions.is_latest', true);
-            })
-            ->whereNotNull('computer_software.version')
-            ->whereColumn('computer_software.version', '!=', 'package_versions.version')
-            ->count();
-    }
 
     private function licenseUsage(): int
     {
@@ -107,12 +92,16 @@ class Dashboard extends Component
             return $this->renderClientPortal($tenantId);
         }
 
+        $updates = app(\App\Services\FleetUpdateService::class)->pending();
+
         $stats = [
             'online'    => Computer::online()->count(),
             'offline'   => Computer::offline()->count(),
             'pending'   => DeploymentJob::whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])->count(),
             'failed'    => DeploymentJob::where('status', JobStatus::Failed)->count(),
-            'outdated'  => $this->outdatedSoftwareCount(),
+            'outdated'  => $updates->count(),
+            // One update across sixty machines is one decision, not sixty.
+            'outdated_machines' => $updates->pluck('computer_id')->unique()->count(),
             'software'  => ComputerSoftware::count(),
             'licenses'  => $this->licenseUsage(),
             'clients'   => Client::count(),
@@ -123,6 +112,7 @@ class Dashboard extends Component
 
         return view('livewire.dashboard', [
             'stats'         => $stats,
+            'updatesByPackage' => app(\App\Services\FleetUpdateService::class)->byPackage()->take(6),
             'fleetByClient' => $this->fleetByClient(),
             'series'        => $this->deploymentsSeries(),
             'activity'      => Activity::with('causer')->latest()->limit(8)->get(),

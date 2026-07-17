@@ -43,7 +43,12 @@
             <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div class="pd-card p-4">
                     <p class="text-xl font-bold {{ $stats['outdated'] > 0 ? 'text-amber-600' : 'text-slate-300' }}">{{ $stats['outdated'] }}</p>
-                    <p class="text-xs font-semibold text-slate-600">Outdated software</p>
+                    <p class="text-xs font-semibold text-slate-600">Updates available</p>
+                    @if ($stats['outdated'] > 0)
+                        <p class="text-[11px] text-slate-400 mt-0.5">
+                            on {{ $stats['outdated_machines'] }} {{ Str::plural('machine', $stats['outdated_machines']) }}
+                        </p>
+                    @endif
                 </div>
                 <div class="pd-card p-4">
                     <p class="text-xl font-bold text-slate-700">{{ number_format($stats['software']) }}</p>
@@ -66,6 +71,44 @@
                     <p class="text-xs font-semibold text-slate-600">Active packages</p>
                 </a>
             </div>
+
+            {{-- What is behind, folded by package: one update across sixty
+                 machines is one decision, not sixty rows. --}}
+            @if ($updatesByPackage->isNotEmpty())
+                <div class="pd-card p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                            Updates waiting
+                            <span class="ml-1 text-slate-400 font-normal normal-case">— newer versions the fleet has not taken</span>
+                        </h3>
+                        <a href="{{ route('policies.index') }}" class="text-xs text-teal-600 hover:underline">Policies →</a>
+                    </div>
+
+                    <div class="overflow-x-auto -mx-6">
+                        <table class="min-w-full divide-y divide-slate-100">
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach ($updatesByPackage as $update)
+                                    <tr>
+                                        <td class="px-6 py-2.5 text-sm text-slate-800">{{ $update['name'] }}</td>
+                                        <td class="px-6 py-2.5 whitespace-nowrap text-xs font-mono text-slate-500">
+                                            {{ $update['from'] }}
+                                            <span class="text-amber-600">→ {{ $update['to'] }}</span>
+                                        </td>
+                                        <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 text-right">
+                                            {{ $update['machines'] }} {{ Str::plural('machine', $update['machines']) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-xs text-slate-400 mt-3">
+                        Reported by each machine's own package manager. Nothing is installed until you say so —
+                        an <strong>Update</strong> policy does it on a schedule, or deploy one from a machine's page.
+                    </p>
+                </div>
+            @endif
 
             {{-- Browser policy compliance --}}
             @if (($browserPolicySummary['policies'] ?? 0) > 0)
