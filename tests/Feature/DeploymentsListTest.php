@@ -69,6 +69,79 @@ class DeploymentsListTest extends TestCase
             ->assertSee('×8');
     }
 
+    /**
+     * A rollback with no pinned version cannot succeed however many times it
+     * runs — the failure is in the job, not the machine.
+     */
+    public function test_a_job_that_cannot_succeed_is_not_offered_a_retry(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create(['winget_id' => 'Google.Chrome']);
+
+        $job = DeploymentJob::factory()->create([
+            'computer_id'    => $computer->id,
+            'package_id'     => $package->id,
+            'action'         => JobAction::Rollback,
+            'target_version' => null,
+            'status'         => JobStatus::Failed,
+            'attempts'       => 3,
+            'max_attempts'   => 3,
+        ]);
+
+        $this->assertNotNull($job->impossibleReason());
+
+        Livewire::actingAs($this->admin())
+            ->test(DeploymentsIndex::class)
+            ->assertSee('nothing to roll back to')
+            ->assertDontSee('label="Retry"', false);
+    }
+
+    public function test_retrying_an_impossible_job_explains_instead_of_requeueing(): void
+    {
+        $computer = Computer::factory()->create();
+        $job = DeploymentJob::factory()->create([
+            'computer_id'    => $computer->id,
+            'package_id'     => Package::factory()->create(['winget_id' => 'Google.Chrome'])->id,
+            'action'         => JobAction::Rollback,
+            'target_version' => null,
+            'status'         => JobStatus::Failed,
+            'attempts'       => 3,
+            'max_attempts'   => 3,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(DeploymentsIndex::class)
+            ->call('retry', $job->id);
+
+        // Still failed, still out of attempts — not quietly re-queued to fail again.
+        $job->refresh();
+        $this->assertSame(JobStatus::Failed, $job->status);
+        $this->assertSame(3, $job->attempts);
+    }
+
+    public function test_an_ordinary_failure_is_still_retryable(): void
+    {
+        $computer = Computer::factory()->create();
+        $job = DeploymentJob::factory()->create([
+            'computer_id'  => $computer->id,
+            'package_id'   => Package::factory()->create(['winget_id' => 'Google.Chrome'])->id,
+            'action'       => JobAction::Install,
+            'status'       => JobStatus::Failed,
+            'attempts'     => 3,
+            'max_attempts' => 3,
+        ]);
+
+        $this->assertNull($job->impossibleReason());
+
+        Livewire::actingAs($this->admin())
+            ->test(DeploymentsIndex::class)
+            ->call('retry', $job->id);
+
+        $job->refresh();
+        $this->assertSame(JobStatus::Pending, $job->status);
+        $this->assertSame(0, $job->attempts);
+    }
+
     public function test_full_history_shows_every_attempt(): void
     {
         $computer = Computer::factory()->create();

@@ -92,7 +92,12 @@
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @can('manage', $job)
-                                        @if (in_array($job->status, [\App\Enums\JobStatus::Failed, \App\Enums\JobStatus::Cancelled], true))
+                                        @if ($reason = $job->impossibleReason())
+                                            {{-- Offering retry here would promise something that cannot happen. --}}
+                                            <x-icon-button icon="cancel" variant="danger" label="Cancel — {{ $reason }}"
+                                                           wire:click="cancel({{ $job->id }})"
+                                                           wire:confirm="{{ $reason }}&#10;&#10;Cancel this job?" />
+                                        @elseif (in_array($job->status, [\App\Enums\JobStatus::Failed, \App\Enums\JobStatus::Cancelled], true))
                                             <x-icon-button icon="retry" label="Retry" wire:click="retry({{ $job->id }})" />
                                         @elseif (! $job->status->isTerminal())
                                             <x-icon-button icon="cancel" variant="danger" label="Cancel"

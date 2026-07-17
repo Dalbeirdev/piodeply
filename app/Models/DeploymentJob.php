@@ -93,6 +93,21 @@ class DeploymentJob extends Model
     }
 
     /**
+     * Why re-running this job could never work, if so. Retrying is offered on
+     * anything failed, but some failures are in the job itself rather than the
+     * machine — running it again just fails again, three more times.
+     */
+    public function impossibleReason(): ?string
+    {
+        if ($this->action === JobAction::Rollback && $this->target_version === null) {
+            return 'No version was pinned, so there is nothing to roll back to. '
+                 . 'Cancel this and queue a rollback with a version.';
+        }
+
+        return null;
+    }
+
+    /**
      * The version this job aims for: a pinned target (winget/choco) takes
      * precedence over the catalogue binary it was built from. Null means
      * "whatever the package source calls current", which only the agent

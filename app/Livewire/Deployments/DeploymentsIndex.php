@@ -35,6 +35,15 @@ class DeploymentsIndex extends Component
     {
         $job = DeploymentJob::findOrFail($jobId);
         $this->authorize('manage', $job);
+
+        // Some failures are in the job, not the machine. Re-running those just
+        // spends three more attempts arriving at the same place.
+        if ($reason = $job->impossibleReason()) {
+            session()->flash('status', $reason);
+
+            return;
+        }
+
         $service->retry($job);
     }
 
