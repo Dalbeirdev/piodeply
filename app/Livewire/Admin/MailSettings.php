@@ -56,7 +56,11 @@ class MailSettings extends Component
         $this->host         = (string) $mail->get('host', '');
         $this->port         = (string) ($mail->get('port') ?: '587');
         $this->username     = (string) $mail->get('username', '');
-        $this->scheme       = (string) ($mail->get('scheme') ?: 'tls');
+        // Stored as a transport scheme (smtp/smtps/''); the form works in
+        // tls/ssl/none. Converting back is what was missing — the raw stored
+        // value is not one of the dropdown's options, so validation rejected
+        // every save after the first, with no visible error.
+        $this->scheme       = self::schemeToForm((string) $mail->get('scheme'));
         $this->from_address = (string) ($mail->get('from_address') ?: config('mail.from.address'));
         $this->from_name    = (string) ($mail->get('from_name') ?: config('mail.from.name'));
         $this->testTo       = (string) (auth()->user()->email ?? '');
@@ -94,6 +98,26 @@ class MailSettings extends Component
         ];
     }
 
+    /** Dropdown value -> transport scheme stored and handed to the mailer. */
+    public static function formToScheme(string $form): string
+    {
+        return match ($form) {
+            'ssl'  => 'smtps',
+            'none' => '',
+            default => 'smtp',
+        };
+    }
+
+    /** Transport scheme -> dropdown value, for reading a saved setting back. */
+    public static function schemeToForm(string $scheme): string
+    {
+        return match ($scheme) {
+            'smtps' => 'ssl',
+            ''      => 'none',
+            default => 'tls',
+        };
+    }
+
     public function save(MailSettingsService $mail): void
     {
         abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
@@ -108,9 +132,7 @@ class MailSettings extends Component
             'host'         => $validated['host'],
             'port'         => $validated['port'],
             'username'     => $validated['username'] ?? '',
-            // Stored as a scheme; "none" means plain, which some internal
-            // relays legitimately want.
-            'scheme'       => $validated['scheme'] === 'none' ? '' : ($validated['scheme'] === 'ssl' ? 'smtps' : 'smtp'),
+            'scheme'       => self::formToScheme($validated['scheme']),
             'from_address' => $validated['from_address'],
             'from_name'    => $validated['from_name'],
         ], $validated['password'] ?? null);
@@ -156,7 +178,7 @@ class MailSettings extends Component
             'host'         => $this->host,
             'port'         => $this->port,
             'username'     => $this->username,
-            'scheme'       => $this->scheme === 'ssl' ? 'smtps' : ($this->scheme === 'none' ? '' : 'smtp'),
+            'scheme'       => self::formToScheme($this->scheme),
             'from_address' => $this->from_address,
             'from_name'    => $this->from_name,
         ];

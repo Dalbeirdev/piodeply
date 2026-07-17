@@ -85,6 +85,37 @@ class MailSettingsTest extends TestCase
         $this->assertSame('smtp.already-working.test', config('mail.mailers.smtp.host'));
     }
 
+    /**
+     * The reported bug: save once, change one field, save again — the second
+     * save was silently rejected because the stored scheme (smtp/smtps/'')
+     * came back into a dropdown that only knows tls/ssl/none, and failed
+     * validation with no visible error.
+     */
+    public function test_saving_a_second_time_actually_saves(): void
+    {
+        // First save.
+        $this->fill($this->page(), $this->valid(['scheme' => 'ssl', 'from_address' => 'hello@piodeploy.com']))->call('save');
+        $this->assertSame('smtps', $this->mail()->get('scheme'));
+
+        // Reopen (mount reads the stored scheme back) and change one field.
+        $this->page()
+            ->assertSet('scheme', 'ssl')                 // converted back, not "smtps"
+            ->set('from_address', 'info@piodeploy.com')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('info@piodeploy.com', $this->mail()->get('from_address'));
+        $this->assertSame('smtps', $this->mail()->get('scheme')); // unchanged, still valid
+    }
+
+    public function test_the_stored_scheme_round_trips_through_the_form(): void
+    {
+        foreach (['tls' => 'smtp', 'ssl' => 'smtps', 'none' => ''] as $form => $stored) {
+            $this->assertSame($stored, \App\Livewire\Admin\MailSettings::formToScheme($form));
+            $this->assertSame($form, \App\Livewire\Admin\MailSettings::schemeToForm($stored));
+        }
+    }
+
     /* ─────────── the password ─────────── */
 
     public function test_the_password_is_encrypted_at_rest(): void

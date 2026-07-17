@@ -30,6 +30,19 @@
                 </div>
             @endif
 
+            {{-- No field can fail invisibly: the scheme select had no error
+                 slot, so a rejected save looked like nothing happening. --}}
+            @if ($errors->any())
+                <div class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                    <p class="font-semibold">That didn't save — please fix:</p>
+                    <ul class="mt-1 list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <form wire:submit="save" class="pd-card p-6 space-y-5">
                 <div>
                     <x-label for="provider" value="Provider" />
