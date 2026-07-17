@@ -58,10 +58,30 @@
                 @if ($versionKnown)
                     <label class="inline-flex items-center gap-1.5 text-slate-500">
                         Pin version
-                        <input type="text" wire:model.live.debounce.400ms="target_version"
-                               placeholder="latest" aria-label="Pin version"
-                               class="w-24 py-0.5 text-xs font-mono border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded shadow-sm">
+                        @if ($offeredVersions !== null)
+                            {{-- We know what the source publishes, so only offer
+                                 versions that will actually install. --}}
+                            <select wire:model.live="target_version" aria-label="Pin version"
+                                    class="py-0.5 text-xs font-mono border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded shadow-sm">
+                                <option value="">latest</option>
+                                @foreach ($offeredVersions as $offered)
+                                    <option value="{{ $offered }}">{{ $offered }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            {{-- Could not read the source: a free-text box is
+                                 honest, an empty dropdown would claim there are
+                                 no versions. --}}
+                            <input type="text" wire:model.live.debounce.400ms="target_version"
+                                   placeholder="latest" aria-label="Pin version"
+                                   class="w-24 py-0.5 text-xs font-mono border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded shadow-sm">
+                        @endif
                     </label>
+                    @if ($offeredVersions !== null && count($offeredVersions) === 1)
+                        <span class="text-amber-600" title="Rolling back needs an older version to still be published">
+                            Only one version is published — this package cannot be rolled back.
+                        </span>
+                    @endif
                 @endif
 
                 @if ($satisfied)

@@ -8,6 +8,7 @@ use App\Models\DeploymentJob;
 use App\Models\Package;
 use App\Services\DeploymentService;
 use App\Services\InstalledStateService;
+use App\Services\WingetVersionService;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -81,7 +82,7 @@ class DeployToComputer extends Component
         session()->flash('status', $result->message);
     }
 
-    public function render(InstalledStateService $installedState)
+    public function render(InstalledStateService $installedState, WingetVersionService $wingetVersions)
     {
         $package = $this->package_id !== null
             ? Package::active()->find($this->package_id)
@@ -105,6 +106,9 @@ class DeployToComputer extends Component
             'label'     => $this->buttonLabel($package, $state, $action, $satisfied),
             // Only package managers report a version we can trust.
             'versionKnown' => $package?->installer_type->requiresPackageManagerId() ?? false,
+            // Null means we could not find out, which the form must not
+            // present as "no versions exist" — it falls back to free text.
+            'offeredVersions' => $package !== null ? $wingetVersions->versionsFor($package) : null,
         ]);
     }
 
