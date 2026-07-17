@@ -264,22 +264,49 @@ class PolicyService
             ->map(function (SoftwarePolicy $policy) use ($computer) {
                 // Two reasons nothing will ever happen, which the compliance
                 // evaluation does not model because it never sees them.
+                $excluded = $policy->excludedComputers()->whereKey($computer->id)->exists();
+
                 if (! $policy->package->is_active) {
                     $row = $this->row($computer, 'disabled', null, 'Package is not active in the catalogue — no jobs will run');
                 } elseif ($policy->mode === \App\Enums\PolicyMode::Disabled) {
                     $row = $this->row($computer, 'disabled', null, 'Policy is disabled');
+                } elseif ($policy->mode === \App\Enums\PolicyMode::Audit && ! $excluded) {
+                    // Audit reports drift and never acts, so the schedule is
+                    // irrelevant to it. Saying "waiting for maintenance window"
+                    // would promise something that is never coming.
+                    $row = $this->auditRow($policy, $computer);
                 } else {
-                    $row = $this->evaluate(
-                        $policy,
-                        $computer,
-                        $policy->excludedComputers()->whereKey($computer->id)->exists()
-                    );
+                    $row = $this->evaluate($policy, $computer, $excluded);
                 }
 
                 return ['policy' => $policy] + $row;
             })
             ->sortBy(fn (array $row) => $row['policy']->package->name)
             ->values();
+    }
+
+    /**
+     * An audit policy watches; it does not act. Its only two answers are
+     * "matches desired state" and "does not" — the maintenance window, the
+     * ring and the failure backoff all govern queueing, which will never
+     * happen here, so quoting them would describe work that is not coming.
+     *
+     * @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string}
+     */
+    private function auditRow(SoftwarePolicy $policy, Computer $computer): array
+    {
+        $state = $this->installedStateOn($policy->package, $computer);
+
+        if ($this->remediationFor($policy, $computer) === null) {
+            return $this->row($computer, 'compliant', $state['version'], $this->compliantReason($policy, $state));
+        }
+
+        return $this->row(
+            $computer,
+            'non_compliant',
+            $state['version'],
+            $this->driftReason($policy, $state).' — audit only, so nothing will be queued'
+        );
     }
 
     /**

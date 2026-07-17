@@ -93,6 +93,51 @@ class ComputerSoftwareLogTest extends TestCase
         $this->page()->assertSee('Installed 138.0, policy wants');
     }
 
+    /**
+     * An audit policy never queues, so quoting the schedule at the operator
+     * promises work that is not coming.
+     */
+    public function test_an_audit_policy_does_not_blame_the_maintenance_window(): void
+    {
+        $this->policy($this->chrome(), ['mode' => PolicyMode::Audit]);
+
+        $this->page()
+            ->assertSee('audit only, so nothing will be queued')
+            ->assertDontSee('Waiting for maintenance window')
+            ->assertDontSee('ring eligible');
+    }
+
+    public function test_an_audit_policy_that_matches_desired_state_reads_as_compliant(): void
+    {
+        $this->policy($this->chrome(), ['mode' => PolicyMode::Audit]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->computer->id, 'name' => 'Google.Chrome',
+            'version' => '141.0', 'source' => 'winget',
+        ]);
+
+        $this->page()
+            ->assertSee('Installed (141.0)')
+            ->assertDontSee('audit only, so nothing will be queued');
+    }
+
+    /** An enforcing policy must still explain the schedule holding it back. */
+    public function test_an_enforcing_policy_still_names_the_maintenance_window(): void
+    {
+        $this->policy($this->chrome(), [
+            'mode'         => PolicyMode::Enforce,
+            'window_start' => '02:00',
+            'window_end'   => '04:00',
+            'window_days'  => [1],
+        ]);
+
+        $reasons = app(\App\Services\PolicyService::class)
+            ->explainFor($this->computer)
+            ->pluck('reason')
+            ->implode(' ');
+
+        $this->assertStringNotContainsString('audit only', $reasons);
+    }
+
     public function test_a_disabled_policy_explains_that_nothing_will_run(): void
     {
         $this->policy($this->chrome(), ['mode' => PolicyMode::Disabled]);
