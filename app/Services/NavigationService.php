@@ -65,6 +65,8 @@ class NavigationService
                 'icon' => '<path d="M4 4h16v16H4z"/><path d="m4 7 8 6 8-6"/>'],
             ['label' => 'Notifications', 'route' => 'admin.notifications', 'active' => 'admin.notifications*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'],
+            ['label' => 'Email', 'route' => 'admin.mail', 'active' => 'admin.mail*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
+                'icon' => '<path d="m22 7-10 6L2 7"/><rect x="2" y="5" width="20" height="14" rx="2"/>'],
             ['label' => 'Website', 'route' => 'admin.content', 'active' => 'admin.content*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 4v5"/>'],
             ['label' => 'Billing', 'route' => 'admin.billing', 'active' => 'admin.billing*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,

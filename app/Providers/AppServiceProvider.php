@@ -32,6 +32,12 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Pagination\Paginator::defaultView('pagination.compact');
         \Illuminate\Pagination\Paginator::defaultSimpleView('pagination.compact');
 
+        // SMTP set in the portal beats .env, so changing provider is a form
+        // rather than an SSH session. Silent no-op when nothing is saved, and
+        // SettingsService swallows a missing table, so this is safe during an
+        // install before the first migration.
+        app(\App\Services\MailSettingsService::class)->apply();
+
         // Shared branding for the public marketing site.
         \Illuminate\Support\Facades\View::composer('marketing.*', function ($view) {
             $content = app(\App\Services\SiteContentService::class);
