@@ -61,6 +61,8 @@ class NavigationService
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'],
             ['label' => 'Roles', 'route' => 'admin.roles', 'active' => 'admin.roles*', 'permission' => Permission::RolesManage, 'group' => self::ADMIN,
                 'icon' => '<circle cx="12" cy="8" r="3.5"/><path d="M6 21v-1.5a6 6 0 0 1 9-5.2"/><path d="m16.5 20 1.6 1 2.9-4"/>'],
+            ['label' => 'Enquiries', 'route' => 'admin.leads', 'active' => 'admin.leads*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
+                'icon' => '<path d="M4 4h16v16H4z"/><path d="m4 7 8 6 8-6"/>'],
             ['label' => 'Notifications', 'route' => 'admin.notifications', 'active' => 'admin.notifications*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'],
             ['label' => 'Website', 'route' => 'admin.content', 'active' => 'admin.content*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,

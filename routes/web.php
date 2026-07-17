@@ -83,6 +83,9 @@ Route::middleware([
             ->name('projects.enrollment');
     });
 
+    // Everything the website sent us. Gated inside the component too.
+    Route::get('/admin/enquiries', \App\Livewire\Admin\LeadsIndex::class)->name('admin.leads');
+
     Route::middleware('permission:computers.view')->group(function () {
         Route::get('/computers', \App\Livewire\Computers\ComputersIndex::class)->name('computers.index');
         Route::get('/computers/{computer}', \App\Livewire\Computers\ComputerShow::class)->name('computers.show');
