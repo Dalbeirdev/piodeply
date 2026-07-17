@@ -112,7 +112,7 @@
     <li>7. Browser policies</li>
     <li>8. Viewing your fleet (dashboard, compliance, reports)</li>
     <li>9. Notifications</li>
-    <li>10. Administration (users, roles, settings, billing)</li>
+    <li>10. Administration (users, roles, settings, email, enquiries, billing)</li>
     <li>11. Integration API</li>
     <li>12. Troubleshooting &amp; FAQ</li>
   </ol>
@@ -296,9 +296,20 @@
   <h3>Dashboard</h3>
   <p>Online vs offline machines, pending &amp; failed deployments, software counts, and a browser-policy compliance widget.</p>
   <h3>Computers</h3>
-  <p>Click any machine to see hardware, installed software, health checks (disk, secure boot, last check-in), its deployment history and browser-policy status.</p>
+  <p>Click any machine to see hardware, health checks (disk, secure boot, last check-in), its deployment history and browser-policy status.</p>
+
+  <h4>Installed software</h4>
+  <p>Filter by <b>In catalogue</b>, <b>Deployed by PioDeploy</b> (software a job of yours actually installed, as opposed to software that was simply already there), <b>Update available</b>, or <b>All software</b>. A version reading <code>138.0 → 141.0</code> means the machine's own package manager is offering something newer.</p>
+  <div class="callout"><b>Only the machine knows.</b> The portal knows your catalogue and what is installed; it has no idea a new Chrome shipped this morning. The agent asks winget and reports back — which is why a package can be <b>Compliant</b> and still show an update: your policy asked for it to be installed, and it is. Whether to update is your call, or a job for an <b>Update</b> policy.</div>
+
+  <h4>Software status</h4>
+  <p>Why each policy is — or is not — acting on this machine, in words: “Installed (141.0)”, “Waiting for maintenance window”, “Cadence ring eligible in 2 hours”, “Installed 138.0, policy wants Minimum 141.0”, or “audit only, so nothing will be queued”. This answers “so why isn't it installed?” when there is no job to point at.</p>
+
+  <h4>Deployment log</h4>
+  <p>Every attempt and the reason it ended that way, with the agent's own output behind a toggle. Note that “Succeeded” is not always “installed something”: <b>Already installed — nothing was changed</b> means winget found the package present and did nothing, which is a success worth telling apart from real work.</p>
+
   <h3>Deployments</h3>
-  <p>The live job queue and history — filter by status/action, retry failed jobs, cancel pending ones.</p>
+  <p>The live job queue and history — filter by status/action, retry failed jobs, cancel pending ones. Repeats of the same task on the same machine fold into one row with a <code>×N</code> badge; tick <b>Show full history</b> for every attempt.</p>
   <h3>Reports (with CSV export)</h3>
   <table>
     <tr><th>Report</th><th>Shows</th></tr>
@@ -328,6 +339,15 @@
   <p><b>Users → Add user</b> creates a team account with a role. Roles (Super Admin, Admin, Manager, Technician, Client, Viewer) are permission sets you can edit on the <b>Roles</b> matrix — tick a box to grant a permission to a role. <b>Client</b> users are scoped to their own client's data only.</p>
   <h3>Settings</h3>
   <p>Company name, agent online threshold, offline-alert delay, default job retries, policy backoff, and activity-log retention — all editable, no redeploy.</p>
+
+  <h3>Email (SMTP)</h3>
+  <p><b>Administration → Email</b> is where outgoing mail is configured — in the portal, not over SSH. Choose your provider (Hostinger, Gmail, Microsoft 365, Postmark, SendGrid, Brevo, Mailgun, SES, or a custom relay) and the server details fill themselves in; you supply the username, password and sender. Then <b>Send test email</b>, because saving proves nothing and sending does. A failure shows your provider's own words plus what to do about them.</p>
+  <div class="callout warn"><b>The most common failure:</b> the <b>From address</b> must be the mailbox you authenticated as, or another address verified with your provider. Authenticating as <code>info@yourdomain.com</code> and sending as <code>hello@yourdomain.com</code> is rejected — <code>553 5.7.1 Sender address rejected</code>. Your SMTP password is encrypted before it is stored and is never shown again; leave the field blank to keep the stored one.</div>
+  <p>Until this is set, nothing can send: deployment-failure alerts, offline warnings and website enquiries all go nowhere silently. <code>php artisan security:check</code> flags it.</p>
+
+  <h3>Enquiries</h3>
+  <p><b>Administration → Enquiries</b> lists every contact message and access request submitted on your website — who, their company, fleet size, and what they wrote. <b>Mark handled</b> moves one out of the open list; untick <b>Open only</b> to see the history.</p>
+  <div class="callout"><b>Why it matters:</b> these are recorded whether or not an email went out, so a misconfigured mailer costs you a notification, never the lead itself. To be alerted as they arrive, add a channel under <b>Notifications</b> subscribed to “Contact / access-request submitted on the website”.</div>
   <h3>Website content &amp; Billing</h3>
   <p><b>Website</b> edits the public marketing copy (hero, pricing intro, contact). <b>Billing</b> shows your Stripe connection status, currency, and recent payments.</p>
   <h3>Impersonation ("Login as")</h3>
@@ -357,6 +377,11 @@ curl -X POST https://piodeploy.com/api/v1/deployments \
     <tr><td>Deployment failed: "Win32Exception … start process"</td><td>Agent couldn't find winget as SYSTEM. Ensure the agent is <b>v1.3.1+</b> (re-run the enrolment script to upgrade), then retry the job.</td></tr>
     <tr><td>Installed software says <b>"0 managed"</b> though the machine clearly has managed apps</td><td>The agent's winget scan is failing, so no package ids reach the server and the catalogue cannot match anything. Upgrade the agent to <b>v1.3.1+</b>; the count fills in on the next check-in.</td></tr>
     <tr><td>The same package installs over and over, always "Succeeded"</td><td>Same cause as above: the server cannot see the app, so the policy keeps asking for it and winget keeps replying "already installed". Upgrade the agent to <b>v1.3.1+</b> and the loop stops by itself.</td></tr>
+    <tr><td>No emails arrive at all</td><td>Mail is almost certainly not configured. <b>Administration → Email</b> → pick your provider → <b>Send test email</b>. It reports your provider's own error and what to do about it. Until it passes, nothing can send — but nothing is lost either: website submissions are still recorded under <b>Enquiries</b>.</td></tr>
+    <tr><td>Test email fails: <code>553 5.7.1 Sender address rejected</code></td><td>Your login was accepted; the <b>From address</b> was not. It must be the mailbox you authenticated as, or another address verified with your provider.</td></tr>
+    <tr><td>Test email fails: <code>535 Authentication failed</code></td><td>Several providers refuse your account password here. Gmail needs an App Password (with 2-Step Verification on), SendGrid's username is the literal word <code>apikey</code>, Postmark wants its Server API token in <i>both</i> boxes, Brevo needs an SMTP key.</td></tr>
+    <tr><td>"Update available" never appears</td><td>The version on offer is reported by the machine's own package manager, so the agent must be <b>v1.3.3+</b>. Re-run the enrolment script to upgrade. Binary (MSI/EXE) packages have no package manager to ask, so they never show one.</td></tr>
+    <tr><td>A rollback fails, or cannot be queued</td><td>A rollback needs a version pinned — “roll back to what?” — and that version must still be published. Some vendors (Chrome especially) only publish the current one, which makes rollback impossible however you ask. The version dropdown lists what can actually be installed.</td></tr>
     <tr><td>Install script warns "no agent bundle published"</td><td>The server hasn't got the agent bundle. Your administrator publishes it once; then re-download the script.</td></tr>
     <tr><td>Browser policy shows "pending restart"</td><td>The browser was open when the policy applied — it takes effect on next browser restart.</td></tr>
     <tr><td>Client user sees "account isn't linked to a client"</td><td>The Client-role account has no client binding. Admin: Users → set its Client binding, or change the role.</td></tr>
