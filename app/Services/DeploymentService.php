@@ -76,6 +76,17 @@ class DeploymentService
         ?string $targetVersion = null,
         bool $force = false,
     ): QueueResult {
+        // Roll back to what? The agent can build no command from this, so the
+        // job fails, retries twice more, and reports something unhelpful. The
+        // policy engine never asks for this; only a hand-made request can.
+        if ($action === JobAction::Rollback && $targetVersion === null) {
+            return new QueueResult(
+                QueueOutcome::Invalid,
+                null,
+                'A rollback needs the version to roll back to — pin one and try again.',
+            );
+        }
+
         $inFlight = DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $package->id)
             ->where('action', $action)

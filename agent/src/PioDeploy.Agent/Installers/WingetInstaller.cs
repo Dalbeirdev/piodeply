@@ -39,7 +39,12 @@ public sealed class WingetInstaller : IInstaller
         var arguments = BuildArguments(job.Action, job.WingetId, job.Version);
         if (arguments is null)
         {
-            return InstallResult.Fail($"Action '{job.Action}' is not supported for winget packages.");
+            // Rollback is supported; it just cannot be done without a target.
+            // Saying "not supported" sent an operator looking at the wrong
+            // thing entirely.
+            return InstallResult.Fail(job.Action == "rollback"
+                ? "Rollback needs a target version, and none was given."
+                : $"Action '{job.Action}' is not supported for winget packages.");
         }
 
         // Resolve the real winget.exe — the bare "winget" alias isn't on the

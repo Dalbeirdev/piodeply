@@ -61,6 +61,15 @@ class DeploymentsController extends IntegrationController
             force: (bool) ($validated['force'] ?? false),
         );
 
+        // A request that cannot be carried out is the caller's mistake, not a
+        // no-op — 422 so it is not mistaken for "already done".
+        if ($result->outcome === \App\Enums\QueueOutcome::Invalid) {
+            return response()->json([
+                'message' => $result->message,
+                'errors'  => ['target_version' => [$result->message]],
+            ], 422);
+        }
+
         // Nothing to do is a success, not an error: 200 + the reason, so a
         // caller looping over a fleet is not punished for machines that are
         // already where they should be. A new job still answers 201.

@@ -9,6 +9,9 @@ enum QueueOutcome: string
     case AlreadyQueued = 'already_queued';
     case AlreadySatisfied = 'already_satisfied';
 
+    /** The request cannot be carried out as asked — not "nothing to do". */
+    case Invalid = 'invalid';
+
     public function queued(): bool
     {
         return $this === self::Queued;

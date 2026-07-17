@@ -166,6 +166,65 @@ class SmartDeployButtonTest extends TestCase
         $this->assertNull(DeploymentJob::sole()->target_version);
     }
 
+    /**
+     * A rollback with no target is not a job anything can carry out: the agent
+     * builds no command, fails, and retries twice more for nothing.
+     */
+    public function test_a_rollback_without_a_version_cannot_be_queued(): void
+    {
+        $computer = Computer::factory()->create();
+        $this->installed($computer, '150.0');
+
+        $this->form($computer)
+            ->set('package_id', $this->chrome()->id)
+            ->set('action', 'rollback')
+            ->assertViewHas('canQueue', false)
+            ->assertViewHas('label', 'Pin a version to roll back to');
+    }
+
+    public function test_a_rollback_with_a_version_is_allowed(): void
+    {
+        $computer = Computer::factory()->create();
+        $this->installed($computer, '150.0');
+
+        $this->form($computer)
+            ->set('package_id', $this->chrome()->id)
+            ->set('action', 'rollback')
+            ->set('target_version', '141.0')
+            ->assertViewHas('canQueue', true)
+            ->call('queue');
+
+        $this->assertSame('141.0', DeploymentJob::sole()->target_version);
+    }
+
+    public function test_submitting_a_versionless_rollback_is_refused_not_queued(): void
+    {
+        $computer = Computer::factory()->create();
+        $this->installed($computer, '150.0');
+
+        $this->form($computer)
+            ->set('package_id', $this->chrome()->id)
+            ->set('action', 'rollback')
+            ->call('queue')
+            ->assertHasErrors('target_version');
+
+        $this->assertSame(0, DeploymentJob::count());
+    }
+
+    /** Belt and braces: the service refuses it even if a caller gets past the form. */
+    public function test_the_service_itself_refuses_a_versionless_rollback(): void
+    {
+        $result = app(\App\Services\DeploymentService::class)->queueIfNeeded(
+            Computer::factory()->create(),
+            $this->chrome(),
+            \App\Enums\JobAction::Rollback,
+        );
+
+        $this->assertSame(\App\Enums\QueueOutcome::Invalid, $result->outcome);
+        $this->assertStringContainsString('needs the version to roll back to', $result->message);
+        $this->assertSame(0, DeploymentJob::count());
+    }
+
     public function test_no_selection_shows_a_neutral_button(): void
     {
         $this->form(Computer::factory()->create())

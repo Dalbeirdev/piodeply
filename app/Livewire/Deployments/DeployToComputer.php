@@ -57,7 +57,13 @@ class DeployToComputer extends Component
             'package_id'     => ['required', 'integer', Rule::exists('packages', 'id')->where('is_active', true)],
             'action'         => ['required', Rule::in(JobAction::values())],
             'priority'       => ['required', 'integer', 'between:1,10'],
-            'target_version' => ['nullable', 'string', 'max:100'],
+            // A rollback with no version is not a job anything can carry out.
+            'target_version' => [
+                Rule::requiredIf(fn () => $this->action === JobAction::Rollback->value),
+                'nullable', 'string', 'max:100',
+            ],
+        ], [
+            'target_version.required' => 'Pin the version to roll back to.',
         ]);
 
         $result = $service->queueIfNeeded(
@@ -87,13 +93,15 @@ class DeployToComputer extends Component
         $satisfied = $state !== null && $action !== null
             && $installedState->isSatisfiedBy($state, $action, $this->targetVersion());
 
+        $needsVersion = $action === JobAction::Rollback && $this->targetVersion() === null;
+
         return view('livewire.deployments.deploy-to-computer', [
             'packages'  => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
             'actions'   => JobAction::cases(),
             'package'   => $package,
             'state'     => $state,
             'satisfied' => $satisfied,
-            'canQueue'  => ! $satisfied || $this->force,
+            'canQueue'  => (! $satisfied || $this->force) && ! $needsVersion,
             'label'     => $this->buttonLabel($package, $state, $action, $satisfied),
             // Only package managers report a version we can trust.
             'versionKnown' => $package?->installer_type->requiresPackageManagerId() ?? false,
@@ -110,6 +118,11 @@ class DeployToComputer extends Component
     {
         if ($package === null || $state === null || $action === null) {
             return 'Queue';
+        }
+
+        // Say what is missing, rather than let it queue and fail three times.
+        if ($action === JobAction::Rollback && $this->targetVersion() === null) {
+            return 'Pin a version to roll back to';
         }
 
         if ($satisfied && ! $this->force) {
