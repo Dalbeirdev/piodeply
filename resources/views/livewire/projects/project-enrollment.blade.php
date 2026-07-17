@@ -97,6 +97,27 @@
                 </div>
             </div>
 
+            {{-- Fresh VMs are the machines that used to fail: a clean Windows
+                 image often lacks the VC++ runtime and a working winget, which
+                 is what the installer now repairs on its own. Say so here so an
+                 operator enrolling a VM knows there is nothing extra to do. --}}
+            <div class="pd-card p-4 border-emerald-200 bg-emerald-50/50 flex gap-3">
+                <svg class="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                <div class="text-sm text-slate-700 space-y-1">
+                    <p class="font-semibold text-emerald-800">Fresh machines &amp; VMs are prepared automatically.</p>
+                    <p>
+                        A clean Windows image — especially a new VM — usually lacks the <strong>Visual C++ runtime</strong>
+                        and a working <strong>winget</strong> for the SYSTEM account. The installer checks both and repairs
+                        them before the agent starts, so a bare VM enrols with no manual prep. This is what previously
+                        caused installs to fail with exit <code class="font-mono text-xs">-1073741515</code>.
+                    </p>
+                    <p class="text-slate-500">
+                        Anything that still can't be fixed shows on the machine's page as a
+                        <strong>“Not ready to deploy”</strong> banner naming the exact remedy — so a VM is never silently broken.
+                    </p>
+                </div>
+            </div>
+
             <p class="text-xs text-slate-500">
                 Every method installs the same agent and enrols it into <strong>{{ $project->name }}</strong>.
                 Machines appear under <a href="{{ route('computers.index') }}" class="pd-link">Computers</a> within a

@@ -53,6 +53,13 @@ class ProjectEnrollmentTest extends TestCase
             ->assertSee('Single machine');
     }
 
+    public function test_the_page_explains_fresh_vms_are_auto_prepared(): void
+    {
+        $this->page()
+            ->assertSee('Fresh machines & VMs are prepared automatically')
+            ->assertSee('-1073741515');
+    }
+
     public function test_the_gpo_script_carries_the_projects_download_url(): void
     {
         $this->page()->assertSee(route('agent.download', $this->project->download_token));
