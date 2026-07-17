@@ -56,7 +56,10 @@ class NotificationChannels extends Component
         $validated = $this->validate([
             'name'        => ['required', 'string', 'max:100'],
             'type'        => ['required', Rule::in([NotificationChannel::TYPE_EMAIL, NotificationChannel::TYPE_WEBHOOK])],
-            'destination' => ['required', 'string', 'max:500',
+            // Webhook URLs (Teams, Azure Logic Apps) can run to hundreds of
+            // characters; the column now holds 2048, and the validation must
+            // not promise more room than the column has ever again.
+            'destination' => ['required', 'string', 'max:2048',
                 $this->type === NotificationChannel::TYPE_EMAIL ? 'email' : 'url'],
             'events'      => ['required', 'array', 'min:1'],
             'events.*'    => [Rule::in(array_keys(NotificationChannel::EVENTS))],

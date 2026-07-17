@@ -210,6 +210,36 @@ class NotificationsTest extends TestCase
         $this->assertNotNull($channel->fresh()->last_sent_at);
     }
 
+    /**
+     * A Teams / Azure Logic Apps webhook URL runs to hundreds of characters.
+     * The column was VARCHAR(255) while validation allowed 500, so such a URL
+     * passed the form and then hit a raw "Data too long" 500 at the database.
+     */
+    public function test_a_long_webhook_url_can_be_saved(): void
+    {
+        $this->fakeHttpOk();
+
+        // ~430 chars, in the shape of a real Logic Apps / Teams webhook.
+        $longUrl = 'https://prod-12.westeurope.logic.azure.com:443/workflows/'
+            .str_repeat('a1b2c3d4', 20)
+            .'/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig='
+            .str_repeat('X', 60);
+
+        $this->assertGreaterThan(255, strlen($longUrl));
+
+        Livewire::actingAs($this->admin())
+            ->test(NotificationChannels::class)
+            ->call('create')
+            ->set('name', 'Teams alerts')
+            ->set('type', 'webhook')
+            ->set('destination', $longUrl)
+            ->set('events', ['lead.received'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame($longUrl, NotificationChannel::firstOrFail()->destination);
+    }
+
     public function test_validation_rejects_bad_destinations(): void
     {
         $admin = $this->admin();
