@@ -24,6 +24,24 @@ final class MailProviders
     public static function all(): array
     {
         return [
+            'hostinger' => [
+                'label'         => 'Hostinger Email',
+                'host'          => 'smtp.hostinger.com',
+                'port'          => 465,
+                'scheme'        => 'ssl',
+                'username_hint' => 'The full mailbox address, e.g. info@piodeploy.com',
+                'password_hint' => 'That mailbox’s own password — the one set in hPanel, not your Hostinger account password',
+                'warning'       => 'The mailbox has to exist first: hPanel → Emails → create info@… and set its password. If your plan uses Titan rather than Hostinger Email, the host is smtp.titan.email instead — hPanel → Emails → Configuration shows which you have.',
+            ],
+            'titan' => [
+                'label'         => 'Titan Email (via Hostinger or direct)',
+                'host'          => 'smtp.titan.email',
+                'port'          => 465,
+                'scheme'        => 'ssl',
+                'username_hint' => 'The full mailbox address',
+                'password_hint' => 'That mailbox’s own password',
+                'warning'       => 'Hostinger sells both its own email and Titan. hPanel → Emails → Configuration tells you which this domain uses; picking the wrong one fails to connect.',
+            ],
             'gmail' => [
                 'label'         => 'Gmail / Google Workspace',
                 'host'          => 'smtp.gmail.com',

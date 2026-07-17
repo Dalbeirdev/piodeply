@@ -193,6 +193,18 @@ class MailSettingsTest extends TestCase
             ->assertSet('scheme', 'tls');
     }
 
+    public function test_hostinger_uses_ssl_on_465(): void
+    {
+        $this->page()
+            ->set('provider', 'hostinger')
+            ->assertSet('host', 'smtp.hostinger.com')
+            ->assertSet('port', '465')
+            ->assertSet('scheme', 'ssl')
+            // The two things that actually catch people out on Hostinger.
+            ->assertSee('has to exist first')
+            ->assertSee('smtp.titan.email');
+    }
+
     /** Knowing the host is easy; the gotcha is the point. */
     public function test_a_provider_warns_about_its_own_trap(): void
     {
