@@ -112,7 +112,11 @@ if changed '^composer\.(json|lock)$'; then
     as_app_user composer install --no-dev --optimize-autoloader --no-interaction
 fi
 
-if changed '^(package(-lock)?\.json|vite\.config\.js|tailwind\.config\.js|resources/(js|css)/)'; then
+# Tailwind scans the Blade views for class names, so a view-only change can
+# introduce classes that are not yet in the compiled CSS. Rebuild on any
+# resources/ change (views included), not just js/css, or new utility classes
+# silently render unstyled.
+if changed '^(package(-lock)?\.json|vite\.config\.js|tailwind\.config\.js|resources/)'; then
     log "Front-end changed — rebuilding assets"
     as_app_user npm ci --silent
     as_app_user npm run build

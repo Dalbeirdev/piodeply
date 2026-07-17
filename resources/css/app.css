@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Touch this file to force a full asset rebuild when a Blade-only change
+   introduces new Tailwind classes (e.g. responsive card layouts). */
+
 [x-cloak] {
     display: none;
 }
