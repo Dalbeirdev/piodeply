@@ -116,6 +116,51 @@ class MailSettingsService
     }
 
     /**
+     * What to actually do about an SMTP failure.
+     *
+     * The provider's own words are precise and useless unless you already
+     * speak SMTP: "553 5.7.1" is exactly right and tells an operator nothing.
+     * This sits above the verbatim error, never instead of it — a guess that
+     * replaced the evidence would be worse than no guess.
+     */
+    public function hintFor(string $error): ?string
+    {
+        $e = mb_strtolower($error);
+
+        return match (true) {
+            // Authenticated fine, then tried to send as someone else.
+            str_contains($e, '553') || str_contains($e, '5.7.1') || str_contains($e, 'sender address rejected')
+                => 'The provider accepted your login but refused the From address. It usually has to be the '
+                 . 'same mailbox you authenticated as, or another address verified with them.',
+
+            str_contains($e, '535') || str_contains($e, 'authentication failed') || str_contains($e, 'auth')
+                => 'The username or password was rejected. Several providers want something other than your '
+                 . 'account password here — an App Password, an API key, or a mailbox-specific password.',
+
+            str_contains($e, 'getaddrinfo') || str_contains($e, 'name or service not known') || str_contains($e, 'could not be resolved')
+                => 'The host does not exist. Check it for a typo, and that it is the right one for your plan.',
+
+            str_contains($e, 'connection refused') || str_contains($e, 'connection could not be established')
+                => 'Nothing answered on that host and port. Try the other pairing — 587 with STARTTLS, or 465 '
+                 . 'with SSL/TLS — since providers differ, and some networks block one of them outright.',
+
+            str_contains($e, 'timed out') || str_contains($e, 'timeout')
+                => 'The connection hung rather than being refused, which usually means a firewall is dropping '
+                 . 'outbound mail on this port.',
+
+            str_contains($e, 'ssl') || str_contains($e, 'tls') || str_contains($e, 'certificate')
+                => 'The encryption did not agree. 465 expects SSL/TLS and 587 expects STARTTLS — a mismatched '
+                 . 'pair fails exactly like this.',
+
+            str_contains($e, '550') || str_contains($e, 'relay')
+                => 'The provider would not relay this message. Usually the sending domain is not verified with '
+                 . 'them, or the mailbox is not allowed to send externally.',
+
+            default => null,
+        };
+    }
+
+    /**
      * Send a real message with the current settings. Returns the provider's
      * complaint verbatim on failure — paraphrasing an SMTP error helps nobody.
      */

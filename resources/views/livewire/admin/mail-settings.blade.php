@@ -178,9 +178,17 @@
 
                 @if ($testError)
                     <div class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
-                        <p class="font-semibold">It did not send. Your provider said:</p>
-                        {{-- Verbatim: paraphrasing an SMTP error helps nobody. --}}
-                        <pre class="mt-2 whitespace-pre-wrap break-words text-xs font-mono">{{ $testError }}</pre>
+                        <p class="font-semibold">It did not send.</p>
+
+                        {{-- Above the evidence, never instead of it: a guess
+                             that replaced the provider's own words would be
+                             worse than no guess. --}}
+                        @if ($testHint)
+                            <p class="mt-1.5">{{ $testHint }}</p>
+                        @endif
+
+                        <p class="mt-2 text-xs text-red-500">Your provider said:</p>
+                        <pre class="mt-1 whitespace-pre-wrap break-words text-xs font-mono">{{ $testError }}</pre>
                     </div>
                 @endif
             </div>

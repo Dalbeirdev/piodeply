@@ -42,6 +42,9 @@ class MailSettings extends Component
 
     public ?string $testError = null;
 
+    /** What to do about it, when the error is one we recognise. */
+    public ?string $testHint = null;
+
     public bool $testSent = false;
 
     public function mount(MailSettingsService $mail): void
@@ -114,6 +117,7 @@ class MailSettings extends Component
         $this->password = '';
         $this->testSent = false;
         $this->testError = null;
+        $this->testHint = null;
 
         session()->flash('status', 'Email settings saved. Send a test to confirm they work.');
     }
@@ -134,6 +138,7 @@ class MailSettings extends Component
 
         $this->testError = $mail->sendTest($this->testTo);
         $this->testSent  = $this->testError === null;
+        $this->testHint  = $this->testError === null ? null : $mail->hintFor($this->testError);
     }
 
     public function render(MailSettingsService $mail)

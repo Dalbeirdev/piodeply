@@ -166,6 +166,42 @@ class MailSettingsTest extends TestCase
             ->assertSee('Connection refused by smtp.postmarkapp.com:587');
     }
 
+    /**
+     * The real one this instance hit: authenticated as info@, tried to send as
+     * hello@, and got a code that is exact and useless unless you speak SMTP.
+     */
+    public function test_a_rejected_sender_is_explained_without_hiding_the_error(): void
+    {
+        $this->fill($this->page(), $this->valid())->call('save');
+
+        Mail::shouldReceive('raw')->andThrow(new \RuntimeException(
+            'Expected response code "250/251/252" but got code "553", with message "553 5.7.1 <hello@piodeploy.com>: Sender address rejected"'
+        ));
+
+        $this->page()
+            ->set('testTo', 'admin@piodeploy.com')
+            ->call('sendTest')
+            ->assertSee('refused the From address')   // what to do
+            ->assertSee('553 5.7.1');                 // and the evidence, still there
+    }
+
+    public function test_common_failures_each_get_a_next_step(): void
+    {
+        $mail = $this->mail();
+
+        $this->assertStringContainsString('App Password', $mail->hintFor('535 5.7.8 Authentication failed'));
+        $this->assertStringContainsString('does not exist', $mail->hintFor('getaddrinfo for smtp.yourprovider.com failed'));
+        $this->assertStringContainsString('587 with STARTTLS', $mail->hintFor('Connection refused'));
+        $this->assertStringContainsString('firewall', $mail->hintFor('Connection timed out'));
+        $this->assertStringContainsString('465 expects SSL/TLS', $mail->hintFor('SSL routines: wrong version number'));
+    }
+
+    /** An error we do not recognise must not get an invented explanation. */
+    public function test_an_unrecognised_error_gets_no_guess(): void
+    {
+        $this->assertNull($this->mail()->hintFor('Something entirely novel went wrong'));
+    }
+
     /* ─────────── validation and access ─────────── */
 
     public function test_a_host_and_a_valid_sender_are_required(): void
