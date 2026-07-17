@@ -64,76 +64,89 @@
                 </label>
             </div>
 
-            <div class="pd-card">
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="pd-th">Project</th>
-                            <th class="pd-th">Client</th>
-                            <th class="pd-th">API key</th>
-                            <th class="pd-th">Download URL</th>
-                            <th class="pd-th">Status</th>
-                            <th class="px-6 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-slate-100">
-                        @forelse ($projects as $project)
-                            <tr @class(['opacity-60' => $project->trashed()])>
-                                <td class="px-6 py-3">
-                                    <span class="font-medium text-slate-900">{{ $project->name }}</span>
-                                    @if ($project->trashed())
-                                        <span class="ml-1 text-xs rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5">deleted</span>
-                                    @endif
-                                    @if ($project->description)
-                                        <p class="text-xs text-slate-500 max-w-xs truncate">{{ $project->description }}</p>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $project->client->company_name }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    <code class="text-xs text-slate-600 font-mono">{{ $project->api_key_prefix }}…</code>
-                                    @if ($project->api_key_rotated_at)
-                                        <p class="text-xs text-slate-400">rotated {{ $project->api_key_rotated_at->diffForHumans() }}</p>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    <code class="text-xs text-slate-600 font-mono select-all">{{ $project->downloadUrl() }}</code>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap">
+            {{-- Cards, not a wide table: the API key and the long download URL
+                 used to force a horizontal scrollbar. A card fits any width,
+                 shows every field in full, and lets "Enrol machines" be a real
+                 highlighted button instead of a raw URL to copy by hand. --}}
+            <div class="space-y-3">
+                @forelse ($projects as $project)
+                    <div @class(['pd-card p-5', 'opacity-60' => $project->trashed()])>
+                        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                            {{-- Identity --}}
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-semibold text-slate-900 text-base leading-tight">{{ $project->name }}</h3>
                                     <span @class([
                                         'text-xs font-semibold rounded-full px-2 py-0.5 border',
                                         'bg-green-50 text-green-700 border-green-200' => $project->status === \App\Enums\ProjectStatus::Active,
                                         'bg-slate-100 text-slate-600 border-slate-200' => $project->status === \App\Enums\ProjectStatus::Archived,
                                     ])>{{ $project->status->label() }}</span>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @if ($project->trashed())
-                                        @can('restore', $project)
-                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $project->id }})" />
-                                        @endcan
-                                    @else
-                                        @can('rotateApiKey', $project)
-                                            <x-icon-button icon="key" variant="amber" label="Rotate API key"
-                                                           wire:click="rotateKey({{ $project->id }})"
-                                                           wire:confirm="Rotate the API key for “{{ $project->name }}”? Every agent using the old key stops authenticating immediately." />
-                                        @endcan
-                                        <x-icon-button icon="download" label="Enrol machines"
-                                                       :href="route('projects.enrollment', $project)" />
-                                        @can('update', $project)
-                                            <x-icon-button icon="edit" label="Edit" :href="route('projects.edit', $project)" />
-                                        @endcan
-                                        @can('delete', $project)
-                                            <x-icon-button icon="delete" variant="danger" label="Delete"
-                                                           wire:click="delete({{ $project->id }})"
-                                                           wire:confirm="Delete project “{{ $project->name }}”? It can be restored later." />
-                                        @endcan
+                                        <span class="text-xs rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5">deleted</span>
                                     @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">No projects found.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table></div>
+                                </div>
+                                <p class="text-sm text-slate-500 mt-0.5">{{ $project->client->company_name }}</p>
+                                @if ($project->description)
+                                    <p class="text-xs text-slate-500 mt-1 max-w-2xl">{{ $project->description }}</p>
+                                @endif
+                            </div>
+
+                            {{-- Actions: Enrol is the highlighted primary. --}}
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                @if ($project->trashed())
+                                    @can('restore', $project)
+                                        <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $project->id }})" />
+                                    @endcan
+                                @else
+                                    <a href="{{ route('projects.enrollment', $project) }}"
+                                       class="inline-flex items-center gap-2 px-4 py-2 bg-teal-700 text-white rounded-lg font-semibold text-sm shadow-sm hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-1">
+                                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                                        Enrol machines
+                                    </a>
+                                    @can('rotateApiKey', $project)
+                                        <x-icon-button icon="key" variant="amber" label="Rotate API key"
+                                                       wire:click="rotateKey({{ $project->id }})"
+                                                       wire:confirm="Rotate the API key for “{{ $project->name }}”? Every agent using the old key stops authenticating immediately." />
+                                    @endcan
+                                    @can('update', $project)
+                                        <x-icon-button icon="edit" label="Edit" :href="route('projects.edit', $project)" />
+                                    @endcan
+                                    @can('delete', $project)
+                                        <x-icon-button icon="delete" variant="danger" label="Delete"
+                                                       wire:click="delete({{ $project->id }})"
+                                                       wire:confirm="Delete project “{{ $project->name }}”? It can be restored later." />
+                                    @endcan
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- Credentials, shown in full, wrapping so nothing scrolls. --}}
+                        @unless ($project->trashed())
+                            <div class="mt-4 pt-4 border-t border-slate-100 grid gap-4 sm:grid-cols-2"
+                                 x-data="{ copied: false, copy(v) { navigator.clipboard.writeText(v); this.copied = true; setTimeout(() => this.copied = false, 1500); } }">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">API key</p>
+                                    <code class="text-sm text-slate-700 font-mono">{{ $project->api_key_prefix }}…</code>
+                                    @if ($project->api_key_rotated_at)
+                                        <span class="text-xs text-slate-400 ml-1">rotated {{ $project->api_key_rotated_at->diffForHumans() }}</span>
+                                    @endif
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Full key is shown once on creation or rotation — never stored in readable form.</p>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Download link</p>
+                                    <div class="flex items-start gap-2">
+                                        <code class="text-xs text-slate-600 font-mono break-all select-all min-w-0">{{ $project->downloadUrl() }}</code>
+                                        <button type="button" x-on:click="copy(@js($project->downloadUrl()))"
+                                                class="shrink-0 text-xs font-semibold text-teal-700 hover:text-teal-900"
+                                                x-text="copied ? 'Copied' : 'Copy'">Copy</button>
+                                    </div>
+                                </div>
+                            </div>
+                        @endunless
+                    </div>
+                @empty
+                    <div class="pd-card p-10 text-center text-slate-500">No projects found.</div>
+                @endforelse
             </div>
 
             {{ $projects->links() }}
