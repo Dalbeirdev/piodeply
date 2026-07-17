@@ -21,6 +21,9 @@
             compliance reporting — without needing a domain, an imaging server, or a six-figure contract.
             One lightweight agent, one portal, and everything runs silently in the background.</p>
 
+        {{-- The same story, in motion. Decorative: the prose above carries it. --}}
+        @include('marketing.partials.story')
+
         <h2>What we believe</h2>
         <div class="value-grid">
             <div class="feature">

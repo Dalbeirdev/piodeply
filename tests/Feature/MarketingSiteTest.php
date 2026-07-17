@@ -19,6 +19,35 @@ class MarketingSiteTest extends TestCase
         }
     }
 
+    public function test_the_about_page_tells_the_story_in_motion(): void
+    {
+        $response = $this->get('/about')->assertOk();
+
+        $html = $response->getContent();
+
+        // The grid the whole animation runs on: 8x3, each card carrying its
+        // paint order and its distance from the portal.
+        $this->assertSame(24, substr_count($html, '--i:'), 'expected a full 8x3 grid of machines');
+        $this->assertStringContainsString('data-story-caption', $html);
+
+        // The refusal is the point of this section — the three costs we would
+        // not pay are named, not implied.
+        foreach (['A domain', 'An imaging server', 'A six-figure contract'] as $cost) {
+            $response->assertSee($cost);
+        }
+    }
+
+    /** The motion is decorative; the prose beside it has to carry the story. */
+    public function test_the_about_story_survives_without_the_animation(): void
+    {
+        $this->get('/about')
+            ->assertOk()
+            ->assertSee('started inside', false)
+            ->assertSee('What we believe')
+            ->assertSee("Where we're going", false)
+            ->assertSee('aria-hidden="true"', false);
+    }
+
     public function test_home_page_replaces_the_laravel_welcome_screen(): void
     {
         $this->get('/')

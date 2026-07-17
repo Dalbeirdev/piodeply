@@ -397,3 +397,209 @@ p { margin:0 0 1rem; }
     .reveal { opacity:1 !important; transform:none !important; transition:none !important; }
     .mock.in .mock-row { opacity:1; transform:none; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Our story — the origin, told in motion.
+   Light brand throughout: depth is shadow and translucency, never
+   neon on black. Only transform/opacity animate; the wave is driven
+   by per-card --d (rings from centre) so nothing measures layout.
+   ───────────────────────────────────────────────────────────── */
+
+.story-stage {
+    position: relative;
+    margin: 2.5rem auto 0;
+    padding: 44px 24px 30px;
+    max-width: 720px;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, #fff, var(--slate-50));
+    border: 1px solid var(--slate-200);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+/* The portal: one point everything comes from. */
+.story-portal {
+    position: absolute; top: 16px; left: 50%;
+    width: 10px; height: 10px; margin-left: -5px;
+    border-radius: 50%;
+    border: 1.5px solid var(--slate-300);
+    background: #fff;
+    transition: border-color .6s ease, box-shadow .6s ease;
+}
+.story-portal-dot {
+    position: absolute; inset: 2px;
+    border-radius: 50%;
+    background: var(--slate-300);
+    transition: background .6s ease;
+}
+
+/* One line of intent, not a network diagram. */
+.story-spine {
+    position: absolute; top: 26px; left: 50%;
+    width: 1.5px; height: 26px; margin-left: -.75px;
+    background: linear-gradient(180deg, var(--teal-500), transparent);
+    transform: scaleY(0); transform-origin: top;
+    transition: transform .7s cubic-bezier(.4,0,.2,1);
+}
+
+.story-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 10px;
+    transition: opacity .6s ease, filter .6s ease;
+}
+
+/* A machine. Deliberately anonymous — this is about how many, not which. */
+.m {
+    position: relative;
+    height: 30px;
+    border-radius: 7px;
+    background: #fff;
+    border: 1px solid var(--slate-200);
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    transform: scale(.9);
+    transition: opacity .45s ease, transform .45s ease, border-color .5s ease, background .5s ease;
+}
+.m::after {
+    content: '';
+    position: absolute; top: 6px; left: 6px;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--slate-300);
+    transition: background .45s ease, box-shadow .45s ease;
+}
+
+.story-caption {
+    margin: 22px 0 0;
+    text-align: center;
+    font-size: .95rem;
+    color: var(--gray);
+    min-height: 1.4em;
+    transition: opacity .4s ease;
+}
+
+/* ── 1. Accumulation ─────────────────────────────────────────── */
+/* Not alarm. The quiet dread of scale: one, then dozens, faster
+   than a person could keep up with. */
+.story-stage.is-gather .m {
+    opacity: 1; transform: none;
+    transition-delay: calc(var(--i) * 90ms);
+}
+
+/* ── 2. The repetition ───────────────────────────────────────── */
+/* The cruelty is the sameness, not the failure. Amber, sparingly —
+   this is tedium, not catastrophe. */
+.story-stage.is-repeat .m { opacity: 1; transform: none; }
+.story-stage.is-repeat .m::after {
+    animation: story-touch 1.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 70ms);
+}
+.story-stage.is-repeat .m-stubborn {
+    border-color: #fcd9a3;
+    background: #fffdf7;
+}
+/* The few you learn the hostname of. */
+.story-stage.is-repeat .m-stubborn::after {
+    background: var(--amber-500);
+    animation: story-retry 1.4s ease-in-out infinite;
+}
+
+@keyframes story-touch {
+    0%, 70%, 100% { background: var(--slate-300); }
+    35%           { background: var(--teal-400); }
+}
+@keyframes story-retry {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: .25; }
+}
+
+/* ── 3. The refusal ──────────────────────────────────────────── */
+/* The turn, and the sharpest thing on this page: the cure was
+   available, and its price was the point. */
+.story-slabs {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.slab {
+    padding: 7px 16px;
+    border-radius: 999px;
+    font-size: .82rem; font-weight: 600;
+    color: var(--slate-600);
+    background: rgba(255, 255, 255, .82);
+    backdrop-filter: blur(6px);
+    border: 1px solid var(--slate-200);
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(6px) scale(.98);
+    transition: opacity .45s ease, transform .45s ease;
+}
+.story-stage.is-refuse .m { opacity: 1; transform: none; }
+.story-stage.is-refuse .story-grid { opacity: .35; filter: saturate(.5); }
+.story-stage.is-refuse .slab { opacity: 1; transform: none; }
+.story-stage.is-refuse .slab:nth-child(1) { transition-delay: .05s; }
+.story-stage.is-refuse .slab:nth-child(2) { transition-delay: .35s; }
+.story-stage.is-refuse .slab:nth-child(3) { transition-delay: .65s; }
+
+/* ── 4. The build ────────────────────────────────────────────── */
+/* One agent, one portal. The wave decides outward from the centre —
+   one line doing one thing, correctly, everywhere. */
+.story-stage.is-build .story-portal,
+.story-stage.is-silence .story-portal {
+    border-color: var(--teal-500);
+    box-shadow: 0 0 0 4px rgba(20, 184, 166, .12);
+}
+.story-stage.is-build .story-portal-dot,
+.story-stage.is-silence .story-portal-dot { background: var(--teal-600); }
+.story-stage.is-build .story-spine,
+.story-stage.is-silence .story-spine { transform: scaleY(1); }
+
+.story-stage.is-build .m {
+    opacity: 1; transform: none;
+    border-color: #a7f3d0;
+    background: #f6fefb;
+    transition-delay: calc(var(--d) * 150ms);
+}
+.story-stage.is-build .m::after {
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, .14);
+    transition-delay: calc(var(--d) * 150ms);
+}
+
+/* ── 5. Silence ──────────────────────────────────────────────── */
+/* The reward is nothing happening. Motion drains; the thread rests. */
+.story-stage.is-silence .m {
+    opacity: 1; transform: none;
+    border-color: #d1fae5;
+    background: #f8fefb;
+}
+.story-stage.is-silence .m::after {
+    background: var(--green);
+    box-shadow: none;
+    animation: story-rest 4s ease-in-out infinite;
+    animation-delay: calc(var(--d) * 200ms);
+}
+@keyframes story-rest {
+    0%, 100% { opacity: .55; }
+    50%      { opacity: 1; }
+}
+
+/* Reduced motion lands here directly — the only frame that means
+   anything on its own. */
+.story-stage.is-static .m::after,
+.story-stage.is-static .story-spine { animation: none; }
+
+@media (max-width: 720px) {
+    .story-stage { padding: 40px 16px 26px; }
+    .story-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    /* Fewer machines, same story. */
+    .story-grid .m:nth-child(n+13) { display: none; }
+    .slab { font-size: .76rem; padding: 6px 13px; }
+    .story-caption { font-size: .875rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .story-stage .m::after, .story-spine, .slab, .m { animation: none !important; transition: none !important; }
+}
