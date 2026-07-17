@@ -61,6 +61,24 @@ New-Service -Name $serviceName `
 sc.exe failure $serviceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
 Start-Service $serviceName
 
+# 6. Ensure the Visual C++ runtime. Many app installers (Chrome among them)
+#    fail to even launch without it — exit -1073741515 / 0xC0000135
+#    (STATUS_DLL_NOT_FOUND), common on a fresh VM. The redist is idempotent:
+#    it no-ops when an equal-or-newer version is already present. Best-effort,
+#    so a hiccup here never fails the agent install.
+try {
+    Write-Host 'Ensuring Visual C++ runtime (needed by many installers)...'
+    $vc = Join-Path $env:TEMP 'vc_redist.x64.exe'
+    Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile $vc -UseBasicParsing
+    $vcProc = Start-Process -FilePath $vc -ArgumentList '/install', '/quiet', '/norestart' -Wait -PassThru
+    Remove-Item $vc -Force -ErrorAction SilentlyContinue
+    # 1638/3010 = already present / reboot-to-complete; both are success here.
+    if ($vcProc.ExitCode -in 0, 1638, 3010) { Write-Host 'Visual C++ runtime present.' }
+    else { Write-Warning "VC++ runtime installer returned $($vcProc.ExitCode)." }
+} catch {
+    Write-Warning "Could not ensure the Visual C++ runtime: $($_.Exception.Message)"
+}
+
 Write-Host 'PioDeploy agent installed and started.'
 Write-Host "Logs: $env:ProgramData\PioDeploy\logs"
 @endif

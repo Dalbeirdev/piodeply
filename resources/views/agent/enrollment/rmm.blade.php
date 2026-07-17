@@ -18,9 +18,9 @@ if (Test-Path $agentExe) {
 }
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$installer = Join-Path $env:TEMP 'install-piodeploy-agent.ps1'
-Invoke-WebRequest -Uri '{!! $scriptUrl !!}' -OutFile $installer -UseBasicParsing
-& $installer -ApiKey '{!! $apiKey !!}'
-Remove-Item $installer -Force -ErrorAction SilentlyContinue
+# Run the installer in memory: no saved .ps1, so a Restricted execution policy
+# on the endpoint cannot block it.
+$src = (Invoke-WebRequest -Uri '{!! $scriptUrl !!}' -UseBasicParsing).Content
+& ([scriptblock]::Create($src)) -ApiKey '{!! $apiKey !!}'
 
 Write-Output "PioDeploy agent installed on $env:COMPUTERNAME."

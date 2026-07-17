@@ -52,10 +52,10 @@ try {
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    $installer = Join-Path $env:TEMP 'install-piodeploy-agent.ps1'
-    Invoke-WebRequest -Uri $scriptUrl -OutFile $installer -UseBasicParsing
-    & $installer -ApiKey $apiKey
-    Remove-Item $installer -Force -ErrorAction SilentlyContinue
+    # Run the installer in memory, not from a saved .ps1 — a device on a
+    # Restricted execution policy would refuse to run the file otherwise.
+    $src = (Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing).Content
+    & ([scriptblock]::Create($src)) -ApiKey $apiKey
 
     Write-Log ("Agent {0} on {1}." -f (Get-InstalledVersion), $env:COMPUTERNAME)
     exit 0

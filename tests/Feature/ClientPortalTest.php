@@ -181,6 +181,22 @@ class ClientPortalTest extends TestCase
         $this->assertStringContainsString('/download/agent/', $script);     // binary url present
     }
 
+    public function test_agent_install_script_provisions_the_vc_runtime(): void
+    {
+        // With a bundle published, the installer body ensures the VC++ runtime,
+        // so a fresh machine will not fail app installs with -1073741515 /
+        // 0xC0000135. Publish a stand-in bundle so the install branch renders.
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Storage::disk('local')
+            ->put(\App\Http\Controllers\AgentDownloadController::BUNDLE_PATH, 'zip-bytes');
+
+        $script = $this->get("/download/agent/{$this->acmeProject->download_token}")
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString('vc_redist.x64.exe', $script);
+        $this->assertStringContainsString('/quiet', $script);
+    }
+
     public function test_agent_download_rejects_unknown_and_archived_tokens(): void
     {
         $this->get('/download/agent/definitely-not-a-token')->assertNotFound();

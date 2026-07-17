@@ -174,6 +174,40 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertStringContainsString(EnrollmentScriptService::CURRENT_AGENT_VERSION, $body);
     }
 
+    public function test_every_method_runs_the_installer_in_memory_not_from_a_saved_file(): void
+    {
+        // Execution policy only blocks running a .ps1 *file*. Building the
+        // installer as an in-memory scriptblock sidesteps a Restricted policy
+        // entirely — the failure a fresh machine hit. Guard against a regression
+        // to the save-to-temp-then-run pattern on any method.
+        $all = app(EnrollmentScriptService::class)->all($this->project, 'pio_k');
+
+        foreach (['single', 'rmm', 'gpo', 'intune'] as $method) {
+            $body = $all[$method]['body'];
+            $this->assertStringContainsString('[scriptblock]::Create(', $body, "$method should run the installer in memory");
+            $this->assertStringNotContainsString('OutFile $installer', $body, "$method must not save the installer to a file");
+            $this->assertStringNotContainsString("& \$installer -ApiKey", $body, "$method must not run the installer from a file");
+        }
+    }
+
+    public function test_the_single_machine_command_is_one_self_contained_line(): void
+    {
+        // A real-length key (KEY_PATTERN needs >= 8 chars) so we can assert it
+        // is carried inline rather than falling back to the placeholder.
+        $body = app(EnrollmentScriptService::class)->all($this->project, 'pio_realkey1')['single']['body'];
+
+        // Exactly one executable (non-comment, non-blank) line: nothing can be
+        // pasted out of order, and it carries the key inline.
+        $exec = collect(preg_split('/\R/', $body))
+            ->map(fn ($l) => trim($l))
+            ->filter(fn ($l) => $l !== '' && ! str_starts_with($l, '#'))
+            ->values();
+
+        $this->assertCount(1, $exec, 'the single-machine command must be one line');
+        $this->assertStringContainsString('[scriptblock]::Create(', $exec[0]);
+        $this->assertStringContainsString("-ApiKey 'pio_realkey1'", $exec[0]);
+    }
+
     public function test_switching_method_changes_the_script_shown(): void
     {
         $this->page()
