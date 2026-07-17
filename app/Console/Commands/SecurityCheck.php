@@ -25,7 +25,11 @@ class SecurityCheck extends Command
      * Hosts nobody owns. Shipped in .env.production.example for an operator to
      * replace, and passed straight through to production when they didn't.
      */
-    private const PLACEHOLDER_HOSTS = ['yourprovider', 'example.com', 'example.org', 'changeme', 'smtp.host'];
+    // Substrings of the shipped example values only. 'smtp.host' was here and
+    // matched smtp.HOSTinger.com — this instance's real provider — failing the
+    // check on a correct config. Needles must be specific enough that no real
+    // host contains one.
+    private const PLACEHOLDER_HOSTS = ['yourprovider', 'example.com', 'example.org', 'changeme', 'smtp.example'];
 
     public function handle(): int
     {

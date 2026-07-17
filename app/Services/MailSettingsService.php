@@ -161,13 +161,46 @@ class MailSettingsService
     }
 
     /**
-     * Send a real message with the current settings. Returns the provider's
-     * complaint verbatim on failure — paraphrasing an SMTP error helps nobody.
+     * Push an explicit set of values over the config, without saving them.
+     * Lets the operator test a configuration before committing it — the whole
+     * point of a test button is to try before you trust.
+     *
+     * @param array{host?:?string, port?:?string, username?:?string, scheme?:?string, from_address?:?string, from_name?:?string} $values
      */
-    public function sendTest(string $to): ?string
+    public function applyRuntime(array $values, ?string $password): void
+    {
+        config([
+            'mail.default'                => 'smtp',
+            'mail.mailers.smtp.transport' => 'smtp',
+            'mail.mailers.smtp.host'      => $values['host'] ?? null,
+            'mail.mailers.smtp.port'      => (int) (($values['port'] ?? null) ?: 587),
+            'mail.mailers.smtp.username'  => ($values['username'] ?? null) ?: null,
+            // A typed password wins; a blank field falls back to what is
+            // stored, so testing an unchanged password after editing the host
+            // does not force the operator to retype the secret.
+            'mail.mailers.smtp.password'  => ($password !== null && trim($password) !== '') ? trim($password) : $this->password(),
+            'mail.mailers.smtp.scheme'    => ($values['scheme'] ?? null) ?: null,
+        ]);
+
+        if (trim((string) ($values['from_address'] ?? '')) !== '') {
+            config(['mail.from.address' => $values['from_address']]);
+        }
+        if (trim((string) ($values['from_name'] ?? '')) !== '') {
+            config(['mail.from.name' => $values['from_name']]);
+        }
+    }
+
+    /**
+     * Send a real message with the given settings (or, if none passed, the
+     * stored ones). Returns the provider's complaint verbatim on failure —
+     * paraphrasing an SMTP error helps nobody.
+     *
+     * @param array<string, string|null>|null $override
+     */
+    public function sendTest(string $to, ?array $override = null, ?string $password = null): ?string
     {
         try {
-            $this->apply();
+            $override !== null ? $this->applyRuntime($override, $password) : $this->apply();
 
             Mail::raw(
                 "This is a test from PioDeploy.\n\nIf you are reading this, outgoing mail works: "

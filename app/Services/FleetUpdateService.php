@@ -60,7 +60,13 @@ class FleetUpdateService
                 // curated guess, and the agent asked the package source.
                 $offered = $row->available_version ?: ($pinned[$row->name] ?? null);
 
-                if ($offered === null || version_compare($offered, $row->version, '<=')) {
+                // winget reports "Unknown" and worse; version_compare will not
+                // throw on it but will happily rank it, producing a bogus
+                // "Unknown → 1.0". Only compare things that look like versions.
+                if ($offered === null
+                    || ! self::isVersion($row->version)
+                    || ! self::isVersion($offered)
+                    || version_compare($offered, $row->version, '<=')) {
                     return null;
                 }
 
@@ -78,15 +84,25 @@ class FleetUpdateService
             ->values();
     }
 
+    /** A version_compare-able string, as opposed to "Unknown" or a blank. */
+    private static function isVersion(?string $v): bool
+    {
+        return $v !== null && preg_match('/^\d[\w.\-+]*$/', $v) === 1;
+    }
+
     /**
      * The same rows folded by package — what an operator acts on. One update
      * across sixty machines is one decision, not sixty.
      *
+     * Pass an already-computed pending() to avoid a second full pass over the
+     * inventory; the dashboard needs both the count and the fold from one load.
+     *
+     * @param  Collection<int, array<string, mixed>>|null  $pending
      * @return Collection<int, array{id: string, name: string, machines: int, from: string, to: string}>
      */
-    public function byPackage(?int $clientId = null): Collection
+    public function byPackage(?int $clientId = null, ?Collection $pending = null): Collection
     {
-        return $this->pending($clientId)
+        return ($pending ?? $this->pending($clientId))
             ->groupBy('id')
             ->map(fn (Collection $rows) => [
                 'id'       => $rows->first()['id'],

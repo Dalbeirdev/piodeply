@@ -124,6 +124,30 @@ class FleetUpdatesTest extends TestCase
         $this->assertCount(0, $this->service()->pending());
     }
 
+    /** winget really does report "Unknown"; it must not become "Unknown → 1.0". */
+    public function test_a_non_numeric_version_is_not_ranked(): void
+    {
+        $this->chrome();
+        $this->installed(Computer::factory()->create(), 'Google.Chrome', 'Unknown', '141.0');
+        $this->installed(Computer::factory()->create(), 'Google.Chrome', '138.0', 'Unknown');
+
+        $this->assertCount(0, $this->service()->pending());
+    }
+
+    public function test_byPackage_reuses_a_supplied_pending_set(): void
+    {
+        $this->chrome();
+        $this->installed(Computer::factory()->create(), 'Google.Chrome', '138.0', '141.0');
+
+        $pending = $this->service()->pending();
+
+        // Passing it in must give the same fold without a second query pass.
+        $this->assertEquals(
+            $this->service()->byPackage()->toArray(),
+            $this->service()->byPackage(pending: $pending)->toArray(),
+        );
+    }
+
     /* ─────────── folding ─────────── */
 
     public function test_one_update_across_many_machines_is_one_row(): void

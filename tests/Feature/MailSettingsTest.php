@@ -152,6 +152,44 @@ class MailSettingsTest extends TestCase
             ->assertSet('testError', null);
     }
 
+    /** The page promises the test uses what is on screen, saved or not. */
+    public function test_a_test_uses_the_typed_settings_before_they_are_saved(): void
+    {
+        Mail::fake();
+
+        // Nothing saved; fill the form and test straight away.
+        $this->page()
+            ->set('provider', 'custom')
+            ->set('host', 'smtp.brevo.com')
+            ->set('from_address', 'info@piodeploy.com')
+            ->set('from_name', 'PioDeploy')
+            ->set('password', 'typed-not-saved')
+            ->set('testTo', 'admin@piodeploy.com')
+            ->call('sendTest')
+            ->assertSet('testSent', true);
+
+        // And it genuinely used the typed host, not the (empty) stored config.
+        $this->assertSame('smtp.brevo.com', config('mail.mailers.smtp.host'));
+        $this->assertNull($this->mail()->get('host')); // still nothing persisted
+    }
+
+    public function test_test_emails_are_rate_limited(): void
+    {
+        Mail::fake();
+        \Illuminate\Support\Facades\RateLimiter::clear('mail-test:'.\App\Models\User::first()?->id);
+
+        $component = $this->fill($this->page(), $this->valid())->call('save')
+            ->set('testTo', 'admin@piodeploy.com');
+
+        foreach (range(1, 5) as $i) {
+            $component->call('sendTest')->assertSet('testSent', true);
+        }
+
+        $component->call('sendTest')
+            ->assertSet('testSent', false)
+            ->assertSee('Too many test emails');
+    }
+
     /** The provider's complaint verbatim — paraphrasing it helps nobody. */
     public function test_a_failing_send_shows_what_the_provider_said(): void
     {

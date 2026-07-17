@@ -229,4 +229,27 @@ class SecurityHardeningTest extends TestCase
             ->doesntExpectOutputToContain('MAIL_HOST')
             ->assertExitCode(0);
     }
+
+    /**
+     * smtp.hostinger.com contains the substring "smtp.host" — a placeholder
+     * needle that used to fail the check on this instance's own real provider.
+     */
+    public function test_security_check_does_not_flag_hostinger_as_the_example_value(): void
+    {
+        $this->userWithRole(RoleEnum::SuperAdmin);
+        app()->detectEnvironment(fn () => 'production');
+        config([
+            'mail.default'            => 'smtp',
+            'mail.mailers.smtp.host'  => 'smtp.hostinger.com',
+            'mail.from.address'       => 'info@piodeploy.com',
+            'app.debug'               => false,
+            'app.url'                 => 'https://piodeploy.com',
+            'session.secure'          => true,
+            'session.http_only'       => true,
+        ]);
+
+        $this->artisan('security:check')
+            ->doesntExpectOutputToContain('example value')
+            ->assertExitCode(0);
+    }
 }

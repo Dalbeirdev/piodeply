@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Enums\Permission;
 use App\Services\MailSettingsService;
 use App\Support\MailProviders;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -136,7 +137,31 @@ class MailSettings extends Component
 
         $this->validate(['testTo' => ['required', 'email']]);
 
-        $this->testError = $mail->sendTest($this->testTo);
+        // A real send that hits an external server, so it is rate limited: a
+        // settings-manager should not be able to loop it as a relay.
+        $key = 'mail-test:'.auth()->id();
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $this->testSent = false;
+            $this->testHint = null;
+            $this->testError = 'Too many test emails just now — wait a minute and try again.';
+
+            return;
+        }
+        RateLimiter::hit($key, 60);
+
+        // Test what is on screen, saved or not — the promise the page makes,
+        // and the point of testing before you commit. scheme maps the form's
+        // tls/ssl/none to the transport's smtp/smtps/plain, as save() does.
+        $override = [
+            'host'         => $this->host,
+            'port'         => $this->port,
+            'username'     => $this->username,
+            'scheme'       => $this->scheme === 'ssl' ? 'smtps' : ($this->scheme === 'none' ? '' : 'smtp'),
+            'from_address' => $this->from_address,
+            'from_name'    => $this->from_name,
+        ];
+
+        $this->testError = $mail->sendTest($this->testTo, $override, $this->password);
         $this->testSent  = $this->testError === null;
         $this->testHint  = $this->testError === null ? null : $mail->hintFor($this->testError);
     }

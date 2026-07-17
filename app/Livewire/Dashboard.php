@@ -92,7 +92,8 @@ class Dashboard extends Component
             return $this->renderClientPortal($tenantId);
         }
 
-        $updates = app(\App\Services\FleetUpdateService::class)->pending();
+        $fleetUpdates = app(\App\Services\FleetUpdateService::class);
+        $updates = $fleetUpdates->pending();   // one pass; byPackage reuses it
 
         $stats = [
             'online'    => Computer::online()->count(),
@@ -112,7 +113,7 @@ class Dashboard extends Component
 
         return view('livewire.dashboard', [
             'stats'         => $stats,
-            'updatesByPackage' => app(\App\Services\FleetUpdateService::class)->byPackage()->take(6),
+            'updatesByPackage' => $fleetUpdates->byPackage(pending: $updates)->take(6),
             'fleetByClient' => $this->fleetByClient(),
             'series'        => $this->deploymentsSeries(),
             'activity'      => Activity::with('causer')->latest()->limit(8)->get(),

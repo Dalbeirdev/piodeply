@@ -87,7 +87,8 @@ Route::middleware([
     Route::get('/admin/enquiries', \App\Livewire\Admin\LeadsIndex::class)->name('admin.leads');
 
     // SMTP without an SSH session. Gated inside the component too.
-    Route::get('/admin/email', \App\Livewire\Admin\MailSettings::class)->name('admin.mail');
+    Route::get('/admin/email', \App\Livewire\Admin\MailSettings::class)
+        ->middleware('permission:settings.manage')->name('admin.mail');
 
     Route::middleware('permission:computers.view')->group(function () {
         Route::get('/computers', \App\Livewire\Computers\ComputersIndex::class)->name('computers.index');
