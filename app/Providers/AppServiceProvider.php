@@ -35,8 +35,15 @@ class AppServiceProvider extends ServiceProvider
         // Shared branding for the public marketing site.
         \Illuminate\Support\Facades\View::composer('marketing.*', function ($view) {
             $content = app(\App\Services\SiteContentService::class);
+            $company = app(\App\Services\SettingsService::class)->get('branding.company_name');
+
             $view->with([
-                'company' => app(\App\Services\SettingsService::class)->get('branding.company_name'),
+                'company' => $company,
+                // The house that built the product. When the setting is just
+                // the product's own name, sentences like "PioDeploy started
+                // inside PioDeploy" come out as nonsense — so callers get null
+                // and phrase it without naming anyone.
+                'house'   => $company !== config('app.name') ? $company : null,
                 'email'   => $content->get('contact.email') ?: (config('mail.from.address') ?: 'hello@piodeploy.app'),
                 'content' => $content,
                 'billing' => app(\App\Services\BillingService::class),

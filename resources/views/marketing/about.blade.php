@@ -14,9 +14,12 @@
 <section class="section">
     <div class="container prose">
         <h2>Our story</h2>
-        <p>PioDeploy started inside {{ $company }} as an internal tool. Managing software across dozens
-            of client sites meant repetitive, error-prone work: chasing down machines that missed an
-            update, re-running failed installs, and having no single view of what was actually deployed.</p>
+        {{-- $house is null when the branding setting is just the product's own
+             name, which turned this into "PioDeploy started inside PioDeploy". --}}
+        <p>PioDeploy started as an internal tool inside {{ $house ?? 'a working MSP' }}. Managing software
+            across dozens of client sites meant repetitive, error-prone work: chasing down machines that
+            missed an update, re-running failed installs, and having no single view of what was actually
+            deployed.</p>
         <p>We wanted the power of enterprise tooling — desired-state configuration, staged rollouts,
             compliance reporting — without needing a domain, an imaging server, or a six-figure contract.
             One lightweight agent, one portal, and everything runs silently in the background.</p>

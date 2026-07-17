@@ -17,20 +17,35 @@
         <div class="container nav-inner">
             <a href="{{ route('home') }}" class="brand">
                 <img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="52" height="52">
-                <span>PioDeploy <span class="sub">· {{ $company }}</span></span>
+                <span>PioDeploy @if ($house)<span class="sub">· {{ $house }}</span>@endif</span>
             </a>
-            <nav class="nav-links">
-                <a href="{{ route('home') }}#features" class="link">Features</a>
-                <a href="{{ route('pricing') }}" class="link">Pricing</a>
-                <a href="{{ route('about') }}" class="link">About</a>
-                <a href="{{ route('contact') }}" class="link">Contact</a>
-            </nav>
-            <div class="nav-cta">
-                <a href="{{ url('/login') }}" class="btn btn-ghost">Log in</a>
-                <a href="{{ route('get-started') }}" class="btn btn-primary">Get started</a>
+            {{-- display:contents on desktop, so this wrapper changes nothing
+                 there — but on mobile the links AND the buttons collapse into
+                 the menu together. Left out, the buttons stayed in the bar and
+                 fought the logo and the burger for a phone's width. --}}
+            <div class="nav-drawer" id="navDrawer">
+                <nav class="nav-links">
+                    <a href="{{ route('home') }}#features" class="link">Features</a>
+                    <a href="{{ route('pricing') }}" class="link">Pricing</a>
+                    <a href="{{ route('about') }}" class="link">About</a>
+                    <a href="{{ route('contact') }}" class="link">Contact</a>
+                </nav>
+
+                {{-- Someone already signed in does not need to be sold to, and
+                     "Log in" is a dead end for the people who already pay us. --}}
+                <div class="nav-cta">
+                    @auth
+                        <span class="nav-who">{{ Str::of(Auth::user()->name)->explode(' ')->first() }}</span>
+                        <a href="{{ url('/dashboard') }}" class="btn btn-primary">Go to dashboard →</a>
+                    @else
+                        <a href="{{ url('/login') }}" class="btn btn-ghost">Log in</a>
+                        <a href="{{ route('get-started') }}" class="btn btn-primary">Get started</a>
+                    @endauth
+                </div>
             </div>
-            <button class="nav-toggle" aria-label="Menu"
-                    onclick="var n=document.getElementById('siteNav');n.dataset.open=n.dataset.open==='1'?'0':'1';">
+
+            <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="navDrawer"
+                    onclick="var n=document.getElementById('siteNav');var o=n.dataset.open==='1';n.dataset.open=o?'0':'1';this.setAttribute('aria-expanded',String(!o));">
                 <span></span><span></span><span></span>
             </button>
         </div>
@@ -43,7 +58,7 @@
             <div class="footer-grid">
                 <div>
                     <div class="brand"><img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="38" height="38"><span>PioDeploy</span></div>
-                    <p class="fdesc">{{ $content->get('footer.tagline') }} Built for MSPs by {{ $company }}.</p>
+                    <p class="fdesc">{{ $content->get('footer.tagline') }} Built for MSPs{{ $house ? ' by '.$house : '' }}.</p>
                 </div>
                 <div>
                     <h4>Product</h4>
@@ -51,7 +66,11 @@
                     <a href="{{ route('pricing') }}">Pricing</a>
                     <a href="{{ route('home') }}#how">How it works</a>
                     <a href="{{ asset('PioDeploy-User-Guide.pdf') }}" target="_blank" rel="noopener">User guide (PDF)</a>
-                    <a href="{{ url('/login') }}">Log in</a>
+                    @auth
+                        <a href="{{ url('/dashboard') }}">Dashboard</a>
+                    @else
+                        <a href="{{ url('/login') }}">Log in</a>
+                    @endauth
                 </div>
                 <div>
                     <h4>Company</h4>

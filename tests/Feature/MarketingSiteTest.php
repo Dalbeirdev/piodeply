@@ -19,6 +19,51 @@ class MarketingSiteTest extends TestCase
         }
     }
 
+    public function test_a_signed_in_visitor_is_sent_to_the_dashboard_not_asked_to_log_in(): void
+    {
+        $this->actingAs(\App\Models\User::factory()->create(['name' => 'Dalbeir Singh']))
+            ->get('/about')
+            ->assertOk()
+            ->assertSee('Go to dashboard')
+            ->assertSee('Dalbeir')          // first name only
+            ->assertDontSee('>Log in<', false)
+            ->assertDontSee('>Get started<', false);
+    }
+
+    public function test_a_visitor_who_is_not_signed_in_still_gets_the_pitch(): void
+    {
+        $this->get('/about')
+            ->assertOk()
+            ->assertSee('Log in')
+            ->assertSee('Get started')
+            ->assertDontSee('Go to dashboard');
+    }
+
+    /**
+     * The branding setting is the company that makes the product. When it is
+     * set to the product's own name, "PioDeploy started inside PioDeploy" is
+     * what reaches the page — so nothing may name it blindly.
+     */
+    public function test_the_story_does_not_say_piodeploy_was_built_inside_piodeploy(): void
+    {
+        app(\App\Services\SettingsService::class)->set('branding.company_name', config('app.name'));
+
+        $this->get('/about')
+            ->assertOk()
+            ->assertDontSee('inside '.config('app.name'))
+            ->assertSee('inside a working MSP');
+    }
+
+    public function test_the_story_names_the_house_when_the_setting_is_a_real_company(): void
+    {
+        app(\App\Services\SettingsService::class)->set('branding.company_name', 'TechPio');
+
+        $this->get('/about')
+            ->assertOk()
+            ->assertSee('inside TechPio')
+            ->assertDontSee('inside a working MSP');
+    }
+
     public function test_the_about_page_tells_the_story_in_motion(): void
     {
         $response = $this->get('/about')->assertOk();
@@ -42,7 +87,7 @@ class MarketingSiteTest extends TestCase
     {
         $this->get('/about')
             ->assertOk()
-            ->assertSee('started inside', false)
+            ->assertSee('as an internal tool inside', false)
             ->assertSee('What we believe')
             ->assertSee("Where we're going", false)
             ->assertSee('aria-hidden="true"', false);
