@@ -171,4 +171,62 @@ class SecurityHardeningTest extends TestCase
             ->expectsOutputToContain('no client binding')
             ->assertExitCode(1);
     }
+
+    /* ── the mailer check ──────────────────────────────────────────────
+     | It used to test only that MAIL_MAILER was not "log", so a real
+     | install shipped with MAIL_HOST=smtp.yourprovider.com, passed
+     | cleanly, and every notification failed at the first send.
+     */
+
+    public function test_security_check_catches_the_example_mail_host_still_in_place(): void
+    {
+        $this->userWithRole(RoleEnum::SuperAdmin);
+        app()->detectEnvironment(fn () => 'production');
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'smtp.yourprovider.com']);
+
+        $this->artisan('security:check')
+            ->expectsOutputToContain('still the example value')
+            ->assertExitCode(1);
+    }
+
+    public function test_security_check_catches_an_empty_mail_host(): void
+    {
+        $this->userWithRole(RoleEnum::SuperAdmin);
+        app()->detectEnvironment(fn () => 'production');
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => '']);
+
+        $this->artisan('security:check')
+            ->expectsOutputToContain('MAIL_HOST is empty')
+            ->assertExitCode(1);
+    }
+
+    public function test_security_check_still_catches_the_log_mailer(): void
+    {
+        $this->userWithRole(RoleEnum::SuperAdmin);
+        app()->detectEnvironment(fn () => 'production');
+        config(['mail.default' => 'log']);
+
+        $this->artisan('security:check')
+            ->expectsOutputToContain('go to a file, not people')
+            ->assertExitCode(1);
+    }
+
+    public function test_security_check_accepts_a_real_smtp_host(): void
+    {
+        $this->userWithRole(RoleEnum::SuperAdmin);
+        app()->detectEnvironment(fn () => 'production');
+        config([
+            'mail.default'            => 'smtp',
+            'mail.mailers.smtp.host'  => 'smtp.sendgrid.net',
+            'mail.from.address'       => 'hello@piodeploy.com',
+            'app.debug'               => false,
+            'app.url'                 => 'https://piodeploy.com',
+            'session.secure'          => true,
+            'session.http_only'       => true,
+        ]);
+
+        $this->artisan('security:check')
+            ->doesntExpectOutputToContain('MAIL_HOST')
+            ->assertExitCode(0);
+    }
 }

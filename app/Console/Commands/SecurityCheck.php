@@ -21,6 +21,12 @@ class SecurityCheck extends Command
 
     private int $warnings = 0;
 
+    /**
+     * Hosts nobody owns. Shipped in .env.production.example for an operator to
+     * replace, and passed straight through to production when they didn't.
+     */
+    private const PLACEHOLDER_HOSTS = ['yourprovider', 'example.com', 'example.org', 'changeme', 'smtp.host'];
+
     public function handle(): int
     {
         $production = app()->environment('production');
@@ -49,10 +55,11 @@ class SecurityCheck extends Command
             'session.http_only must stay true'
         );
 
+        $mailProblem = $production ? $this->mailerProblem() : null;
         $this->check(
-            ! $production || config('mail.default') !== 'log',
+            $mailProblem === null,
             'Mailer is configured in production',
-            'MAIL_MAILER=log means notification emails go to a file, not people'
+            $mailProblem ?? ''
         );
 
         $superAdmins = User::role(RoleEnum::SuperAdmin->value)->count();
@@ -100,6 +107,43 @@ class SecurityCheck extends Command
         $this->warn("Security check finished with {$this->warnings} warning(s).");
 
         return self::FAILURE;
+    }
+
+    /**
+     * Why mail would fail, if it would. "Not the log driver" was the whole
+     * test before, so MAIL_MAILER=smtp pointed at the example host passed
+     * cleanly and then failed at the first send — the check reported on the
+     * one part that happened to be right, and told the operator not to look.
+     */
+    private function mailerProblem(): ?string
+    {
+        if (config('mail.default') === 'log') {
+            return 'MAIL_MAILER=log means notification emails go to a file, not people';
+        }
+
+        if (trim((string) config('mail.from.address')) === '') {
+            return 'MAIL_FROM_ADDRESS is empty — messages will be rejected by most providers';
+        }
+
+        // Only SMTP exposes a host we can sanity-check; API mailers carry
+        // their own credentials and fail loudly on their own.
+        if (config('mail.default') !== 'smtp') {
+            return null;
+        }
+
+        $host = trim((string) config('mail.mailers.smtp.host'));
+
+        if ($host === '') {
+            return 'MAIL_HOST is empty — nothing can be sent';
+        }
+
+        foreach (self::PLACEHOLDER_HOSTS as $placeholder) {
+            if (str_contains(mb_strtolower($host), $placeholder)) {
+                return "MAIL_HOST is still the example value ({$host}) — every notification will fail to send";
+            }
+        }
+
+        return null;
     }
 
     private function check(bool $passed, string $okMessage, string $warnMessage): void
