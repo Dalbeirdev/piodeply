@@ -64,6 +64,27 @@ class MarketingSiteTest extends TestCase
             ->assertDontSee('inside a working MSP');
     }
 
+    /** "Company: PioDeploy" on PioDeploy's own contact page says nothing. */
+    public function test_contact_does_not_state_the_obvious_company(): void
+    {
+        app(\App\Services\SettingsService::class)->set('branding.company_name', config('app.name'));
+
+        $this->get('/contact')->assertOk()->assertDontSee('Built by');
+
+        app(\App\Services\SettingsService::class)->set('branding.company_name', 'TechPio');
+
+        $this->get('/contact')->assertOk()->assertSee('Built by')->assertSee('TechPio');
+    }
+
+    public function test_contact_sends_a_signed_in_customer_to_their_fleet(): void
+    {
+        $this->actingAs(\App\Models\User::factory()->create())
+            ->get('/contact')
+            ->assertOk()
+            ->assertSee('Go to your dashboard')
+            ->assertDontSee('Already a customer?');
+    }
+
     public function test_the_about_page_tells_the_story_in_motion(): void
     {
         $response = $this->get('/about')->assertOk();

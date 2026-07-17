@@ -332,11 +332,19 @@ p { margin:0 0 1rem; }
 .field input:focus, .field textarea:focus, .field select:focus { outline:none; border-color:var(--teal-500); box-shadow:0 0 0 3px rgba(20,184,166,.15); }
 .field .err { color:#dc2626; font-size:.82rem; margin-top:.35rem; }
 .alert-ok { background:var(--teal-50); border:1px solid var(--teal-100); color:var(--teal-700); padding:14px 16px; border-radius:var(--radius-sm); margin-bottom:20px; font-size:.95rem; }
-.contact-grid { display:grid; grid-template-columns:.9fr 1.1fr; gap:48px; align-items:start; }
-.contact-item { display:flex; gap:.9rem; margin-bottom:1.4rem; }
-.contact-item .ic { width:42px; height:42px; border-radius:11px; background:var(--teal-50); color:var(--teal-700); display:grid; place-content:center; border:1px solid var(--teal-100); flex-shrink:0; }
-.contact-item .l { font-weight:600; color:var(--slate-800); }
-.contact-item .v { color:var(--slate-500); font-size:.92rem; }
+.contact-grid { display:grid; grid-template-columns:1fr 1.15fr; gap:64px; align-items:start; }
+/* .form-card is a standalone, centred card elsewhere; in this grid it has a
+   column to fill, and capping it there strands it beside its own gutter. */
+.contact-grid .form-card { max-width:none; margin:0; padding:36px; }
+.contact-aside h2 { font-size:1.35rem; margin:0 0 .4rem; color:var(--ink); }
+.contact-aside .muted { margin:0 0 2rem; font-size:.98rem; }
+.contact-item { display:flex; gap:1rem; padding:1.05rem 0; border-top:1px solid var(--slate-200); }
+.contact-item:first-of-type { border-top:0; padding-top:0; }
+.contact-item .ic { width:40px; height:40px; border-radius:11px; background:var(--teal-50); color:var(--teal-700); display:grid; place-content:center; border:1px solid var(--teal-100); flex-shrink:0; }
+.contact-item .l { font-weight:600; color:var(--slate-800); font-size:.95rem; }
+.contact-item .v { color:var(--slate-500); font-size:.92rem; margin-top:.12rem; }
+.contact-item .v a { color:var(--teal-700); font-weight:600; }
+.contact-item .v a:hover { text-decoration:underline; }
 
 /* ---------- Footer ---------- */
 .footer { background:var(--slate-900); color:var(--slate-400); padding:72px 0 32px; }
@@ -383,6 +391,8 @@ p { margin:0 0 1rem; }
 /* ---------- Responsive ---------- */
 @media (max-width:980px) {
     .hero-layout, .contact-grid, .compliance { grid-template-columns:1fr; }
+    .contact-grid { gap:40px; }
+    .contact-grid .form-card { max-width:560px; margin:0 auto; }
     .features, .steps, .value-grid { grid-template-columns:1fr 1fr; }
     .why-grid { grid-template-columns:1fr 1fr; }
     .flow, .dash-metrics { grid-template-columns:1fr 1fr; }

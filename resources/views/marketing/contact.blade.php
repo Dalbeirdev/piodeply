@@ -16,22 +16,38 @@
 <section class="section">
     <div class="container">
         <div class="contact-grid">
-            <div>
+            <div class="contact-aside">
+                <h2>Ways to reach us</h2>
+                <p class="muted">A real person reads every message — there is no ticket queue to get lost in.</p>
+
                 <div class="contact-item">
                     <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 6l8 6 8-6"/></svg></div>
                     <div><div class="l">Email</div><div class="v"><a href="mailto:{{ $email }}">{{ $email }}</a></div></div>
                 </div>
-                <div class="contact-item">
-                    <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11a8 8 0 1 0-16 0c0 6.5 8 11 8 11z"/><circle cx="12" cy="11" r="2.5"/></svg></div>
-                    <div><div class="l">Company</div><div class="v">{{ $company }}</div></div>
-                </div>
+
+                {{-- Naming the company only says something when it is not just
+                     the product's own name — "Company: PioDeploy" on
+                     PioDeploy's contact page is a row that costs a reader
+                     attention and gives nothing back. --}}
+                @if ($house)
+                    <div class="contact-item">
+                        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11a8 8 0 1 0-16 0c0 6.5 8 11 8 11z"/><circle cx="12" cy="11" r="2.5"/></svg></div>
+                        <div><div class="l">Built by</div><div class="v">{{ $house }}</div></div>
+                    </div>
+                @endif
+
                 <div class="contact-item">
                     <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg></div>
                     <div><div class="l">Response time</div><div class="v">{{ $content->get('contact.response_time') }}</div></div>
                 </div>
+
                 <div class="contact-item">
                     <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
-                    <div><div class="l">Already a customer?</div><div class="v"><a href="{{ url('/login') }}">Sign in to the portal →</a></div></div>
+                    @auth
+                        <div><div class="l">Your fleet</div><div class="v"><a href="{{ url('/dashboard') }}">Go to your dashboard →</a></div></div>
+                    @else
+                        <div><div class="l">Already a customer?</div><div class="v"><a href="{{ url('/login') }}">Sign in to the portal →</a></div></div>
+                    @endauth
                 </div>
             </div>
 
