@@ -88,6 +88,9 @@
                                     <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $badge }}">{{ $job->status->label() }}</span>
                                     @if ($job->failure_reason)
                                         <p class="text-xs text-red-500 max-w-xs truncate" title="{{ $job->failure_reason }}">{{ $job->failure_reason }}</p>
+                                        @if ($hint = $job->failureHint())
+                                            <p class="text-xs text-slate-500 max-w-xs mt-0.5">{{ $hint }}</p>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">

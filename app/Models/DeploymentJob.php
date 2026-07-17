@@ -93,6 +93,47 @@ class DeploymentJob extends Model
     }
 
     /**
+     * A failure explained in plain terms and, where possible, what to do about
+     * it. The raw "winget exited with -1073741515" is exact and useless unless
+     * you already read Windows status codes; this sits above it, never instead.
+     * Null when the exit code carries no known meaning — no invented advice.
+     */
+    public function failureHint(): ?string
+    {
+        return match ($this->exit_code) {
+            // Windows NTSTATUS: the installer could not launch.
+            -1073741515 => 'A required runtime is missing on the machine (0xC0000135, DLL not found) — '
+                         . 'usually the Visual C++ Redistributable, or winget’s own App Installer runtime on a '
+                         . 'minimal VM. Install it on the machine, then retry: '
+                         . 'winget install Microsoft.VCRedist.2015+.x64',
+            -1073741502 => 'A runtime failed to initialise on the machine (0xC0000142). Reboot it and retry; '
+                         . 'if it persists, a Visual C++ Redistributable is missing or damaged.',
+            -1073741819 => 'The installer crashed on the machine (0xC0000005, access violation) — often a '
+                         . 'corrupt download or an incompatible build. Retry; if it repeats, the package needs a look.',
+
+            // MSI install codes.
+            1603 => 'A fatal error inside the installer (MSI 1603) — frequently a half-removed previous version, '
+                  . 'or not enough disk. Check the machine’s free space and any leftover install.',
+            1618 => 'Another install was already running on the machine (MSI 1618). This is transient — retry.',
+            1619 => 'The installer package could not be opened (MSI 1619) — a bad or blocked download URL.',
+            1625, 1643 => 'An organisation policy on the machine forbids this install (MSI 1625/1643) — a GPO or '
+                        . 'restriction is blocking it.',
+
+            // Access.
+            -2147024891 => 'Access denied on the machine (0x80070005). The agent runs as SYSTEM, so this is usually '
+                         . 'the target folder or registry key being locked by another process or policy.',
+
+            // winget package-source problems.
+            -1978335216 => 'winget has no installer for this machine’s architecture (0x8A150010) — e.g. an x64-only '
+                         . 'package on an Arm device.',
+            -1978334975 => 'The downloaded installer’s hash did not match (0x8A150041) — a corrupt or tampered '
+                         . 'download. Retry; if it repeats, the package version needs checking.',
+
+            default => null,
+        };
+    }
+
+    /**
      * Why re-running this job could never work, if so. Retrying is offered on
      * anything failed, but some failures are in the job itself rather than the
      * machine — running it again just fails again, three more times.

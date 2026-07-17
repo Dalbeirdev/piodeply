@@ -178,6 +178,44 @@ class ComputerSoftwareLogTest extends TestCase
             ->assertSee('exit 1');
     }
 
+    public function test_a_dll_not_found_exit_code_is_explained_in_plain_terms(): void
+    {
+        DeploymentJob::factory()->create([
+            'computer_id'    => $this->computer->id,
+            'package_id'     => $this->chrome()->id,
+            'status'         => JobStatus::Failed,
+            'action'         => JobAction::Install,
+            'exit_code'      => -1073741515,
+            'failure_reason' => 'winget exited with -1073741515.',
+        ]);
+
+        $this->page()
+            ->assertSee('winget exited with -1073741515')   // the raw code, still there
+            ->assertSee('required runtime is missing')       // and what it means
+            ->assertSee('Microsoft.VCRedist');               // and what to do
+    }
+
+    public function test_an_unknown_exit_code_gets_no_invented_advice(): void
+    {
+        $job = DeploymentJob::factory()->make([
+            'status'         => JobStatus::Failed,
+            'exit_code'      => 42,
+            'failure_reason' => 'winget exited with 42.',
+        ]);
+
+        $this->assertNull($job->failureHint());
+    }
+
+    public function test_common_windows_install_codes_carry_guidance(): void
+    {
+        $hint = fn (int $code) => DeploymentJob::factory()->make(['exit_code' => $code])->failureHint();
+
+        $this->assertStringContainsString('Access denied', $hint(-2147024891));
+        $this->assertStringContainsString('MSI 1603', $hint(1603));
+        $this->assertStringContainsString('Another install', $hint(1618));
+        $this->assertStringContainsString('architecture', $hint(-1978335216));
+    }
+
     /** The 29 "successful" installs that installed nothing. */
     public function test_an_already_installed_exit_code_is_not_passed_off_as_an_install(): void
     {

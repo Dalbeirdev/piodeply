@@ -505,6 +505,9 @@
                                         @endif
                                     </p>
                                     <p class="text-sm text-slate-500">{{ $job->reasonLabel() }}</p>
+                                    @if ($hint = $job->failureHint())
+                                        <p class="text-xs text-slate-500 mt-0.5 bg-slate-50 border border-slate-200 rounded p-2">{{ $hint }}</p>
+                                    @endif
 
                                     @if ($job->output_log || $job->exit_code !== null)
                                         <button type="button" @click="open = ! open"
