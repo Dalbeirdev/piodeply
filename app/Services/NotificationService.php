@@ -64,20 +64,82 @@ class NotificationService
 
     private function sendWebhook(NotificationChannel $channel, string $event, string $title, array $data): void
     {
-        // "text" makes the payload drop-in compatible with Slack/Discord
-        // incoming webhooks; structured fields serve everything else.
         $response = Http::timeout(self::WEBHOOK_TIMEOUT_SECONDS)
-            ->post($channel->destination, [
-                'event'   => $event,
-                'title'   => $title,
-                'text'    => trim("*{$title}*\n" . $this->lines($data)),
-                'data'    => $data,
-                'sent_at' => now()->toIso8601String(),
-            ]);
+            ->post($channel->destination, $this->webhookPayload($event, $title, $data));
 
         if ($response->failed()) {
             throw new \RuntimeException("Webhook returned HTTP {$response->status()}.");
         }
+    }
+
+    /**
+     * One payload, three readers. Each platform ignores the keys it does not
+     * know and renders the ones it does:
+     *   - Teams reads the MessageCard (@type/sections) and shows a card with
+     *     a coloured bar and a facts table. It does NOT render Slack's *bold*,
+     *     so we never send Slack markdown.
+     *   - Slack reads "text".
+     *   - Discord reads "content".
+     * The raw event and data ride along for anything scripted.
+     *
+     * @param array<string, scalar|null> $data
+     * @return array<string, mixed>
+     */
+    private function webhookPayload(string $event, string $title, array $data): array
+    {
+        [$emoji, $colour] = $this->accent($event);
+
+        // Plain, no markdown: this renders acceptably everywhere, where
+        // Slack's *bold* would show literal asterisks in Teams.
+        $plain = trim("{$emoji} {$title}\n\n" . $this->lines($data));
+
+        return [
+            // Slack / generic
+            'text'    => $plain,
+            // Discord
+            'content' => $plain,
+
+            // Microsoft Teams (incoming-webhook MessageCard)
+            '@type'      => 'MessageCard',
+            '@context'   => 'https://schema.org/extensions',
+            'themeColor' => $colour,
+            'summary'    => $title,
+            'title'      => "{$emoji} {$title}",
+            'sections'   => [[
+                'facts'    => collect($data)
+                    ->map(fn ($value, $key) => [
+                        'name'  => ucfirst(str_replace('_', ' ', $key)),
+                        'value' => (string) ($value ?? '—'),
+                    ])
+                    ->values()
+                    ->all(),
+                'markdown' => false,
+            ]],
+
+            // Structured, for anything reading the raw body
+            'event'   => $event,
+            'data'    => $data,
+            'sent_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * An emoji and a card colour per event, so a glance says how much it
+     * matters. Colours are hex without the # that Teams expects.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function accent(string $event): array
+    {
+        return match ($event) {
+            'job.failed'            => ['⚠️', 'D64545'],  // red — needs attention
+            'agent.offline'         => ['🔌', 'F59E0B'],  // amber
+            'browser_policy.failed' => ['🛡️', 'F59E0B'],  // amber
+            'policy.drift'          => ['📋', '2563EB'],  // blue — informational
+            'computer.registered'   => ['🟢', '22C55E'],  // green — good news
+            'lead.received'         => ['✉️', '0F766E'],  // teal — a new enquiry
+            default                 => ['🔔', '0F766E'],  // test and anything else
+        };
     }
 
     private function lines(array $data): string

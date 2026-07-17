@@ -82,6 +82,45 @@ class NotificationsTest extends TestCase
         });
     }
 
+    /**
+     * Teams renders a MessageCard, not Slack markdown. The payload must carry
+     * the card shape, a facts table, and never the *bold* that shows as
+     * literal asterisks there.
+     */
+    public function test_the_webhook_payload_renders_as_a_teams_card(): void
+    {
+        $this->fakeHttpOk();
+        NotificationChannel::factory()->webhook()->events(['job.failed'])->create();
+
+        $this->failJob();
+
+        Http::assertSent(function ($request) {
+            $p = $request->data();
+
+            $facts = collect($p['sections'][0]['facts'] ?? []);
+
+            return $p['@type'] === 'MessageCard'
+                && $p['themeColor'] === 'D64545'                      // red, for a failure
+                && str_starts_with($p['title'], '⚠️')
+                && $facts->contains(fn ($f) => $f['name'] === 'Package' && str_contains($f['value'], 'FailApp'))
+                && ! str_contains($p['text'], '*')                   // no Slack markdown
+                && $p['content'] === $p['text'];                     // Discord key present
+        });
+    }
+
+    public function test_an_enquiry_alert_is_coloured_and_labelled_for_the_event(): void
+    {
+        $this->fakeHttpOk();
+        NotificationChannel::factory()->webhook()->events(['lead.received'])->create();
+
+        app(\App\Services\NotificationService::class)->notify('lead.received', 'Access request from Jane', [
+            'company' => 'Acme IT',
+        ]);
+
+        Http::assertSent(fn ($request) => $request->data()['themeColor'] === '0F766E'
+            && str_starts_with($request->data()['title'], '✉️'));
+    }
+
     public function test_retryable_failure_does_not_notify(): void
     {
         NotificationChannel::factory()->events(['job.failed'])->create();
