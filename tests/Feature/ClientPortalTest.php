@@ -195,6 +195,11 @@ class ClientPortalTest extends TestCase
 
         $this->assertStringContainsString('vc_redist.x64.exe', $script);
         $this->assertStringContainsString('/quiet', $script);
+
+        // And it preflights winget for the SYSTEM account: check first, and
+        // only repair (for all users) when it is actually broken.
+        $this->assertStringContainsString('Test-WingetWorks', $script);
+        $this->assertStringContainsString('Repair-WinGetPackageManager -AllUsers', $script);
     }
 
     public function test_agent_download_rejects_unknown_and_archived_tokens(): void
