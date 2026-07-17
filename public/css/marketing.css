@@ -75,9 +75,16 @@ p { margin:0 0 1rem; }
 .nav-links a.link::after { content:""; position:absolute; left:0; bottom:-5px; height:2px; width:0; background:var(--teal-500); transition:width .22s ease; }
 .nav-links a.link:hover { color:var(--teal-700); }
 .nav-links a.link:hover::after { width:100%; }
-.nav-cta { display:flex; align-items:center; gap:.75rem; }
+.nav-cta { display:flex; align-items:center; gap:.65rem; }
 .nav-drawer { display:contents; }
-.nav-who { color:var(--slate-500); font-size:.9rem; font-weight:600; }
+.nav-who { color:var(--slate-500); font-size:.88rem; font-weight:600; }
+/* The bar is not a hero. The shared .btn is sized for the call to action a
+   page is built around, and .btn-primary carries a 48px glow to match — both
+   are overbearing in a 78px nav, where these are wayfinding, not the pitch. */
+.nav-cta .btn { padding:.5rem 1.1rem; font-size:.9rem; gap:.35rem; }
+.nav-cta .btn-primary { box-shadow:0 8px 18px -8px rgba(13,148,136,.45); }
+.nav-cta .btn-primary:hover { box-shadow:0 12px 24px -10px rgba(14,165,233,.45); }
+.nav-cta .btn:hover { transform:translateY(-1px); }
 .nav-toggle { display:none; background:none; border:0; cursor:pointer; padding:.4rem; }
 .nav-toggle span { display:block; width:22px; height:2px; background:var(--slate-700); margin:4px 0; border-radius:2px; }
 
@@ -387,7 +394,7 @@ p { margin:0 0 1rem; }
     .nav[data-open="1"] .nav-drawer { display:flex; flex-direction:column; align-items:stretch; gap:1rem; position:absolute; top:78px; left:0; right:0; background:#fff; padding:18px 24px 22px; border-bottom:1px solid var(--slate-200); box-shadow:var(--shadow); }
     .nav[data-open="1"] .nav-links { flex-direction:column; align-items:flex-start; gap:.9rem; }
     .nav[data-open="1"] .nav-cta { flex-direction:column; align-items:stretch; gap:.6rem; }
-    .nav[data-open="1"] .nav-cta .btn { justify-content:center; }
+    .nav[data-open="1"] .nav-cta .btn { justify-content:center; padding:.7rem 1.2rem; font-size:.95rem; }
     .nav[data-open="1"] .nav-who { padding-bottom:.2rem; }
     .hero-mock { display:block; }
 }
