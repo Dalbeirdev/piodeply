@@ -17,7 +17,11 @@ public sealed class Worker : BackgroundService
     private readonly ISoftwareCollector _software;
     private readonly IInstallerEngine _engine;
     private readonly IBrowserPolicyEnforcer _browserPolicies;
+    private readonly SelfUpdater _selfUpdater;
+    private readonly IHostApplicationLifetime _lifetime;
     private readonly ILogger<Worker> _logger;
+
+    private bool _updating;
 
     private int _heartbeatSeconds = 60;
     private readonly int _inventoryEveryBeats = 60;      // full refresh ~hourly
@@ -30,6 +34,8 @@ public sealed class Worker : BackgroundService
         ISoftwareCollector software,
         IInstallerEngine engine,
         IBrowserPolicyEnforcer browserPolicies,
+        SelfUpdater selfUpdater,
+        IHostApplicationLifetime lifetime,
         ILogger<Worker> logger)
     {
         _api = api;
@@ -38,6 +44,8 @@ public sealed class Worker : BackgroundService
         _software = software;
         _engine = engine;
         _browserPolicies = browserPolicies;
+        _selfUpdater = selfUpdater;
+        _lifetime = lifetime;
         _logger = logger;
     }
 
@@ -65,6 +73,15 @@ public sealed class Worker : BackgroundService
                 {
                     _heartbeatSeconds = Math.Clamp(response.HeartbeatSeconds, 15, 3600);
                     backoff = TimeSpan.FromSeconds(_heartbeatSeconds);
+
+                    // A newer build on the server upgrades this machine with no
+                    // one re-running a script. Checked before jobs, so an agent
+                    // known to be superseded is replaced rather than kept busy.
+                    if (await TrySelfUpdateAsync(response, stoppingToken))
+                    {
+                        _lifetime.StopApplication(); // let the helper swap us out
+                        break;
+                    }
 
                     if (response.PendingJobs > 0)
                     {
@@ -106,6 +123,23 @@ public sealed class Worker : BackgroundService
         }
 
         _logger.LogInformation("PioDeploy agent stopping.");
+    }
+
+    /// <summary>Replaces this agent with the server's version when it is newer.
+    /// Returns true once a swap has been staged, so the caller stops the
+    /// service and lets the detached helper take over.</summary>
+    private async Task<bool> TrySelfUpdateAsync(HeartbeatResponse response, CancellationToken ct)
+    {
+        if (_updating || !SelfUpdatePlan.ShouldUpdate(AgentVersion, response.LatestAgentVersion, response.BundleUrl))
+        {
+            return false;
+        }
+
+        _updating = true; // never stage twice, even if the swap is slow to take
+        _logger.LogInformation("Server offers agent {Version}; updating from {Current}.",
+            response.LatestAgentVersion, AgentVersion);
+
+        return await _selfUpdater.UpdateAsync(response.BundleUrl!, response.LatestAgentVersion!, ct);
     }
 
     private async Task RegisterWithRetryAsync(CancellationToken ct)

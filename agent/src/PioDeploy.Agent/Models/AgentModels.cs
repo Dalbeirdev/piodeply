@@ -50,6 +50,12 @@ public sealed class HeartbeatResponse
     [JsonPropertyName("status")] public string? Status { get; set; }
     [JsonPropertyName("pending_jobs")] public int PendingJobs { get; set; }
     [JsonPropertyName("heartbeat_seconds")] public int HeartbeatSeconds { get; set; } = 60;
+
+    /// <summary>The version the server wants this agent to be on, and where to
+    /// fetch it. An agent already on it ignores both; an older one updates
+    /// itself, so a machine is upgraded once and never touched by hand again.</summary>
+    [JsonPropertyName("latest_agent_version")] public string? LatestAgentVersion { get; set; }
+    [JsonPropertyName("bundle_url")] public string? BundleUrl { get; set; }
 }
 
 public sealed class InventoryRequest

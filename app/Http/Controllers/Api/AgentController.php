@@ -63,7 +63,32 @@ class AgentController extends Controller
             'pending_jobs'      => $this->deployments->pendingCountFor($computer),
             'heartbeat_seconds' => (int) config('piodeploy.agent.heartbeat_seconds'),
             'server_time'       => now()->toIso8601String(),
+            // What the agent should be running, and where to get it. An agent
+            // already on this version ignores both; an older one self-updates,
+            // so a machine is upgraded once and never touched by hand again.
+            'latest_agent_version' => \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION,
+            'bundle_url'           => \Illuminate\Support\Facades\Storage::disk('local')
+                ->exists(\App\Http\Controllers\AgentDownloadController::BUNDLE_PATH)
+                    ? route('agent.bundle')
+                    : null,
         ]);
+    }
+
+    /**
+     * GET /api/v1/agent/bundle — the current agent zip, for an agent that has
+     * decided to update itself. Authenticated by the same API key the agent
+     * already holds, so no download token is needed.
+     */
+    public function bundle(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        abort_unless(
+            \Illuminate\Support\Facades\Storage::disk('local')->exists(\App\Http\Controllers\AgentDownloadController::BUNDLE_PATH),
+            404,
+            'No agent bundle published.'
+        );
+
+        return \Illuminate\Support\Facades\Storage::disk('local')
+            ->download(\App\Http\Controllers\AgentDownloadController::BUNDLE_PATH, 'PioDeployAgent.zip');
     }
 
     /**

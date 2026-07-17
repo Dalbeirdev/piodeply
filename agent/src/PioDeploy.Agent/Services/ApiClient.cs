@@ -14,6 +14,7 @@ public interface IApiClient
     Task<bool> ReportJobResultAsync(long jobId, JobResultRequest result, CancellationToken ct);
     Task<BrowserPolicyDocument?> GetBrowserPoliciesAsync(string agentUuid, CancellationToken ct);
     Task<bool> ReportBrowserPolicyResultsAsync(BrowserPolicyResultsRequest request, CancellationToken ct);
+    Task<bool> DownloadBundleAsync(string url, string destinationPath, CancellationToken ct);
 }
 
 /// <summary>Typed HTTP client for the PioDeploy agent API. Authentication is
@@ -131,6 +132,30 @@ public sealed class ApiClient : IApiClient
         }
 
         return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> DownloadBundleAsync(string url, string destinationPath, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Bundle download failed: {Status}", (int)response.StatusCode);
+                return false;
+            }
+
+            await using var source = await response.Content.ReadAsStreamAsync(ct);
+            await using var file = File.Create(destinationPath);
+            await source.CopyToAsync(file, ct);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Bundle download errored");
+            return false;
+        }
     }
 }
 

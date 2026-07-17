@@ -34,6 +34,7 @@ builder.Services.AddSingleton<ISoftwareCollector, WindowsSoftwareCollector>();
 
 // Installer engine + strategies
 builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
+builder.Services.AddSingleton<SelfUpdater>();
 builder.Services.AddSingleton<IChecksumVerifier, ChecksumVerifier>();
 builder.Services.AddSingleton<IPackageDownloader, PackageDownloader>();
 builder.Services.AddSingleton<PioDeploy.Agent.Installers.IInstaller, PioDeploy.Agent.Installers.WingetInstaller>();

@@ -133,6 +133,52 @@ class AgentApiTest extends TestCase
         $this->assertSame('1.0.1', $computer->agent_version);
     }
 
+    public function test_heartbeat_advertises_the_current_agent_version(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            \App\Http\Controllers\AgentDownloadController::BUNDLE_PATH, 'zip-bytes'
+        );
+
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('latest_agent_version', \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION)
+            ->assertJsonPath('bundle_url', route('agent.bundle'));
+    }
+
+    public function test_no_bundle_url_is_offered_when_no_bundle_is_published(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local'); // nothing put
+
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('bundle_url', null);
+    }
+
+    public function test_the_agent_can_download_the_bundle_with_its_key(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        \Illuminate\Support\Facades\Storage::disk('local')->put(
+            \App\Http\Controllers\AgentDownloadController::BUNDLE_PATH, 'zip-bytes'
+        );
+
+        $this->get('/api/v1/agent/bundle', $this->agentHeaders())
+            ->assertOk()
+            ->assertDownload('PioDeployAgent.zip');
+    }
+
+    public function test_the_bundle_endpoint_rejects_a_bad_key(): void
+    {
+        $this->get('/api/v1/agent/bundle', $this->agentHeaders('pio_' . str_repeat('x', 40)))
+            ->assertUnauthorized();
+    }
+
     public function test_heartbeat_for_unknown_agent_requires_reregistration(): void
     {
         $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => (string) Str::uuid()], $this->agentHeaders())
