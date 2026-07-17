@@ -14,14 +14,6 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                @can('enforce', $policy)
-                    @if ($policy->mode === \App\Enums\PolicyMode::Enforce)
-                        <button type="button" wire:click="enforceNow" wire:loading.attr="disabled"
-                                class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
-                            Enforce now
-                        </button>
-                    @endif
-                @endcan
                 @can('update', $policy)
                     <a href="{{ route('policies.edit', $policy) }}"
                        class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
@@ -39,6 +31,14 @@
                     {{ session('status') }}
                 </div>
             @endif
+
+            @can('enforce', $policy)
+                @if ($policy->mode === \App\Enums\PolicyMode::Enforce)
+                    <div class="flex justify-end">
+                        <x-button type="button" wire:click="enforceNow" wire:loading.attr="disabled">Enforce now</x-button>
+                    </div>
+                @endif
+            @endcan
 
             {{-- Compliance summary — click a card to filter the table --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">

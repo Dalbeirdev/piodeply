@@ -1,12 +1,6 @@
 <div>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Notifications') }}</h2>
-            <button type="button" wire:click="create"
-                    class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
-                Add channel
-            </button>
-        </div>
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Notifications') }}</h2>
     </x-slot>
 
     <div class="py-12">
@@ -16,6 +10,13 @@
                     {{ session('status') }}
                 </div>
             @endif
+
+            {{-- The action lives here, inside the component root. In the header
+                 slot it renders outside Livewire's morphable DOM, so its
+                 wire:click never fired — the button did nothing. --}}
+            <div class="flex justify-end">
+                <x-button wire:click="create" type="button">＋ Add channel</x-button>
+            </div>
 
             <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
                 Channels receive alerts for the events they subscribe to. <strong>Email</strong> uses the
@@ -122,9 +123,15 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">
-                                No channels yet. Add an email address or a Slack/Teams webhook to get alerted about
-                                failed deployments, offline agents and compliance drift.
+                            <tr><td colspan="6" class="px-6 py-10 text-center">
+                                <p class="text-slate-500">No channels yet.</p>
+                                <p class="text-sm text-slate-400 mt-1 max-w-md mx-auto">
+                                    Get alerted about failed deployments, offline agents, compliance drift and
+                                    website enquiries — by email, or a Slack, Teams or Discord webhook.
+                                </p>
+                                <div class="mt-4">
+                                    <x-button wire:click="create" type="button">＋ Add your first channel</x-button>
+                                </div>
                             </td></tr>
                         @endforelse
                     </tbody>

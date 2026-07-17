@@ -1,13 +1,6 @@
 <div>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Roles & Permissions') }}</h2>
-            <button type="button" wire:click="resetDefaults"
-                    wire:confirm="Reset every role to the platform default permissions? Custom changes will be lost."
-                    class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
-                Reset to defaults
-            </button>
-        </div>
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Roles & Permissions') }}</h2>
     </x-slot>
 
     <div class="py-12">
@@ -17,6 +10,13 @@
                     {{ session('status') }}
                 </div>
             @endif
+
+            <div class="flex justify-end">
+                <x-secondary-button type="button" wire:click="resetDefaults"
+                                    wire:confirm="Reset every role to the platform default permissions? Custom changes will be lost.">
+                    Reset to defaults
+                </x-secondary-button>
+            </div>
 
             <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
                 Tick a box to grant, untick to revoke — changes apply <strong>immediately</strong> to every user

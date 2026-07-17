@@ -1,18 +1,15 @@
 <div>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">Policy compliance report</h2>
-            @can(\App\Enums\Permission::ReportsExport->value)
-                <button type="button" wire:click="export"
-                        class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
-                    Export CSV
-                </button>
-            @endcan
-        </div>
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">Policy compliance report</h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @can(\App\Enums\Permission::ReportsExport->value)
+                <div class="flex justify-end">
+                    <x-secondary-button type="button" wire:click="export">Export CSV</x-secondary-button>
+                </div>
+            @endcan
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Policies</p>
                     <p class="text-2xl font-bold text-slate-800">{{ $overall['policies'] }}</p></div>

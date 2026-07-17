@@ -1,18 +1,15 @@
 <div>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">Fleet health report</h2>
-            @can(\App\Enums\Permission::ReportsExport->value)
-                <button type="button" wire:click="export"
-                        class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
-                    Export CSV
-                </button>
-            @endcan
-        </div>
+        <h2 class="font-semibold text-xl text-slate-800 leading-tight">Fleet health report</h2>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @can(\App\Enums\Permission::ReportsExport->value)
+                <div class="flex justify-end">
+                    <x-secondary-button type="button" wire:click="export">Export CSV</x-secondary-button>
+                </div>
+            @endcan
             <div class="flex flex-wrap items-center gap-3">
                 <select wire:model.live="projectFilter" aria-label="Filter by project"
                         class="border-slate-300 rounded-md shadow-sm text-sm">

@@ -10,12 +10,6 @@
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                @can(\App\Enums\Permission::ReportsExport->value)
-                    <button type="button" wire:click="export"
-                            class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
-                        Export CSV
-                    </button>
-                @endcan
                 @can('update', $policy)
                     <a href="{{ route('browser-policies.edit', $policy) }}"
                        class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
@@ -33,6 +27,12 @@
                     {{ session('status') }}
                 </div>
             @endif
+
+            @can(\App\Enums\Permission::ReportsExport->value)
+                <div class="flex justify-end">
+                    <x-secondary-button type="button" wire:click="export">Export CSV</x-secondary-button>
+                </div>
+            @endcan
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 @php
