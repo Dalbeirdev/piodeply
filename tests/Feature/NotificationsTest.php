@@ -99,12 +99,23 @@ class NotificationsTest extends TestCase
 
             $facts = collect($p['sections'][0]['facts'] ?? []);
 
-            return $p['@type'] === 'MessageCard'
-                && $p['themeColor'] === 'D64545'                      // red, for a failure
-                && str_starts_with($p['title'], '⚠️')
-                && $facts->contains(fn ($f) => $f['name'] === 'Package' && str_contains($f['value'], 'FailApp'))
-                && ! str_contains($p['text'], '*')                   // no Slack markdown
-                && $p['content'] === $p['text'];                     // Discord key present
+            // Teams Workflows adaptive card.
+            $card = $p['attachments'][0]['content'] ?? [];
+            $adaptiveText = $card['body'][0]['text'] ?? '';
+            $adaptiveFacts = collect($card['body'][1]['facts'] ?? []);
+
+            return $p['type'] === 'message'
+                && $p['attachments'][0]['contentType'] === 'application/vnd.microsoft.card.adaptive'
+                && ($card['type'] ?? null) === 'AdaptiveCard'
+                && str_starts_with($adaptiveText, '⚠️')
+                && ($card['body'][0]['color'] ?? null) === 'Attention'
+                && $adaptiveFacts->contains(fn ($f) => $f['title'] === 'Package' && str_contains($f['value'], 'FailApp'))
+                // Legacy connector still served.
+                && $p['@type'] === 'MessageCard'
+                && $p['themeColor'] === 'D64545'
+                // Slack / Discord, no markdown.
+                && ! str_contains($p['text'], '*')
+                && $p['content'] === $p['text'];
         });
     }
 
