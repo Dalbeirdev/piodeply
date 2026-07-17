@@ -123,11 +123,19 @@ class AgentController extends Controller
             'software.*.available_version' => ['nullable', 'string', 'max:100'],
             'software.*.publisher' => ['nullable', 'string', 'max:255'],
             'software.*.source'    => ['required', \Illuminate\Validation\Rule::in(Computer::softwareSources())],
+            // Agent 1.3.5+ reports readiness self-checks; optional so older
+            // agents keep reporting inventory unchanged.
+            'environment'          => ['sometimes', 'array', 'max:20'],
+            'environment.*.key'    => ['required', 'string', 'max:50'],
+            'environment.*.ok'     => ['required', 'boolean'],
+            'environment.*.detail' => ['nullable', 'string', 'max:500'],
         ]);
 
         $computer = $this->resolveComputer($request, $validated['agent_uuid']);
 
-        $stored = $this->computers->replaceSoftwareInventory($computer, $validated['software']);
+        $stored = $this->computers->replaceSoftwareInventory(
+            $computer, $validated['software'], $validated['environment'] ?? null
+        );
 
         return response()->json(['status' => 'ok', 'stored' => $stored]);
     }

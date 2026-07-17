@@ -104,6 +104,7 @@ class Dashboard extends Component
             // One update across sixty machines is one decision, not sixty.
             'outdated_machines' => $updates->pluck('computer_id')->unique()->count(),
             'software'  => ComputerSoftware::count(),
+            'not_ready' => app(\App\Services\ReadinessService::class)->notReadyCount(),
             'licenses'  => $this->licenseUsage(),
             'clients'   => Client::count(),
             'projects'  => Project::count(),

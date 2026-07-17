@@ -68,6 +68,13 @@
                         </p>
                     @endif
                 </div>
+                <a href="{{ route('computers.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
+                    <p class="text-xl font-bold {{ $stats['not_ready'] > 0 ? 'text-red-600' : 'text-slate-300' }}">{{ $stats['not_ready'] }}</p>
+                    <p class="text-xs font-semibold text-slate-600">Not ready to deploy</p>
+                    @if ($stats['not_ready'] > 0)
+                        <p class="text-[11px] text-slate-400 mt-0.5">winget or a runtime is missing</p>
+                    @endif
+                </a>
                 <div class="pd-card p-4">
                     <p class="text-xl font-bold text-slate-700">{{ number_format($stats['software']) }}</p>
                     <p class="text-xs font-semibold text-slate-600">Software detected</p>

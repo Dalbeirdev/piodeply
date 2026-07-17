@@ -17,6 +17,7 @@ public sealed class Worker : BackgroundService
     private readonly ISoftwareCollector _software;
     private readonly IInstallerEngine _engine;
     private readonly IBrowserPolicyEnforcer _browserPolicies;
+    private readonly IEnvironmentInspector _environment;
     private readonly SelfUpdater _selfUpdater;
     private readonly IHostApplicationLifetime _lifetime;
     private readonly ILogger<Worker> _logger;
@@ -34,6 +35,7 @@ public sealed class Worker : BackgroundService
         ISoftwareCollector software,
         IInstallerEngine engine,
         IBrowserPolicyEnforcer browserPolicies,
+        IEnvironmentInspector environment,
         SelfUpdater selfUpdater,
         IHostApplicationLifetime lifetime,
         ILogger<Worker> logger)
@@ -44,6 +46,7 @@ public sealed class Worker : BackgroundService
         _software = software;
         _engine = engine;
         _browserPolicies = browserPolicies;
+        _environment = environment;
         _selfUpdater = selfUpdater;
         _lifetime = lifetime;
         _logger = logger;
@@ -362,10 +365,15 @@ public sealed class Worker : BackgroundService
         {
             var software = collected ?? await _software.CollectAsync(ct);
 
+            // Readiness rides with the inventory it gates: if these checks fail,
+            // the inventory is unreliable, and the server should say so.
+            var environment = await _environment.InspectAsync(ct);
+
             var ok = await _api.SendSoftwareAsync(new SoftwareRequest
             {
                 AgentUuid = _identity.GetAgentUuid(),
                 Software = software,
+                Environment = environment,
             }, ct);
 
             if (ok)

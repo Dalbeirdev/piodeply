@@ -23,7 +23,7 @@ class Computer extends Model
         'os_name', 'os_version', 'windows_build',
         'cpu', 'ram_bytes', 'disk_total_bytes', 'disk_free_bytes',
         'public_ip', 'private_ip', 'mac_address',
-        'secure_boot', 'tpm_enabled', 'tpm_version',
+        'secure_boot', 'tpm_enabled', 'tpm_version', 'environment',
     ];
 
     protected function casts(): array
@@ -36,6 +36,7 @@ class Computer extends Model
             'disk_free_bytes' => 'integer',
             'secure_boot' => 'boolean',
             'tpm_enabled' => 'boolean',
+            'environment' => 'array',
         ];
     }
 

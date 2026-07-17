@@ -47,6 +47,26 @@
                 </div>
             @endif
 
+            {{-- Readiness: the machine cannot sync or deploy software until
+                 these are fixed. Every check is one this fleet has hit. --}}
+            @if (! empty($readinessIssues))
+                <div class="pd-card p-4 border-red-200 bg-red-50/40 space-y-3" role="alert">
+                    <p class="text-sm font-semibold text-red-700 flex items-center gap-2">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                        Not ready to deploy software
+                    </p>
+                    @foreach ($readinessIssues as $issue)
+                        <div class="text-sm">
+                            <p class="font-semibold text-slate-800">{{ $issue['title'] }}</p>
+                            <p class="text-slate-600">{{ $issue['fix'] }}</p>
+                            @if ($issue['detail'])
+                                <p class="text-xs text-slate-400 font-mono mt-0.5">{{ $issue['detail'] }}</p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
             {{-- Deployment stats --}}
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="pd-card p-4">

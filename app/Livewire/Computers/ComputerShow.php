@@ -102,6 +102,7 @@ class ComputerShow extends Component
 
         return view('livewire.computers.computer-show', [
             'health' => $this->healthChecks(),
+            'readinessIssues' => app(\App\Services\ReadinessService::class)->issues($this->computer),
             'stats'  => [
                 'succeeded'   => (clone $jobs)->where('status', JobStatus::Succeeded)->count(),
                 'in_flight'   => (clone $jobs)->whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])->count(),

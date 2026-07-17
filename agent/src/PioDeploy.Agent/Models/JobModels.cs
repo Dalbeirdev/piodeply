@@ -51,10 +51,21 @@ public sealed class SoftwareEntry
     [JsonPropertyName("source")] public string Source { get; set; } = "registry";
 }
 
+/// <summary>One machine-readiness self-check reported to the server.</summary>
+public sealed class EnvironmentCheck
+{
+    [JsonPropertyName("key")] public string Key { get; set; } = string.Empty;
+    [JsonPropertyName("ok")] public bool Ok { get; set; }
+    [JsonPropertyName("detail")] public string? Detail { get; set; }
+}
+
 public sealed class SoftwareRequest
 {
     [JsonPropertyName("agent_uuid")] public string AgentUuid { get; set; } = string.Empty;
     [JsonPropertyName("software")] public IReadOnlyList<SoftwareEntry> Software { get; set; } = [];
+
+    /// <summary>Readiness checks ride with the inventory they gate.</summary>
+    [JsonPropertyName("environment")] public IReadOnlyList<EnvironmentCheck> Environment { get; set; } = [];
 }
 
 /// <summary>Outcome of one installer execution.</summary>

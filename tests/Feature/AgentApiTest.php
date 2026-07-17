@@ -258,6 +258,61 @@ class AgentApiTest extends TestCase
         ], $this->agentHeaders())->assertUnprocessable();
     }
 
+    public function test_agent_readiness_checks_are_stored_and_surface_as_issues(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid'  => $uuid,
+            'software'    => [['name' => 'Git.Git', 'version' => '2.46.0', 'source' => 'winget']],
+            'environment' => [
+                ['key' => 'winget', 'ok' => false, 'detail' => 'winget alias not resolvable as SYSTEM'],
+                ['key' => 'vcredist', 'ok' => true, 'detail' => null],
+            ],
+        ], $this->agentHeaders())->assertOk();
+
+        $computer = Computer::first();
+        $this->assertIsArray($computer->environment);
+
+        $issues = app(\App\Services\ReadinessService::class)->issues($computer);
+        $this->assertCount(1, $issues);
+        $this->assertSame('winget', $issues[0]['key']);
+        $this->assertStringContainsString('winget', strtolower($issues[0]['title']));
+        $this->assertFalse(app(\App\Services\ReadinessService::class)->isReady($computer));
+        $this->assertSame(1, app(\App\Services\ReadinessService::class)->notReadyCount());
+    }
+
+    public function test_agent_readiness_absent_leaves_environment_untouched(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        // Older agents (pre-1.3.5) send no environment; a machine with no data
+        // is not "not ready", it is simply unknown.
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid' => $uuid,
+            'software'   => [['name' => 'Git.Git', 'version' => '2.46.0', 'source' => 'winget']],
+        ], $this->agentHeaders())->assertOk();
+
+        $computer = Computer::first();
+        $this->assertNull($computer->environment);
+        $this->assertSame([], app(\App\Services\ReadinessService::class)->issues($computer));
+        $this->assertSame(0, app(\App\Services\ReadinessService::class)->notReadyCount());
+    }
+
+    public function test_agent_readiness_rejects_malformed_checks(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/software', [
+            'agent_uuid'  => $uuid,
+            'software'    => [['name' => 'X', 'source' => 'registry']],
+            'environment' => [['key' => 'winget', 'ok' => 'maybe']],
+        ], $this->agentHeaders())->assertUnprocessable()->assertJsonValidationErrors(['environment.0.ok']);
+    }
+
     public function test_software_endpoint_requires_known_agent(): void
     {
         $this->postJson('/api/v1/agent/software', [

@@ -90,8 +90,14 @@ class ComputerService
      *
      * @param list<array{name: string, version?: ?string, publisher?: ?string, source: string}> $items
      */
-    public function replaceSoftwareInventory(Computer $computer, array $items): int
+    public function replaceSoftwareInventory(Computer $computer, array $items, ?array $environment = null): int
     {
+        // Readiness rides with the inventory; keep the last report when an
+        // older agent sends none rather than blanking what we knew.
+        if ($environment !== null) {
+            $computer->forceFill(['environment' => array_values($environment)])->saveQuietly();
+        }
+
         $stored = \Illuminate\Support\Facades\DB::transaction(function () use ($computer, $items) {
             $computer->software()->delete();
 
