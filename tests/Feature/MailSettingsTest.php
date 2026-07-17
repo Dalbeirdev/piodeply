@@ -45,6 +45,7 @@ class MailSettingsTest extends TestCase
     private function valid(array $overrides = []): array
     {
         return [
+            'provider' => 'custom',
             'host' => 'smtp.postmarkapp.com', 'port' => '587', 'username' => 'token-user',
             'password' => 's3cret', 'scheme' => 'tls',
             'from_address' => 'hello@piodeploy.com', 'from_name' => 'PioDeploy',
@@ -179,6 +180,73 @@ class MailSettingsTest extends TestCase
         $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));
 
         $this->actingAs($viewer)->get(route('admin.mail'))->assertForbidden();
+    }
+
+    /* ─────────── providers ─────────── */
+
+    public function test_picking_a_provider_fills_in_the_server_for_you(): void
+    {
+        $this->page()
+            ->set('provider', 'gmail')
+            ->assertSet('host', 'smtp.gmail.com')
+            ->assertSet('port', '587')
+            ->assertSet('scheme', 'tls');
+    }
+
+    /** Knowing the host is easy; the gotcha is the point. */
+    public function test_a_provider_warns_about_its_own_trap(): void
+    {
+        $this->page()->set('provider', 'sendgrid')->assertSee('literally "apikey"');
+        $this->page()->set('provider', 'gmail')->assertSee('App Password');
+        $this->page()->set('provider', 'postmark')->assertSee('the same value in both boxes');
+        $this->page()->set('provider', 'microsoft365')->assertSee('SMTP AUTH');
+    }
+
+    public function test_a_preset_hides_the_server_fields_it_already_knows(): void
+    {
+        $this->page()
+            ->set('provider', 'brevo')
+            ->assertViewHas('showServerFields', false)
+            ->assertSee('smtp-relay.brevo.com');
+    }
+
+    public function test_a_preset_can_still_be_overridden(): void
+    {
+        $this->page()
+            ->set('provider', 'gmail')
+            ->assertViewHas('showServerFields', false)
+            ->set('advanced', true)
+            ->assertViewHas('showServerFields', true);
+    }
+
+    /** SES is region-specific, so it cannot pin a host. */
+    public function test_a_provider_without_a_fixed_host_asks_for_one(): void
+    {
+        $this->page()
+            ->set('provider', 'ses')
+            ->assertViewHas('showServerFields', true)
+            ->assertSee('region-specific');
+    }
+
+    public function test_custom_asks_for_everything(): void
+    {
+        $this->page()
+            ->set('provider', 'custom')
+            ->assertViewHas('showServerFields', true);
+    }
+
+    public function test_the_chosen_provider_is_remembered(): void
+    {
+        $this->fill($this->page(), $this->valid(['provider' => 'gmail', 'host' => 'smtp.gmail.com']))->call('save');
+
+        $this->page()->assertSet('provider', 'gmail');
+    }
+
+    public function test_an_unknown_provider_is_rejected(): void
+    {
+        $this->fill($this->page(), $this->valid(['provider' => 'not-a-provider']))
+            ->call('save')
+            ->assertHasErrors('provider');
     }
 
     public function test_it_appears_in_the_admin_section_of_the_nav(): void

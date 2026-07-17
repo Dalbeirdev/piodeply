@@ -4,6 +4,8 @@ namespace App\Livewire\Admin;
 
 use App\Enums\Permission;
 use App\Services\MailSettingsService;
+use App\Support\MailProviders;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 /**
@@ -15,6 +17,12 @@ use Livewire\Component;
  */
 class MailSettings extends Component
 {
+    /** A key from MailProviders, or 'custom'. */
+    public string $provider = MailProviders::CUSTOM;
+
+    /** Reveal the server details a preset already knows. */
+    public bool $advanced = false;
+
     public string $host = '';
 
     public string $port = '587';
@@ -40,6 +48,7 @@ class MailSettings extends Component
     {
         abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
 
+        $this->provider     = (string) ($mail->get('provider') ?: MailProviders::CUSTOM);
         $this->host         = (string) $mail->get('host', '');
         $this->port         = (string) ($mail->get('port') ?: '587');
         $this->username     = (string) $mail->get('username', '');
@@ -49,10 +58,28 @@ class MailSettings extends Component
         $this->testTo       = (string) (auth()->user()->email ?? '');
     }
 
+    /**
+     * Picking a provider fills in what it already determines. The host stays
+     * editable behind "advanced" — a preset is a shortcut, not a cage.
+     */
+    public function updatedProvider(string $value): void
+    {
+        $preset = MailProviders::get($value);
+
+        if ($preset['host'] !== null) {
+            $this->host = $preset['host'];
+        }
+
+        $this->port     = (string) $preset['port'];
+        $this->scheme   = $preset['scheme'];
+        $this->advanced = false;
+    }
+
     /** @return array<string, array<int, string>> */
     private function rules(): array
     {
         return [
+            'provider'     => ['required', 'string', Rule::in(MailProviders::keys())],
             'host'         => ['required', 'string', 'max:190'],
             'port'         => ['required', 'integer', 'between:1,65535'],
             'username'     => ['nullable', 'string', 'max:190'],
@@ -73,6 +100,7 @@ class MailSettings extends Component
         ]);
 
         $mail->save([
+            'provider'     => $validated['provider'],
             'host'         => $validated['host'],
             'port'         => $validated['port'],
             'username'     => $validated['username'] ?? '',
@@ -112,10 +140,17 @@ class MailSettings extends Component
     {
         abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
 
+        $preset = MailProviders::get($this->provider);
+
         return view('livewire.admin.mail-settings', [
             'hasPassword' => $mail->hasPassword(),
             'usingEnv'    => ! $mail->configured(),
             'envHost'     => config('mail.mailers.smtp.host'),
+            'providers'   => MailProviders::all(),
+            'preset'      => $preset,
+            // A preset that pins the host has nothing left to ask about the
+            // server, so those fields only get in the way.
+            'showServerFields' => $this->advanced || $preset['host'] === null,
         ])->layout('layouts.app');
     }
 }

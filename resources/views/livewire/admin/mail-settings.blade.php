@@ -32,57 +32,90 @@
 
             <form wire:submit="save" class="pd-card p-6 space-y-5">
                 <div>
-                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">SMTP server</h3>
+                    <x-label for="provider" value="Provider" />
+                    <select id="provider" wire:model.live="provider"
+                            class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                        @foreach ($providers as $key => $option)
+                            <option value="{{ $key }}">{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
                     <p class="text-xs text-slate-500 mt-1">
-                        Your provider gives you these — Postmark, SendGrid, Brevo, Microsoft 365, or your own relay.
+                        Picking one fills in the server details, so you only supply what is yours.
                     </p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2">
-                        <x-label for="host" value="Host" />
-                        <x-input id="host" type="text" class="mt-1 block w-full font-mono text-sm"
-                                 wire:model="host" placeholder="smtp.postmarkapp.com" />
-                        <x-input-error for="host" class="mt-1" />
+                {{-- Every one of these has a gotcha that costs an hour if you
+                     do not already know it. Say it before it costs one. --}}
+                @if ($preset['warning'])
+                    <div class="rounded-md bg-sky-50 border border-sky-200 p-3 text-xs text-sky-900">
+                        {{ $preset['warning'] }}
                     </div>
-                    <div>
-                        <x-label for="port" value="Port" />
-                        <x-input id="port" type="number" class="mt-1 block w-full" wire:model="port" />
-                        <x-input-error for="port" class="mt-1" />
-                    </div>
-                </div>
+                @endif
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2">
-                        <x-label for="username" value="Username" />
-                        <x-input id="username" type="text" class="mt-1 block w-full font-mono text-sm"
-                                 wire:model="username" autocomplete="off" />
-                        <x-input-error for="username" class="mt-1" />
+                @if ($showServerFields)
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <x-label for="host" value="Host" />
+                            <x-input id="host" type="text" class="mt-1 block w-full font-mono text-sm"
+                                     wire:model="host" placeholder="smtp.example.com" />
+                            <x-input-error for="host" class="mt-1" />
+                        </div>
+                        <div>
+                            <x-label for="port" value="Port" />
+                            <x-input id="port" type="number" class="mt-1 block w-full" wire:model="port" />
+                            <x-input-error for="port" class="mt-1" />
+                        </div>
                     </div>
+
                     <div>
                         <x-label for="scheme" value="Security" />
                         <select id="scheme" wire:model="scheme"
-                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                                class="mt-1 block w-full md:w-64 border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             <option value="tls">STARTTLS (587)</option>
                             <option value="ssl">SSL/TLS (465)</option>
                             <option value="none">None</option>
                         </select>
                     </div>
+                @else
+                    {{-- The preset knows these. Show what will be used rather
+                         than hiding it entirely — then let it be overridden. --}}
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-md bg-slate-50 border border-slate-200 px-3 py-2">
+                        <span class="text-xs text-slate-500">
+                            Connecting to
+                            <code class="font-mono text-slate-700">{{ $host }}:{{ $port }}</code>
+                            over {{ $scheme === 'ssl' ? 'SSL/TLS' : ($scheme === 'none' ? 'no encryption' : 'STARTTLS') }}
+                        </span>
+                        <label class="flex items-center gap-1.5 text-xs text-slate-500 select-none">
+                            <input type="checkbox" wire:model.live="advanced"
+                                   class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                            Change server details
+                        </label>
+                    </div>
+                @endif
+
+                <div>
+                    <x-label for="username" value="Username" />
+                    <x-input id="username" type="text" class="mt-1 block w-full font-mono text-sm"
+                             wire:model="username" autocomplete="off" />
+                    @if ($preset['username_hint'])
+                        <p class="text-xs text-slate-500 mt-1">{{ $preset['username_hint'] }}</p>
+                    @endif
+                    <x-input-error for="username" class="mt-1" />
                 </div>
 
                 <div>
                     <x-label for="password" value="Password" />
                     <x-input id="password" type="password" class="mt-1 block w-full" wire:model="password"
                              autocomplete="new-password"
-                             placeholder="{{ $hasPassword ? 'Stored — leave blank to keep it' : 'Your SMTP password or API key' }}" />
-                    <div class="mt-1 flex items-center justify-between">
+                             placeholder="{{ $hasPassword ? 'Stored — leave blank to keep it' : ($preset['password_hint'] ?: 'Your SMTP password or API key') }}" />
+                    <div class="mt-1 flex items-start justify-between gap-3">
                         <p class="text-xs text-slate-500">
-                            Encrypted before it is stored, and never sent back to this page.
+                            {{ $preset['password_hint'] ?: 'Encrypted before it is stored, and never sent back to this page.' }}
                         </p>
                         @if ($hasPassword)
                             <button type="button" wire:click="clearPassword"
                                     wire:confirm="Remove the stored SMTP password? Mail will stop sending until you set a new one."
-                                    class="text-xs text-red-600 hover:underline">Remove stored password</button>
+                                    class="text-xs text-red-600 hover:underline whitespace-nowrap">Remove stored</button>
                         @endif
                     </div>
                     <x-input-error for="password" class="mt-1" />

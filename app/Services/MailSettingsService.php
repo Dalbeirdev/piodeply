@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Mail;
 class MailSettingsService
 {
     /** Everything except the password, which is handled separately. */
-    public const PLAIN_KEYS = ['host', 'port', 'username', 'scheme', 'from_address', 'from_name'];
+    public const PLAIN_KEYS = ['provider', 'host', 'port', 'username', 'scheme', 'from_address', 'from_name'];
 
     public function __construct(private readonly SettingsService $settings)
     {
