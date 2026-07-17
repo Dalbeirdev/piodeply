@@ -17,13 +17,20 @@
               lg:static lg:shrink-0">
 
     {{-- Brand --}}
-    <div class="flex items-center gap-2.5 px-5 h-16 border-b border-slate-100 shrink-0">
+    @php
+        $brandCompany = app(\App\Services\SettingsService::class)->get('branding.company_name');
+        // Only show the company beside the product when it is actually a
+        // different name — "PioDeploy · PioDeploy" says nothing twice.
+        $brandHouse = $brandCompany !== config('app.name') ? $brandCompany : null;
+    @endphp
+    <div class="flex items-center gap-2.5 px-5 h-16 border-b border-slate-100 shrink-0
+                bg-gradient-to-r from-teal-50 to-white">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5">
             <img src="{{ asset('img/piodeploy-mark.svg') }}" class="h-9 w-9" alt="PioDeploy" width="36" height="36">
-
-            <span class="text-[15px] font-bold tracking-tight text-slate-900">PioDeploy
-                <span class="font-medium text-slate-400 text-xs">· {{ app(\App\Services\SettingsService::class)->get('branding.company_name') }}</span>
-            </span>
+            <span class="text-[15px] font-bold tracking-tight text-slate-900">PioDeploy</span>
+            @if ($brandHouse)
+                <span class="font-medium text-slate-400 text-xs">· {{ $brandHouse }}</span>
+            @endif
         </a>
     </div>
 

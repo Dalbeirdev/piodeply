@@ -9,34 +9,52 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
 
-            {{-- Primary tiles --}}
+            {{-- Primary tiles: an icon to read at a glance, a number that
+                 counts up on load, and a lift on hover. The Failed tile draws
+                 the eye in red only when something is actually wrong. --}}
+            @php
+                $tiles = [
+                    ['route' => 'computers.index', 'value' => $stats['online'], 'label' => 'Computers online',
+                     'sub' => 'heartbeat within '.round(\App\Models\Computer::onlineThreshold() / 60).' min',
+                     'tone' => 'emerald', 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],
+                    ['route' => 'computers.index', 'value' => $stats['offline'], 'label' => 'Computers offline',
+                     'sub' => 'no recent heartbeat',
+                     'tone' => $stats['offline'] > 0 ? 'slate' : 'muted', 'icon' => '<path d="M3 3l18 18M9 5h9a2 2 0 0 1 2 2v9m-2 2H6a2 2 0 0 1-2-2V7"/><path d="M8 21h8M12 17v4"/>'],
+                    ['route' => 'deployments.index', 'value' => $stats['pending'], 'label' => 'Jobs in flight',
+                     'sub' => 'pending / running / blocked',
+                     'tone' => $stats['pending'] > 0 ? 'sky' : 'muted', 'icon' => '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>'],
+                    ['route' => 'deployments.index', 'value' => $stats['failed'], 'label' => 'Failed jobs',
+                     'sub' => 'out of retries — need attention',
+                     'tone' => $stats['failed'] > 0 ? 'red' : 'muted', 'icon' => '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>'],
+                ];
+                $tones = [
+                    'emerald' => ['num' => 'text-emerald-600', 'ic' => 'text-emerald-600 bg-emerald-50'],
+                    'slate'   => ['num' => 'text-slate-700',   'ic' => 'text-slate-500 bg-slate-100'],
+                    'sky'     => ['num' => 'text-sky-600',     'ic' => 'text-sky-600 bg-sky-50'],
+                    'red'     => ['num' => 'text-red-600',     'ic' => 'text-red-600 bg-red-50'],
+                    'muted'   => ['num' => 'text-slate-300',   'ic' => 'text-slate-300 bg-slate-50'],
+                ];
+            @endphp
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="{{ route('computers.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
-                    <div class="flex items-center justify-between">
-                        <p class="text-2xl font-bold text-emerald-600 leading-tight">{{ $stats['online'] }}</p>
-                        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true"></span>
-                    </div>
-                    <p class="text-sm font-semibold text-slate-700">Computers online</p>
-                    <p class="text-xs text-slate-400">heartbeat within {{ round(\App\Models\Computer::onlineThreshold() / 60) }} min</p>
-                </a>
-                <a href="{{ route('computers.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
-                    <div class="flex items-center justify-between">
-                        <p class="text-2xl font-bold {{ $stats['offline'] > 0 ? 'text-slate-600' : 'text-slate-300' }} leading-tight">{{ $stats['offline'] }}</p>
-                        <span class="h-2.5 w-2.5 rounded-full bg-slate-300" aria-hidden="true"></span>
-                    </div>
-                    <p class="text-sm font-semibold text-slate-700">Computers offline</p>
-                    <p class="text-xs text-slate-400">no recent heartbeat</p>
-                </a>
-                <a href="{{ route('deployments.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
-                    <p class="text-2xl font-bold text-sky-600 leading-tight">{{ $stats['pending'] }}</p>
-                    <p class="text-sm font-semibold text-slate-700">Jobs in flight</p>
-                    <p class="text-xs text-slate-400">pending / running / blocked</p>
-                </a>
-                <a href="{{ route('deployments.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
-                    <p class="text-2xl font-bold {{ $stats['failed'] > 0 ? 'text-red-600' : 'text-slate-300' }} leading-tight">{{ $stats['failed'] }}</p>
-                    <p class="text-sm font-semibold text-slate-700">Failed jobs</p>
-                    <p class="text-xs text-slate-400">out of retries — need attention</p>
-                </a>
+                @foreach ($tiles as $tile)
+                    @php $t = $tones[$tile['tone']]; @endphp
+                    <a href="{{ route($tile['route']) }}"
+                       class="pd-card p-4 flex items-start justify-between gap-3 transition-all duration-200
+                              hover:-translate-y-0.5 hover:shadow-md hover:border-teal-300"
+                       @if ($tile['tone'] === 'red') style="border-color:#fecaca" @endif>
+                        <div>
+                            <p class="text-2xl font-bold leading-tight {{ $t['num'] }}"
+                               x-data="{ n: 0 }" x-init="$nextTick(() => { let t = {{ (int) $tile['value'] }}; if (t === 0) return; let s = performance.now(); let f = (now) => { let p = Math.min(1, (now - s) / 700); n = Math.round(t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); })"
+                               x-text="n">{{ $tile['value'] }}</p>
+                            <p class="text-sm font-semibold text-slate-700 mt-1">{{ $tile['label'] }}</p>
+                            <p class="text-xs text-slate-400">{{ $tile['sub'] }}</p>
+                        </div>
+                        <span class="grid place-items-center h-9 w-9 rounded-lg shrink-0 {{ $t['ic'] }}">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $tile['icon'] !!}</svg>
+                        </span>
+                    </a>
+                @endforeach
             </div>
 
             {{-- Secondary tiles --}}
@@ -207,32 +225,43 @@
                 </div>
             </div>
 
-            {{-- Today's activity --}}
-            <div class="pd-card p-6">
-                <div class="flex items-center justify-between mb-3">
+            {{-- Recent activity — collapsed by default; it is reference, not
+                 the headline, so it does not compete with the fleet at a glance. --}}
+            <div class="pd-card p-6" x-data="{ open: false }">
+                <button type="button" @click="open = ! open"
+                        class="w-full flex items-center justify-between gap-3 text-left"
+                        :aria-expanded="open ? 'true' : 'false'">
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
                         Recent activity
                         <span class="ml-1 text-slate-400 font-normal normal-case">({{ $stats['today'] }} today)</span>
                     </h3>
+                    <span class="flex items-center gap-1 text-xs text-slate-400">
+                        <span x-text="open ? 'Hide' : 'Show'">Show</span>
+                        <svg class="w-4 h-4 transition-transform" :class="open && 'rotate-90'"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </span>
+                </button>
+
+                <div x-show="open" x-collapse x-cloak>
+                    @if ($activity->isEmpty())
+                        <p class="text-sm text-slate-400 mt-3">Nothing recorded yet.</p>
+                    @else
+                        <ul class="divide-y divide-slate-100 mt-3">
+                            @foreach ($activity as $entry)
+                                <li class="py-2 flex items-center justify-between gap-3 text-sm">
+                                    <span class="text-slate-700">
+                                        <span class="pd-badge pd-badge-slate mr-1.5">{{ $entry->log_name }}</span>
+                                        {{ str_replace('_', ' ', $entry->description) }}
+                                        @if ($entry->causer)
+                                            <span class="text-slate-400">by {{ $entry->causer->name }}</span>
+                                        @endif
+                                    </span>
+                                    <span class="text-slate-400 whitespace-nowrap text-xs">{{ $entry->created_at->diffForHumans(short: true) }}</span>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
                 </div>
-                @if ($activity->isEmpty())
-                    <p class="text-sm text-slate-400">Nothing recorded yet.</p>
-                @else
-                    <ul class="divide-y divide-slate-100">
-                        @foreach ($activity as $entry)
-                            <li class="py-2 flex items-center justify-between gap-3 text-sm">
-                                <span class="text-slate-700">
-                                    <span class="pd-badge pd-badge-slate mr-1.5">{{ $entry->log_name }}</span>
-                                    {{ str_replace('_', ' ', $entry->description) }}
-                                    @if ($entry->causer)
-                                        <span class="text-slate-400">by {{ $entry->causer->name }}</span>
-                                    @endif
-                                </span>
-                                <span class="text-slate-400 whitespace-nowrap text-xs">{{ $entry->created_at->diffForHumans(short: true) }}</span>
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
             </div>
         </div>
     </div>
