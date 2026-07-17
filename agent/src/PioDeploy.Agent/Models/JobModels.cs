@@ -41,6 +41,12 @@ public sealed class SoftwareEntry
 {
     [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
     [JsonPropertyName("version")] public string? Version { get; set; }
+
+    /// <summary>What the package manager on this machine is offering, if
+    /// anything. Only it knows — the server has no idea a newer Chrome
+    /// shipped this morning.</summary>
+    [JsonPropertyName("available_version")] public string? AvailableVersion { get; set; }
+
     [JsonPropertyName("publisher")] public string? Publisher { get; set; }
     [JsonPropertyName("source")] public string Source { get; set; } = "registry";
 }

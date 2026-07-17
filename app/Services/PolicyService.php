@@ -298,7 +298,12 @@ class PolicyService
         $state = $this->installedStateOn($policy->package, $computer);
 
         if ($this->remediationFor($policy, $computer) === null) {
-            return $this->row($computer, 'compliant', $state['version'], $this->compliantReason($policy, $state));
+            return $this->row(
+                $computer,
+                'compliant',
+                $state['version'],
+                $this->compliantReason($policy, $state).$this->updateNote($policy, $computer)
+            );
         }
 
         return $this->row(
@@ -325,7 +330,12 @@ class PolicyService
         $remediation = $this->remediationFor($policy, $computer);
 
         if ($remediation === null) {
-            return $this->row($computer, 'compliant', $state['version'], $this->compliantReason($policy, $state));
+            return $this->row(
+                $computer,
+                'compliant',
+                $state['version'],
+                $this->compliantReason($policy, $state).$this->updateNote($policy, $computer)
+            );
         }
 
         // Routine latest-updates: a recent success means "current as of the
@@ -405,6 +415,37 @@ class PolicyService
             PolicyAction::Update, PolicyAction::ForceUpdate => $state['present'] ? 'Version satisfies the policy' : 'Not installed — not targeted',
             PolicyAction::Install => 'Installed' . ($state['version'] !== null ? " ({$state['version']})" : ''),
         };
+    }
+
+    /**
+     * An Install policy is satisfied the moment the software is present, so a
+     * machine two years out of date still reads "Compliant" — true, and
+     * useless. The machine's package manager is the only thing that knows
+     * something newer exists; where it says so, say so, without pretending the
+     * policy is being violated. Choosing to update is the operator's call.
+     */
+    private function updateNote(SoftwarePolicy $policy, Computer $computer): string
+    {
+        if (! $policy->package->installer_type->requiresPackageManagerId()) {
+            return ''; // no package manager to ask
+        }
+
+        $id = $policy->package->installer_type === \App\Enums\InstallerType::Winget
+            ? $policy->package->winget_id
+            : $policy->package->choco_id;
+
+        if ($id === null) {
+            return '';
+        }
+
+        $row = $computer->software()
+            ->where('source', $policy->package->installer_type->value)
+            ->where('name', $id)
+            ->first();
+
+        return $row !== null && $row->hasUpdate()
+            ? " — {$row->available_version} available"
+            : '';
     }
 
     /** @param array{present: bool, version: ?string} $state */

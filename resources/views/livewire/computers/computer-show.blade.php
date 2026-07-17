@@ -260,7 +260,7 @@
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
                         Installed software
                         <span class="ml-1 text-slate-400 font-normal normal-case">
-                            ({{ $softwareDeployed }} by PioDeploy · {{ $softwareManaged }} managed · {{ $softwareTotal }} detected)
+                            (@if ($softwareOutdated > 0)<span class="text-amber-600 font-medium">{{ $softwareOutdated }} outdated</span> · @endif{{ $softwareDeployed }} by PioDeploy · {{ $softwareManaged }} managed · {{ $softwareTotal }} detected)
                         </span>
                     </h3>
                     <div class="flex items-center gap-4">
@@ -268,6 +268,7 @@
                                 class="border-slate-300 rounded-md shadow-sm text-sm py-1.5">
                             <option value="managed">In catalogue</option>
                             <option value="deployed">Deployed by PioDeploy</option>
+                            <option value="outdated">Update available</option>
                             <option value="all">All software</option>
                         </select>
                         <input type="search" wire:model.live.debounce.300ms="softwareSearch"
@@ -291,7 +292,14 @@
                             @forelse ($softwareItems as $item)
                                 <tr>
                                     <td class="px-6 py-2.5 text-sm text-slate-800 {{ $item->source === 'winget' ? 'font-mono text-[13px]' : '' }}">{{ $item->name }}</td>
-                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 font-mono text-[13px]">{{ $item->version ?? '—' }}</td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 font-mono text-[13px]">
+                                        {{ $item->version ?? '—' }}
+                                        @if ($item->hasUpdate())
+                                            <span class="text-amber-600" title="{{ $item->available_version }} is available from the package source">
+                                                → {{ $item->available_version }}
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 max-w-[16rem] truncate">{{ $item->publisher ?? '—' }}</td>
                                     <td class="px-6 py-2.5 whitespace-nowrap">
                                         <span class="pd-badge {{ $item->source === 'winget' ? 'pd-badge-sky' : ($item->source === 'choco' ? 'pd-badge-amber' : 'pd-badge-slate') }}">{{ $item->source }}</span>

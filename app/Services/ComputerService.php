@@ -102,6 +102,10 @@ class ComputerService
                     'computer_id' => $computer->id,
                     'name'        => mb_substr(trim($item['name']), 0, 255),
                     'version'     => isset($item['version']) ? mb_substr((string) $item['version'], 0, 100) : null,
+                    // Agents older than 1.3.3 do not send this.
+                    'available_version' => isset($item['available_version'])
+                        ? mb_substr((string) $item['available_version'], 0, 100)
+                        : null,
                     'publisher'   => isset($item['publisher']) ? mb_substr((string) $item['publisher'], 0, 255) : null,
                     'source'      => $item['source'],
                     'created_at'  => $now,

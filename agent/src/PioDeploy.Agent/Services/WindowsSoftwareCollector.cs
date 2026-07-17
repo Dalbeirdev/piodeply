@@ -124,6 +124,30 @@ public sealed class WindowsSoftwareCollector : ISoftwareCollector
                 "No winget packages detected. If this machine does have winget apps, the export failed — " +
                 "the catalogue matches on package id, so policies cannot see them.");
         }
+        else
+        {
+            // Which of them are behind is a question only this machine can
+            // answer; the server knows the catalogue, not what shipped today.
+            await ProbeAsync("winget upgrade", async () =>
+            {
+                var result = await _processRunner.RunAsync(_wingetPath(),
+                    ["upgrade", "--include-unknown", "--accept-source-agreements", "--disable-interactivity"],
+                    TimeSpan.FromMinutes(3), ct);
+
+                // Exits non-zero when nothing is upgradable — not a failure.
+                var available = WingetUpgradeParser.Parse(result.Output);
+
+                foreach (var entry in entries.Where(e => e.Source == "winget"))
+                {
+                    if (available.TryGetValue(entry.Name, out var newer))
+                    {
+                        entry.AvailableVersion = newer;
+                    }
+                }
+
+                _logger.LogInformation("{Count} winget package(s) have an upgrade available.", available.Count);
+            });
+        }
 
         return entries
             .Where(e => !string.IsNullOrWhiteSpace(e.Name))

@@ -17,9 +17,10 @@ class ComputerShow extends Component
     public string $softwareSearch = '';
 
     /**
-     * managed  — matches a catalogue package (the default; the rest is noise)
-     * deployed — PioDeploy put it here: there is a succeeded install/update
-     * all      — everything the machine reported
+     * managed   — matches a catalogue package (the default; the rest is noise)
+     * deployed  — PioDeploy put it here: there is a succeeded install/update
+     * outdated  — the machine's package manager is offering something newer
+     * all       — everything the machine reported
      */
     public string $softwareFilter = 'managed';
 
@@ -131,6 +132,10 @@ class ComputerShow extends Component
                 ->where('source', 'winget')->whereIn('name', $managedPackages->keys())->count(),
             'softwareDeployed' => $this->computer->software()
                 ->where('source', 'winget')->whereIn('name', $deployedNames)->count(),
+            // Counted in PHP, not SQL: "newer" is a version comparison, and
+            // winget sometimes offers an "available" that is not ahead.
+            'softwareOutdated' => $this->computer->software()
+                ->withUpdateAvailable()->get()->filter->hasUpdate()->count(),
             'softwareItems'   => $this->computer->software()
                 ->when($this->softwareFilter === 'managed', fn ($q) => $q
                     ->where('source', 'winget')
@@ -138,6 +143,7 @@ class ComputerShow extends Component
                 ->when($this->softwareFilter === 'deployed', fn ($q) => $q
                     ->where('source', 'winget')
                     ->whereIn('name', $deployedNames))
+                ->when($this->softwareFilter === 'outdated', fn ($q) => $q->withUpdateAvailable())
                 ->when($this->softwareSearch !== '', fn ($q) => $q->where(fn ($w) => $w
                     ->where('name', 'like', "%{$this->softwareSearch}%")
                     ->orWhere('publisher', 'like', "%{$this->softwareSearch}%")))

@@ -93,6 +93,9 @@ class AgentController extends Controller
             'software'             => ['required', 'array', 'max:3000'],
             'software.*.name'      => ['required', 'string', 'max:255'],
             'software.*.version'   => ['nullable', 'string', 'max:100'],
+            // Agent 1.3.3+ reports what the package manager is offering.
+            // Optional, so older agents keep reporting inventory unchanged.
+            'software.*.available_version' => ['nullable', 'string', 'max:100'],
             'software.*.publisher' => ['nullable', 'string', 'max:255'],
             'software.*.source'    => ['required', \Illuminate\Validation\Rule::in(Computer::softwareSources())],
         ]);
