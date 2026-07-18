@@ -16,7 +16,7 @@
     <header class="nav" id="siteNav">
         <div class="container nav-inner">
             <a href="{{ route('home') }}" class="brand">
-                <img src="{{ asset('img/piodeploy-logo.svg') }}" class="brand-full" alt="PioDeploy">
+                <img src="{{ asset('img/piodeploy-logo.svg') }}?v=2" class="brand-full" alt="PioDeploy">
                 @if ($house)<span class="sub">· {{ $house }}</span>@endif
             </a>
             {{-- display:contents on desktop, so this wrapper changes nothing
@@ -57,7 +57,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div>
-                    <div class="brand"><img src="{{ asset('img/piodeploy-logo-reverse.svg') }}" class="brand-full" alt="PioDeploy"></div>
+                    <div class="brand"><img src="{{ asset('img/piodeploy-logo-reverse.svg') }}?v=2" class="brand-full" alt="PioDeploy"></div>
                     <p class="fdesc">{{ $content->get('footer.tagline') }} Built for MSPs{{ $house ? ' by '.$house : '' }}.</p>
                 </div>
                 <div>
