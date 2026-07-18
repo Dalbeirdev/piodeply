@@ -65,6 +65,13 @@ Route::middleware([
         ->middleware('permission:settings.manage')
         ->name('billing.subscription');
 
+    Route::get('/billing/invoices', \App\Livewire\Billing\Portal::class)
+        ->middleware('permission:settings.manage')
+        ->name('billing.invoices');
+    Route::get('/billing/invoices/{invoiceId}/download', [\App\Http\Controllers\BillingInvoiceController::class, 'download'])
+        ->middleware('permission:settings.manage')
+        ->name('billing.invoices.download');
+
     Route::get('/admin/webhooks', \App\Livewire\Admin\WebhookEvents::class)
         ->middleware('permission:settings.manage')
         ->name('admin.webhooks');

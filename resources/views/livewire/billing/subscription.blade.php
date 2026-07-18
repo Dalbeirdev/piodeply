@@ -109,7 +109,9 @@
                         @endif
                     </div>
 
-                    <p class="text-xs text-slate-400">Invoices, payment method and billing history arrive in the next phase.</p>
+                    <p class="text-xs text-slate-400">
+                        <a href="{{ route('billing.invoices') }}" class="pd-link">Invoices, payment method &amp; billing history →</a>
+                    </p>
                 </div>
             @elseif (! $this->billingConfigured())
                 <div class="pd-card p-6">

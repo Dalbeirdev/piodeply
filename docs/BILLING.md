@@ -246,13 +246,36 @@ idempotency, each status transition, suspend-on-final-failure, dashboard + retry
 
 ---
 
+## Phase 5 — Customer billing portal
+
+`/billing/invoices` (`billing.invoices`, gated by `settings.manage`) —
+invoices + PDF download, the upcoming charge, and payment-method management.
+
+`BillingPortalService` wraps Cashier and is **guarded by `stripeReady()`**
+(keys present AND the account is a Stripe customer). When Stripe isn't ready it
+returns empty collections / null instead of calling the API, so the page
+renders and tests run offline.
+
+| Feature | Source |
+|---|---|
+| Billing history | `invoices()` → date / total / status / **Download PDF** |
+| Invoice PDF | `BillingInvoiceController@download` → `downloadInvoice()`; a not-ours/unknown id is a **404**, never another customer's document |
+| Upcoming charge | `upcomingInvoice()` |
+| Payment methods | `paymentMethods()` / `defaultPaymentMethod()`; add/update via Stripe.js SetupIntent (prepaid rejected), set-default, remove (the in-use default can't be removed) |
+
+Tests: `tests/Feature/BillingPortalTest.php` (4) — offline empty results, page
+gating + notice, download-route authorization + 404. The live invoice/PDF and
+card-management round-trips are verified in Stripe test mode.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
 - [x] **Phase 2 — Cashier + Account (Billable) + card verification + 14-day trial**
 - [x] **Phase 3 — Checkout + subscription lifecycle (upgrade/downgrade/cancel/resume/pause + proration)**
 - [x] **Phase 4 — Stripe webhooks (verify, idempotency, transitions, dashboard)**
-- [ ] Phase 5 — Customer billing portal + invoices + payment methods
+- [x] **Phase 5 — Customer billing portal (invoices + PDF, upcoming, payment methods)**
 - [ ] Phase 6 — Device-limit enforcement + email notifications
 - [ ] Phase 7 — Coupons
 - [ ] Phase 8 — Affiliate system
