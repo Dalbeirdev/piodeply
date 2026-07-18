@@ -45,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
         // install before the first migration.
         app(\App\Services\MailSettingsService::class)->apply();
 
+        // Stripe keys entered in the portal (encrypted) override .env, so
+        // billing can be switched on without an SSH session. No-op until saved.
+        app(\App\Services\StripeSettingsService::class)->apply();
+
         // Shared branding for the public marketing site.
         \Illuminate\Support\Facades\View::composer('marketing.*', function ($view) {
             $content = app(\App\Services\SiteContentService::class);

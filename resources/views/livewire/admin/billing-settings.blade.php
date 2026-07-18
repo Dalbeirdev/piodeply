@@ -14,39 +14,57 @@
             {{-- Connection status --}}
             <div class="pd-card p-6">
                 <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Stripe connection</h3>
-                @if (! $hasKeys)
-                    <div class="rounded-md bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-                        <p class="font-semibold mb-1">Stripe keys are not set.</p>
-                        Add them to your <code class="font-mono text-xs">.env</code> (never commit them), then reload:
-                        <pre class="mt-2 bg-white border border-amber-200 rounded p-2 text-xs overflow-x-auto">STRIPE_KEY=pk_test_...
-STRIPE_SECRET=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...</pre>
-                        Get them from your Stripe dashboard → Developers → API keys. Use <strong>test</strong> keys first.
-                    </div>
-                @else
-                    <div class="flex items-center gap-2 text-sm">
+                <div class="flex items-center gap-2 text-sm flex-wrap">
+                    @if ($hasKeys)
                         <span class="text-xs font-semibold rounded-full px-2 py-0.5 border bg-green-50 text-green-700 border-green-200">Keys detected</span>
                         <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $isLive ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200' }}">
                             {{ $isLive ? 'LIVE mode' : 'TEST mode' }}
                         </span>
-                        @if ($configured)
-                            <span class="text-xs font-semibold rounded-full px-2 py-0.5 border bg-green-50 text-green-700 border-green-200">Checkout active</span>
-                        @endif
-                    </div>
-                    <p class="text-xs text-slate-500 mt-2">
-                        Webhook endpoint: <code class="font-mono">{{ route('billing.webhook') }}</code>
-                        — add this in Stripe → Developers → Webhooks (event <code class="font-mono">checkout.session.completed</code>)
-                        and put its signing secret in <code class="font-mono">STRIPE_WEBHOOK_SECRET</code>.
-                    </p>
-                @endif
+                        <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $hasWebhookSecret ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200' }}">
+                            {{ $hasWebhookSecret ? 'Webhook secret set' : 'Webhook secret missing' }}
+                        </span>
+                    @else
+                        <span class="text-xs font-semibold rounded-full px-2 py-0.5 border bg-amber-50 text-amber-700 border-amber-200">Not configured — enter your keys below</span>
+                    @endif
+                </div>
+                <p class="text-xs text-slate-500 mt-3">
+                    Subscription webhook endpoint (add in Stripe → Developers → Webhooks):
+                    <code class="font-mono">{{ url('/stripe/webhook') }}</code>.
+                    After creating the keys below, run <code class="font-mono">php artisan billing:sync-stripe</code> once to create the Stripe products &amp; prices.
+                </p>
             </div>
 
             {{-- Settings --}}
-            <form wire:submit="save" class="pd-card p-6 space-y-4">
-                <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Configuration</h3>
+            <form wire:submit="save" class="pd-card p-6 space-y-5">
+                <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Stripe API keys</h3>
+                <p class="text-xs text-slate-500 -mt-2">
+                    From Stripe → Developers → API keys. Use <strong>test</strong> keys first. Secrets are encrypted at rest
+                    and never shown again — leave a secret field blank to keep the stored value.
+                </p>
+
+                <div>
+                    <x-label for="pk" value="Publishable key" />
+                    <x-input id="pk" type="text" class="mt-1 block w-full font-mono text-sm" wire:model="publishableKey" placeholder="pk_test_..." autocomplete="off" />
+                    <x-input-error for="publishableKey" class="mt-1" />
+                </div>
+                <div>
+                    <x-label for="sk" value="Secret key" />
+                    <x-input id="sk" type="password" class="mt-1 block w-full font-mono text-sm" wire:model="secretKey"
+                             placeholder="{{ $hasSecret ? '•••••••• (stored — leave blank to keep)' : 'sk_test_...' }}" autocomplete="off" />
+                    <x-input-error for="secretKey" class="mt-1" />
+                </div>
+                <div>
+                    <x-label for="whsec" value="Webhook signing secret" />
+                    <x-input id="whsec" type="password" class="mt-1 block w-full font-mono text-sm" wire:model="webhookSecret"
+                             placeholder="{{ $hasWebhookSecret ? '•••••••• (stored — leave blank to keep)' : 'whsec_...' }}" autocomplete="off" />
+                    <x-input-error for="webhookSecret" class="mt-1" />
+                    <p class="text-xs text-slate-500 mt-1">Shown once when you create the webhook endpoint in Stripe.</p>
+                </div>
+
+                <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider border-t pt-4">Configuration</h3>
                 <label class="flex items-center gap-2 text-sm text-slate-700">
-                    <x-checkbox wire:model="enabled" :disabled="! $hasKeys" />
-                    Enable online payment (show subscribe buttons on the pricing page)
+                    <x-checkbox wire:model="enabled" />
+                    Enable the legacy per-machine checkout on the marketing site (subscription plans do not need this)
                 </label>
                 <div class="max-w-[10rem]">
                     <x-label for="currency" value="Currency (ISO)" />
