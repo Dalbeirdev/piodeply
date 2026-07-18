@@ -107,6 +107,12 @@ class WebhookService
         $account->forceFill(['grace_ends_at' => null])->save();
         $this->subscriptions->syncStatus($account);
 
+        $account->billingContact()?->notify(new \App\Notifications\PaymentReceiptNotification(
+            $account,
+            $invoice['amount_paid'] ?? ($invoice['total'] ?? null),
+            $invoice['currency'] ?? 'usd',
+        ));
+
         return 'processed';
     }
 

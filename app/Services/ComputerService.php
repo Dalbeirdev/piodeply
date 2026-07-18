@@ -51,6 +51,12 @@ class ComputerService
             return $existing->fresh();
         }
 
+        // A brand-new machine: enforce the plan's device limit. Existing
+        // machines re-register above without a check; this only gates growth,
+        // and only when a plan actually sets a limit (unbilled installs are
+        // unlimited).
+        $this->assertHasCapacityForNewDevice();
+
         /** @var Computer $computer */
         $computer = $this->computers->create($attributes + ['agent_uuid' => $agentUuid]);
 
@@ -147,6 +153,31 @@ class ComputerService
     public function restore(Computer $computer): void
     {
         $this->computers->restore($computer);
+    }
+
+    /**
+     * Guard a new enrollment against the account's device limit. No-op when no
+     * plan sets a limit. Alerts the team the first time the ceiling is hit.
+     */
+    private function assertHasCapacityForNewDevice(): void
+    {
+        $account = \App\Models\Account::current();
+        $limit = $account->effectiveDeviceLimit();
+
+        if ($limit === null) {
+            return; // unbilled / no plan → unlimited
+        }
+
+        $current = $account->deviceCount();
+        if ($current >= $limit) {
+            app(NotificationService::class)->notify(
+                'billing.device_limit',
+                "Device limit reached ({$current}/{$limit})",
+                ['limit' => $limit, 'current' => $current, 'plan' => $account->plan?->name]
+            );
+
+            throw new \App\Exceptions\DeviceLimitReachedException($limit, $current);
+        }
     }
 
     private function onlyInventory(array $inventory): array

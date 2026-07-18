@@ -124,8 +124,13 @@ class SubscriptionService
     /** Cancel at period end — access continues until the paid period expires. */
     public function cancel(Account $account): void
     {
-        $account->subscription('default')?->cancel();
+        $subscription = $account->subscription('default');
+        $subscription?->cancel();
         $this->syncStatus($account);
+
+        $account->billingContact()?->notify(
+            new \App\Notifications\SubscriptionCancelledNotification($account, $subscription?->fresh()?->ends_at)
+        );
     }
 
     /** Cancel immediately — access ends now. */

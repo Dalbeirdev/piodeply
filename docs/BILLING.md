@@ -269,6 +269,32 @@ card-management round-trips are verified in Stripe test mode.
 
 ---
 
+## Phase 6 — Device-limit enforcement & billing emails
+
+**Device limit (Module 11).** `ComputerService::register()` blocks a **new**
+machine once the fleet is at the account's `effectiveDeviceLimit()`. It is
+backward-compatible and safe: **existing machines always re-register** (only
+growth is gated), and an install with **no plan has no limit** (unlimited).
+A blocked enrollment throws `DeviceLimitReachedException`; the agent register
+endpoint returns **402** with a clear message, and the team is alerted via the
+notification channels.
+
+**Admin override.** The billing screen has a device-limit override
+(`accounts.device_limit` + `device_limit_overridden`): raise the ceiling above
+the plan, or reset to follow the plan. It wins over the plan limit everywhere
+(`effectiveDeviceLimit()`).
+
+**Billing emails (Module 12).** On top of Trial Started / Trial Ending /
+Payment Failed (Phases 2 & 4): `PaymentReceiptNotification` on `invoice.paid`
+(receipt / invoice-ready) and `SubscriptionCancelledNotification` on cancel.
+
+Tests: `tests/Feature/BillingEnforcementTest.php` (7) — unlimited without a
+plan, block past the limit, existing device re-registers, override grants
+capacity, the 402 endpoint, override set/clear, receipt email. The cancel email
+(Stripe round-trip) is verified in test mode.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
@@ -276,7 +302,8 @@ card-management round-trips are verified in Stripe test mode.
 - [x] **Phase 3 — Checkout + subscription lifecycle (upgrade/downgrade/cancel/resume/pause + proration)**
 - [x] **Phase 4 — Stripe webhooks (verify, idempotency, transitions, dashboard)**
 - [x] **Phase 5 — Customer billing portal (invoices + PDF, upcoming, payment methods)**
-- [ ] Phase 6 — Device-limit enforcement + email notifications
+- [x] **Phase 6 — Device-limit enforcement + billing emails**
+
 - [ ] Phase 7 — Coupons
 - [ ] Phase 8 — Affiliate system
 - [ ] Phase 9 — Admin billing dashboard + admin panel + exports

@@ -28,12 +28,22 @@ class AgentController extends Controller
         /** @var Project $project */
         $project = $request->attributes->get('project');
 
-        $computer = $this->computers->register(
-            project: $project,
-            agentUuid: $request->validated('agent_uuid'),
-            inventory: $this->inventoryWithPublicIp($request),
-            agentVersion: $request->validated('agent_version'),
-        );
+        try {
+            $computer = $this->computers->register(
+                project: $project,
+                agentUuid: $request->validated('agent_uuid'),
+                inventory: $this->inventoryWithPublicIp($request),
+                agentVersion: $request->validated('agent_version'),
+            );
+        } catch (\App\Exceptions\DeviceLimitReachedException $e) {
+            // 402 Payment Required — the fleet has outgrown the plan.
+            return response()->json([
+                'error'        => 'device_limit_reached',
+                'message'      => $e->getMessage(),
+                'device_limit' => $e->limit,
+                'device_count' => $e->current,
+            ], 402);
+        }
 
         return response()->json([
             'computer_id'       => $computer->id,

@@ -32,6 +32,9 @@ class Subscription extends Component
     /** SetupIntent secret used by Stripe.js in the browser (safe to expose). */
     public ?string $stripeClientSecret = null;
 
+    /** Admin device-limit override (null = follow the plan). */
+    public ?int $overrideLimit = null;
+
     public ?string $errorMessage = null;
 
     public function rules(): array
@@ -51,6 +54,8 @@ class Subscription extends Component
             $recommended = app(PricingService::class)->plans()->firstWhere('is_recommended', true);
             $this->planId = $recommended?->id ?? app(PricingService::class)->plans()->first()?->id;
         }
+
+        $this->overrideLimit = $this->account->device_limit_overridden ? $this->account->device_limit : null;
 
         // One SetupIntent per page load — reused across re-renders (interval
         // toggle etc.) so we don't create a new intent on every interaction.
@@ -144,6 +149,28 @@ class Subscription extends Component
     {
         $this->run(fn () => $subscriptions->unpause($this->account),
             'Billing resumed.');
+    }
+
+    /** Admin override of the device ceiling (Module 11); null follows the plan. */
+    public function saveDeviceLimit(): void
+    {
+        $this->authorize('manage-billing');
+        $this->validate(['overrideLimit' => ['nullable', 'integer', 'min:1', 'max:1000000']]);
+
+        $this->account->forceFill([
+            'device_limit'            => $this->overrideLimit,
+            'device_limit_overridden' => $this->overrideLimit !== null,
+        ])->save();
+
+        // With no override, fall back to the current plan's limit.
+        if ($this->overrideLimit === null) {
+            $this->account->forceFill(['device_limit' => $this->account->plan?->device_limit])->save();
+        }
+
+        session()->flash('status', $this->overrideLimit !== null
+            ? "Device limit overridden to {$this->overrideLimit}."
+            : 'Override cleared — using the plan limit.');
+        $this->redirectRoute('billing.subscription', navigate: true);
     }
 
     public function render()
