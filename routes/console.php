@@ -25,3 +25,5 @@ Schedule::command('policies:drift-digest')->dailyAt('08:00');
 
 // Audit-log retention (days configurable in Admin → Settings).
 Schedule::command('logs:prune')->dailyAt('03:30');
+
+Schedule::command('billing:trial-reminders')->dailyAt('09:00');

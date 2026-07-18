@@ -57,6 +57,11 @@ Route::middleware([
         ->middleware('permission:settings.manage')
         ->name('admin.settings');
 
+    // Subscription & billing (per MSP account).
+    Route::get('/billing/subscription', \App\Livewire\Billing\Subscription::class)
+        ->middleware('permission:settings.manage')
+        ->name('billing.subscription');
+
     Route::get('/admin/content', \App\Livewire\Admin\ManageContent::class)
         ->middleware('permission:settings.manage')
         ->name('admin.content');

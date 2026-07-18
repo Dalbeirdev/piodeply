@@ -28,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Billing is per MSP account, so the Cashier customer is the Account,
+        // not a User. Currency comes from the billing settings.
+        \Laravel\Cashier\Cashier::useCustomerModel(\App\Models\Account::class);
+        \Laravel\Cashier\Cashier::calculateTaxes(); // Stripe Tax on invoices
+
         // Compact pagination everywhere (Previous / Next + page summary).
         \Illuminate\Pagination\Paginator::defaultView('pagination.compact');
         \Illuminate\Pagination\Paginator::defaultSimpleView('pagination.compact');
@@ -72,6 +77,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function (User $user, string $ability) {
             return $user->hasRole(Role::SuperAdmin->value) ? true : null;
         });
+
+        // Billing is an owner/admin concern — reuse the settings capability so
+        // no new permission needs seeding. Super Admin already passes above.
+        Gate::define('manage-billing', fn (User $user) => $user->can('settings.manage'));
 
         Event::listen(Login::class, [LogAuthenticationActivity::class, 'handleLogin']);
         Event::listen(Logout::class, [LogAuthenticationActivity::class, 'handleLogout']);

@@ -126,10 +126,67 @@ php artisan test --filter="PricingServiceTest|BillingPricingApiTest|PublicPricin
 
 ---
 
+## Phase 2 — Cashier, Account billable, card verification, 14-day trial
+
+Billing runs on **Laravel Cashier** (`laravel/cashier` ^16, `stripe/stripe-php`
+^17). The Cashier customer is the **`Account`** (the MSP tenant), not a User, so
+the Cashier columns (`stripe_id`, `pm_type`, `pm_last_four`, `trial_ends_at`)
+live on `accounts`, and `subscriptions.account_id` is the billable FK.
+`Cashier::useCustomerModel(Account::class)` is set in `AppServiceProvider`.
+
+### Account (the billing tenant)
+`App\Models\Account` — one row per install, `Account::current()` is the accessor.
+`use Billable`. Device usage = `Computer::count()` across the whole install;
+`effectiveDeviceLimit()` is the admin override if set, else the plan's limit.
+
+### Getting a card on file + starting the trial
+1. `Billing\Subscription` Livewire screen (`/billing/subscription`, gated by the
+   `manage-billing` gate = `settings.manage`). It creates a **SetupIntent**.
+2. Stripe.js (Elements) verifies and tokenises the card in the browser — the
+   card number never reaches the server. It returns a payment-method id.
+3. `SubscriptionService::startTrial()` rejects **prepaid** cards (fake-account
+   defence), attaches the card, and opens a `trialDays(14)` subscription on the
+   chosen plan/interval. The customer is not charged until day 14.
+4. A `TrialStarted` mail goes to the billing contact.
+
+### Trial lifecycle
+- `billing:trial-reminders` (scheduled daily 09:00) emails `TrialEnding` once
+  when a trial is within 3 days of ending.
+- The charge at trial end and failure→grace→suspend are **Stripe-driven and
+  handled by webhooks in Phase 4**.
+
+### Stripe setup (do this once to go live in test mode)
+1. Put test keys in `.env`:
+   ```
+   STRIPE_KEY=pk_test_xxx
+   STRIPE_SECRET=sk_test_xxx
+   STRIPE_WEBHOOK_SECRET=whsec_xxx   # used in Phase 4
+   CASHIER_CURRENCY=usd
+   ```
+2. Create the Stripe products + prices and backfill the plan IDs:
+   ```
+   php artisan billing:sync-stripe          # --dry-run to preview
+   ```
+3. Reload `/billing/subscription`, add a Stripe test card (4242…), start the trial.
+
+### Commands
+| Command | Purpose |
+|---|---|
+| `billing:sync-stripe` | Create/verify Stripe products + monthly/yearly prices; backfill `plans.stripe_*` (idempotent) |
+| `billing:trial-reminders` | Email a 3-days-left reminder (scheduled daily) |
+
+### Tests
+`tests/Feature/BillingAccountTest.php` (Account limits/override, `applyPlan`,
+prepaid rejection via mock, state snapshot), `tests/Feature/TrialLifecycleTest.php`
+(reminder windowing + idempotency, page gating, sync command without keys). The
+live Stripe trial/SetupIntent path is verified manually in Stripe test mode.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
-- [ ] Phase 2 — Cashier + Account (Billable) + card verification + 14-day trial
+- [x] **Phase 2 — Cashier + Account (Billable) + card verification + 14-day trial**
 - [ ] Phase 3 — Checkout + subscription lifecycle (upgrade/downgrade/cancel/resume/pause) + proration
 - [ ] Phase 4 — Webhooks + idempotency + dashboard
 - [ ] Phase 5 — Customer billing portal + invoices + payment methods

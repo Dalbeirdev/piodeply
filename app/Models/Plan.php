@@ -18,8 +18,14 @@ class Plan extends Model
         'slug', 'name', 'device_limit',
         'monthly_price_cents', 'yearly_price_cents', 'currency',
         'features', 'is_recommended', 'is_active', 'sort_order',
-        'stripe_monthly_price_id', 'stripe_yearly_price_id',
+        'stripe_product_id', 'stripe_monthly_price_id', 'stripe_yearly_price_id',
     ];
+
+    /** The Stripe price id for the given interval ('month' | 'year'). */
+    public function stripePriceId(string $interval): ?string
+    {
+        return $interval === 'year' ? $this->stripe_yearly_price_id : $this->stripe_monthly_price_id;
+    }
 
     protected $casts = [
         'device_limit'        => 'integer',
