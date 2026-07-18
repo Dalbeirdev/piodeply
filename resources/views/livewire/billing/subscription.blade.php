@@ -177,6 +177,31 @@
                     </div>
                     @error('planId') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
 
+                    {{-- Coupon --}}
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Coupon code <span class="text-slate-400 font-normal">(optional)</span></label>
+                        <div class="flex gap-2">
+                            <input type="text" wire:model="couponCode" placeholder="e.g. LAUNCH20"
+                                   class="flex-1 rounded-lg border-slate-300 text-sm uppercase" autocomplete="off">
+                            <button type="button" wire:click="checkCoupon" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-600 hover:border-teal-400">Apply</button>
+                        </div>
+                        @if ($couponPreview)
+                            @if ($couponPreview['valid'])
+                                <p class="text-xs text-emerald-600 mt-1">
+                                    {{ $couponPreview['label'] }} applied.
+                                    @if (($couponPreview['preview']['trial_extra_days'] ?? 0) > 0)
+                                        +{{ $couponPreview['preview']['trial_extra_days'] }} trial days.
+                                    @elseif (($couponPreview['preview']['discount_cents'] ?? 0) > 0)
+                                        First charge ${{ number_format($couponPreview['preview']['final_cents'] / 100, 2) }}
+                                        (was ${{ number_format($couponPreview['preview']['base_cents'] / 100, 2) }}).
+                                    @endif
+                                </p>
+                            @else
+                                <p class="text-xs text-red-600 mt-1">{{ $couponPreview['message'] }}</p>
+                            @endif
+                        @endif
+                    </div>
+
                     {{-- Card element (kept out of Livewire's DOM diffing). --}}
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Card details</label>

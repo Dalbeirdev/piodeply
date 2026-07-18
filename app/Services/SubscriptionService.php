@@ -47,7 +47,7 @@ class SubscriptionService
      * Verify the card, attach it, and open the 14-day trial on the chosen plan.
      * The customer is not charged until the trial ends.
      */
-    public function startTrial(Account $account, Plan $plan, string $interval, string $paymentMethodId): Subscription
+    public function startTrial(Account $account, Plan $plan, string $interval, string $paymentMethodId, ?string $couponCode = null): Subscription
     {
         if ($account->subscribed('default')) {
             throw new RuntimeException('This account already has a subscription.');
@@ -60,12 +60,36 @@ class SubscriptionService
 
         $this->assertCardAcceptable($paymentMethodId);
 
+        // Resolve a coupon before we touch Stripe, so an invalid code fails
+        // cleanly with no half-built subscription.
+        $coupons = app(CouponService::class);
+        $coupon = null;
+        $extraTrialDays = 0;
+        $stripeCoupon = null;
+        if ($couponCode !== null && trim($couponCode) !== '') {
+            $result = $coupons->validate($couponCode, $account, $plan);
+            if (! $result['valid']) {
+                throw new RuntimeException($result['reason']);
+            }
+            $coupon = $result['coupon'];
+            $extraTrialDays = $coupons->trialExtraDays($coupon);
+            $stripeCoupon = $coupons->ensureStripeCoupon($coupon); // null for trial-day coupons
+        }
+
         $account->createOrGetStripeCustomer();
         $account->updateDefaultPaymentMethod($paymentMethodId);
 
-        $subscription = $account->newSubscription('default', $priceId)
-            ->trialDays(self::TRIAL_DAYS)
-            ->create($paymentMethodId);
+        $builder = $account->newSubscription('default', $priceId)
+            ->trialDays(self::TRIAL_DAYS + $extraTrialDays);
+        if ($stripeCoupon !== null) {
+            $builder->withCoupon($stripeCoupon);
+        }
+        $subscription = $builder->create($paymentMethodId);
+
+        if ($coupon !== null) {
+            $discount = $coupons->discountCents($coupon, $plan->{$interval === 'year' ? 'yearly_price_cents' : 'monthly_price_cents'});
+            $coupons->redeem($coupon, $account, $discount ?: null);
+        }
 
         $this->applyPlan($account, $plan, $interval, 'trialing');
         $account->forceFill([

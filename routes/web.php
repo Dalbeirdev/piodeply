@@ -76,6 +76,10 @@ Route::middleware([
         ->middleware('permission:settings.manage')
         ->name('admin.webhooks');
 
+    Route::get('/admin/coupons', \App\Livewire\Admin\Coupons::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.coupons');
+
     Route::get('/admin/content', \App\Livewire\Admin\ManageContent::class)
         ->middleware('permission:settings.manage')
         ->name('admin.content');

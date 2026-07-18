@@ -295,6 +295,40 @@ capacity, the 402 endpoint, override set/clear, receipt email. The cancel email
 
 ---
 
+## Phase 7 — Coupons
+
+Tables: `coupon_categories`, `coupons`, `coupon_redemptions`.
+
+`CouponService` computes **everything locally** — so the whole engine is
+unit-tested without Stripe:
+
+| Aspect | Rule |
+|---|---|
+| Types | `percent` (1–100), `fixed` (cents), `trial_days` (extra trial days) |
+| Duration | `once` / `repeating` (+months) / `forever` — mirrors Stripe |
+| Restrictions | plan-specific, expiry (`redeem_by`), global cap (`max_redemptions`), per-customer cap (`max_per_customer`) |
+| `validate(code, account, plan)` | active + not expired + not exhausted + plan match + per-customer under cap |
+| `preview(coupon, plan, interval)` | base / discount / final cents + extra trial days |
+| `redeem()` | logs a `coupon_redemption` and advances `times_redeemed` |
+| `auto_apply` | a live auto-apply coupon is offered automatically |
+
+**Applying at signup:** `startTrial()` takes an optional code — a trial-day
+coupon extends `trialDays()`; a percent/fixed coupon creates the matching
+Stripe coupon on first use (`ensureStripeCoupon`) and passes it via Cashier
+`withCoupon()`. Redemption is recorded either way.
+
+**Admin:** `/admin/coupons` (Livewire, `settings.manage`) — create/edit/delete,
+activate, restrict to a plan, set limits/expiry/auto-apply, and see redemption
+counts (analytics). **Customer:** a coupon field on `/billing/subscription`
+validates + previews the discount before the trial starts.
+
+Tests: `tests/Feature/CouponSystemTest.php` (9) — validation rules (unknown /
+inactive / expired / exhausted / plan / per-customer), preview maths for every
+type, redemption counter, admin CRUD + gating, `%>100` rejection, customer
+preview. The Stripe `withCoupon` round-trip is verified in test mode.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
@@ -303,8 +337,9 @@ capacity, the 402 endpoint, override set/clear, receipt email. The cancel email
 - [x] **Phase 4 — Stripe webhooks (verify, idempotency, transitions, dashboard)**
 - [x] **Phase 5 — Customer billing portal (invoices + PDF, upcoming, payment methods)**
 - [x] **Phase 6 — Device-limit enforcement + billing emails**
+- [x] **Phase 7 — Coupons**
 
-- [ ] Phase 7 — Coupons
+
 - [ ] Phase 8 — Affiliate system
 - [ ] Phase 9 — Admin billing dashboard + admin panel + exports
 - [ ] Phase 10 — Security sweep + full test pass + documentation

@@ -35,6 +35,12 @@ class Subscription extends Component
     /** Admin device-limit override (null = follow the plan). */
     public ?int $overrideLimit = null;
 
+    /** Optional coupon the customer enters before starting the trial. */
+    public string $couponCode = '';
+
+    /** Preview of a validated coupon, or an error message set on it. */
+    public ?array $couponPreview = null;
+
     public ?string $errorMessage = null;
 
     public function rules(): array
@@ -84,7 +90,7 @@ class Subscription extends Component
         $plan = Plan::findOrFail($this->planId);
 
         try {
-            $subscriptions->startTrial($this->account, $plan, $this->interval, $this->paymentMethod);
+            $subscriptions->startTrial($this->account, $plan, $this->interval, $this->paymentMethod, $this->couponCode ?: null);
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
 
@@ -94,6 +100,27 @@ class Subscription extends Component
         $this->account->refresh();
         session()->flash('status', "Your 14-day trial of the {$plan->name} plan has started.");
         $this->redirectRoute('billing.subscription', navigate: true);
+    }
+
+    /** Validate the entered coupon against the selected plan and preview it. */
+    public function checkCoupon(\App\Services\CouponService $coupons): void
+    {
+        $this->couponPreview = null;
+        if (trim($this->couponCode) === '') {
+            return;
+        }
+
+        $plan = Plan::find($this->planId);
+        $result = $coupons->validate($this->couponCode, $this->account, $plan);
+
+        if (! $result['valid']) {
+            $this->couponPreview = ['valid' => false, 'message' => $result['reason']];
+
+            return;
+        }
+
+        $preview = $plan ? $coupons->preview($result['coupon'], $plan, $this->interval) : null;
+        $this->couponPreview = ['valid' => true, 'label' => $result['coupon']->label(), 'preview' => $preview];
     }
 
     // ── Lifecycle actions (Phase 3) ────────────────────────────────────
