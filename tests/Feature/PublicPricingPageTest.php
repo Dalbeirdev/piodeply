@@ -22,8 +22,9 @@ class PublicPricingPageTest extends TestCase
     {
         $this->get('/pricing')
             ->assertOk()
+            ->assertSee('20 Machines')        // first headline tier
             ->assertSee('100 Machines')
-            ->assertSee('5000 Machines')
+            ->assertSee('250 Machines')       // last headline card (larger fleets use the calculator)
             ->assertSee('Most popular')       // recommended badge
             ->assertSee('Size your plan')     // calculator
             ->assertSee('Request a quote');   // enterprise form

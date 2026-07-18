@@ -25,9 +25,11 @@
     <button type="button" class="bt-opt" data-period="yearly" role="tab" aria-selected="false">Yearly <span class="bt-save">2 months free</span></button>
 </div>
 
-{{-- Plan cards --}}
+{{-- Plan cards: only the four headline tiers (≤250) get a card. Larger fleets
+     are served by the "Size your plan" calculator and the Enterprise form below,
+     which both still read every plan from $plansJson. --}}
 <div class="plan-grid">
-    @foreach ($plans as $plan)
+    @foreach ($plans->take(4) as $plan)
         <div class="plan-card @if ($plan->is_recommended) is-recommended @endif">
             @if ($plan->is_recommended)
                 <span class="plan-badge">Most popular</span>
@@ -56,7 +58,8 @@
 </div>
 
 <p class="center muted" style="margin:18px 0 0;font-size:.9rem;">
-    Every plan includes unlimited users and the full platform. 14-day free trial — card required, cancel anytime.
+    Every plan includes unlimited users and the full platform. 14-day free trial — card required, cancel anytime.<br>
+    Managing more than 250 machines? <a href="#calc" style="color:var(--teal-700);font-weight:600;">Size your plan below →</a>
 </p>
 
 {{-- Device calculator --}}

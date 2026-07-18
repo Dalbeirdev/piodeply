@@ -30,8 +30,22 @@
             compliance reporting — without needing a domain, an imaging server, or a six-figure contract.
             One lightweight agent, one portal, and everything runs silently in the background.</p>
 
-        {{-- The same story, in motion. Decorative: the prose above carries it. --}}
-        @include('marketing.partials.story')
+        {{-- A quiet stat strip stands in for the old animated grid: three plain
+             numbers carry the story without a fragile decorative section. --}}
+        <div class="story-stats">
+            <div class="ss">
+                <span class="ss-num">1</span>
+                <span class="ss-label">agent per machine</span>
+            </div>
+            <div class="ss">
+                <span class="ss-num">0</span>
+                <span class="ss-label">domains or imaging servers</span>
+            </div>
+            <div class="ss">
+                <span class="ss-num">100%</span>
+                <span class="ss-label">silent, unattended installs</span>
+            </div>
+        </div>
 
         <h2>What we believe</h2>
         <div class="value-grid">

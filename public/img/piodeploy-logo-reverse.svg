@@ -23,6 +23,6 @@
     <circle cx="75.5" cy="60" r="3.4" fill="#0b1120"/>
   </g>
   <text x="138" y="100" font-family="'Segoe UI',system-ui,Arial,sans-serif" font-weight="800" font-size="66" letter-spacing="-2">
-    <tspan fill="#5eead4">pio</tspan><tspan fill="#ffffff">deploy</tspan>
+    <tspan fill="#5eead4">Pio</tspan><tspan fill="#ffffff">Deploy</tspan>
   </text>
 </svg>
