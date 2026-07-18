@@ -22,6 +22,9 @@ Route::post('/billing/checkout', [\App\Http\Controllers\BillingController::class
 Route::get('/billing/success', [\App\Http\Controllers\BillingController::class, 'success'])->name('billing.success');
 Route::post('/billing/webhook', [\App\Http\Controllers\BillingController::class, 'webhook'])->name('billing.webhook');
 
+// Cashier/subscription webhook — signature-verified, idempotent, logged.
+Route::post('/stripe/webhook', \App\Http\Controllers\StripeWebhookController::class)->name('stripe.webhook');
+
 // Public agent download (the token is the secret; keys are never embedded).
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/download/agent/{token}', [\App\Http\Controllers\AgentDownloadController::class, 'script'])
@@ -61,6 +64,10 @@ Route::middleware([
     Route::get('/billing/subscription', \App\Livewire\Billing\Subscription::class)
         ->middleware('permission:settings.manage')
         ->name('billing.subscription');
+
+    Route::get('/admin/webhooks', \App\Livewire\Admin\WebhookEvents::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.webhooks');
 
     Route::get('/admin/content', \App\Livewire\Admin\ManageContent::class)
         ->middleware('permission:settings.manage')

@@ -209,12 +209,49 @@ path forward; new subscriptions go through the trial + lifecycle above.
 
 ---
 
+## Phase 4 — Stripe webhooks
+
+Endpoint: **`POST /stripe/webhook`** (`stripe.webhook`, CSRF-exempt). Cashier's
+own routes are disabled (`Cashier::ignoreRoutes()`); this endpoint replaces
+them so we control idempotency, logging, and the dashboard.
+
+**Verification → idempotency → handle.** `StripeWebhookController` verifies the
+signature (`BillingService::verifyWebhook`, HMAC-SHA256 with 5-min skew), then
+records the event in `webhook_events` keyed by Stripe's unique event id. A
+redelivered event that was already `processed` returns `200` without re-running.
+A handler error is logged and returned `500` so Stripe retries.
+
+`WebhookService` acts on the payload alone (no calls back to Stripe), so the
+whole path is testable offline:
+
+| Event | Effect |
+|---|---|
+| `customer.subscription.created/updated/deleted` | mirror status / `ends_at` / trial onto the local subscription, then re-derive account status |
+| `invoice.payment_failed` (retry scheduled) | account → `past_due`, `grace_ends_at` = next attempt, email the billing contact |
+| `invoice.payment_failed` (no retry) | account → `suspended` |
+| `invoice.paid` | clear the grace window, re-derive status |
+| `charge.refunded` | logged for the dashboard |
+| `checkout.session.completed`, `payment_intent.*` | acknowledged |
+| anything else | recorded as `skipped` |
+
+**Dashboard:** `/admin/webhooks` (Livewire, `settings.manage`) lists every event
+with status, error and a one-click **Retry** for failed/received events.
+
+### Stripe dashboard setup
+Point the Stripe webhook at `https://<host>/stripe/webhook`, subscribe to the
+events above, and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+
+Tests: `tests/Feature/BillingWebhookTest.php` (9) — signature rejection,
+idempotency, each status transition, suspend-on-final-failure, dashboard + retry.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
 - [x] **Phase 2 — Cashier + Account (Billable) + card verification + 14-day trial**
 - [x] **Phase 3 — Checkout + subscription lifecycle (upgrade/downgrade/cancel/resume/pause + proration)**
-- [ ] Phase 4 — Webhooks + idempotency + dashboard
+- [x] **Phase 4 — Stripe webhooks (verify, idempotency, transitions, dashboard)**
 - [ ] Phase 5 — Customer billing portal + invoices + payment methods
 - [ ] Phase 6 — Device-limit enforcement + email notifications
 - [ ] Phase 7 — Coupons

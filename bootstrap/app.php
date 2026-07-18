@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Stripe posts here from outside the session; the request is
         // HMAC-verified in the controller instead of by CSRF token.
-        $middleware->validateCsrfTokens(except: ['billing/webhook']);
+        $middleware->validateCsrfTokens(except: ['billing/webhook', 'stripe/webhook']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

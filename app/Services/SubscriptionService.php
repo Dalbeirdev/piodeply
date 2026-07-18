@@ -186,6 +186,10 @@ class SubscriptionService
         if ($account->isPaused()) {
             return 'paused';
         }
+        // Dunning exhausted: Stripe marks the subscription unpaid.
+        if ($subscription->stripe_status === 'unpaid') {
+            return 'suspended';
+        }
         if ($subscription->pastDue()) {
             return 'past_due';
         }

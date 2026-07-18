@@ -20,7 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // We register our own /stripe/webhook (with idempotency + logging) and
+        // do card SCA at SetupIntent time, so Cashier's default routes are off.
+        \Laravel\Cashier\Cashier::ignoreRoutes();
     }
 
     /**
