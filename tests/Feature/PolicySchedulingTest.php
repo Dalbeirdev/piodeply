@@ -61,12 +61,16 @@ class PolicySchedulingTest extends TestCase
 
     public function test_enforcement_waits_for_the_maintenance_window(): void
     {
+        // Freeze the clock BEFORE creating fixtures: the policy's rollout start
+        // defaults to created_at, so a real created_at would leak wall-clock
+        // time and make eligibility depend on the hour the suite runs.
+        Carbon::setTestNow(Carbon::parse('2026-07-13 15:00')); // Monday afternoon
+
         $project = Project::factory()->create();
         $package = Package::factory()->create();
         Computer::factory()->create(['project_id' => $project->id]);
         $policy = $this->saturdayWindowPolicy($project, $package);
 
-        Carbon::setTestNow(Carbon::parse('2026-07-13 15:00')); // Monday afternoon
         $this->assertSame(0, $this->service()->enforce($policy));
 
         Carbon::setTestNow(Carbon::parse('2026-07-18 03:00')); // Saturday 3 AM
@@ -103,12 +107,15 @@ class PolicySchedulingTest extends TestCase
 
     public function test_agent_report_respects_the_window(): void
     {
+        // Freeze before creating fixtures (see note above) so created_at — and
+        // thus the rollout start — does not leak real wall-clock time.
+        Carbon::setTestNow(Carbon::parse('2026-07-13 15:00')); // Monday
+
         $project = Project::factory()->create();
         $package = Package::factory()->create();
         $computer = Computer::factory()->create(['project_id' => $project->id]);
         $this->saturdayWindowPolicy($project, $package);
 
-        Carbon::setTestNow(Carbon::parse('2026-07-13 15:00')); // Monday
         app(ComputerService::class)->replaceSoftwareInventory($computer, [
             ['name' => 'X', 'source' => 'registry'],
         ]);

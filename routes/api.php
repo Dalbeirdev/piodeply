@@ -10,6 +10,15 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
+// Public pricing API — plans catalogue + calculator. No customer data is
+// exposed, so it needs no auth, but it is rate limited.
+Route::prefix('v1/billing')
+    ->middleware('throttle:60,1')
+    ->group(function () {
+        Route::get('/plans', [\App\Http\Controllers\Api\PricingController::class, 'plans']);
+        Route::post('/pricing/calculate', [\App\Http\Controllers\Api\PricingController::class, 'calculate']);
+    });
+
 // Integration API for external tools (RMM/PSA/scripts). Authenticate with
 // a personal access token from /user/api-tokens: Authorization: Bearer <token>.
 Route::prefix('v1')

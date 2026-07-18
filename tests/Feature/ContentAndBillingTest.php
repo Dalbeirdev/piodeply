@@ -88,11 +88,16 @@ class ContentAndBillingTest extends TestCase
         $this->assertSame(80, $billing->quoteCents(1));
     }
 
-    public function test_checkout_is_disabled_until_configured(): void
+    public function test_legacy_checkout_route_is_disabled_until_configured(): void
     {
-        // No keys / not enabled → route 404s and pricing shows the lead CTA.
+        // The legacy graduated-checkout route still 404s until Stripe is keyed.
         $this->post('/billing/checkout', ['machines' => 100])->assertNotFound();
-        $this->get('/pricing')->assertOk()->assertSee('Request access')->assertDontSee('Subscribe →');
+
+        // The pricing page is now trial-first (fixed plans, Phase 1): it never
+        // surfaces the old direct "Subscribe →" graduated button.
+        $this->get('/pricing')->assertOk()
+            ->assertSee('Start 14-day trial')
+            ->assertDontSee('Subscribe →');
     }
 
     public function test_configured_checkout_creates_a_stripe_session_and_redirects(): void
@@ -115,12 +120,17 @@ class ContentAndBillingTest extends TestCase
         });
     }
 
-    public function test_pricing_page_shows_subscribe_when_configured(): void
+    public function test_pricing_page_stays_trial_first_even_with_legacy_billing_enabled(): void
     {
+        // Enabling the legacy graduated checkout must not resurrect the old
+        // "Subscribe →" button — the fixed-plan page routes everyone through
+        // the 14-day trial (real Cashier checkout lands in Phase 3).
         config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
         app(SettingsService::class)->set('billing.enabled', '1');
 
-        $this->get('/pricing')->assertOk()->assertSee('Subscribe');
+        $this->get('/pricing')->assertOk()
+            ->assertSee('Start 14-day trial')
+            ->assertDontSee('Subscribe →');
     }
 
     // ── Webhook signature ──────────────────────────────────────────────

@@ -679,3 +679,66 @@ p { margin:0 0 1rem; }
         animation: none !important; transition: none !important;
     }
 }
+
+/* ============================================================
+   Fixed-plan pricing (Phase 1 billing) — plan cards, billing
+   toggle, device calculator, enterprise quote card.
+   ============================================================ */
+.billing-toggle{display:inline-flex;gap:4px;padding:5px;margin:0 auto 32px;background:var(--slate-100);border-radius:999px;border:1px solid var(--slate-200)}
+.billing-toggle{display:flex;width:max-content;margin-left:auto;margin-right:auto}
+.bt-opt{border:0;background:transparent;padding:9px 20px;border-radius:999px;font:inherit;font-weight:600;font-size:.92rem;color:var(--slate-600);cursor:pointer;transition:.15s}
+.bt-opt.is-active{background:#fff;color:var(--teal-700);box-shadow:var(--shadow-sm)}
+.bt-save{display:inline-block;margin-left:6px;font-size:.7rem;font-weight:700;color:var(--emerald);background:var(--teal-50);padding:2px 7px;border-radius:999px}
+
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;align-items:stretch}
+.plan-card{position:relative;display:flex;flex-direction:column;background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);padding:26px 22px;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s}
+.plan-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.plan-card.is-recommended{border-color:var(--teal-500);box-shadow:var(--shadow-teal)}
+.plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--teal-700);color:#fff;font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:5px 12px;border-radius:999px}
+.plan-name{margin:0 0 10px;font-size:1.05rem}
+.plan-price{display:flex;align-items:baseline;gap:6px}
+.pp-amount{font-size:2.1rem;font-weight:800;color:var(--ink);line-height:1}
+.pp-suffix{color:var(--slate-500);font-size:.9rem}
+.plan-per{margin:.35rem 0 0;font-size:.82rem}
+.plan-limit{margin:14px 0;padding:8px 0;border-top:1px solid var(--slate-100);border-bottom:1px solid var(--slate-100);font-size:.9rem;color:var(--slate-700)}
+.plan-features{list-style:none;padding:0;margin:0 0 20px;flex:1}
+.plan-features li{position:relative;padding:6px 0 6px 24px;font-size:.88rem;color:var(--slate-700)}
+.plan-features li::before{content:"";position:absolute;left:0;top:9px;width:14px;height:14px;border-radius:50%;background:var(--teal-50);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");background-size:10px;background-position:center;background-repeat:no-repeat}
+.plan-cta{width:100%;text-align:center;justify-content:center}
+.btn-ghost{background:#fff;border:1px solid var(--slate-300);color:var(--slate-700)}
+.btn-ghost:hover{border-color:var(--teal-500);color:var(--teal-700)}
+
+.calc-wrap{margin:56px 0 0;background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+.calc-head{padding:24px 26px 0}
+.calc-head h3{margin:0 0 4px}
+.calc-body{display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:20px 26px 28px}
+.calc-input label{display:block;font-weight:600;margin-bottom:10px;color:var(--slate-700)}
+.calc-input input[type=range]{width:100%;accent-color:var(--teal-600)}
+.calc-input input[type=number]{width:9rem;margin-top:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;font:inherit}
+.calc-out{background:var(--slate-50);border:1px solid var(--slate-200);border-radius:12px;padding:18px 20px}
+.co-plan{font-size:.95rem;color:var(--slate-600);margin-bottom:12px}
+.co-plan strong{color:var(--teal-700)}
+.co-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.co-label{display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--slate-400)}
+.co-val{font-size:1.3rem;font-weight:800;color:var(--ink)}
+.co-save{color:var(--emerald)}
+
+.enterprise-card{display:none;margin:32px 0 0;grid-template-columns:1fr 1fr;gap:0;background:#0f172a;border-radius:var(--radius);overflow:hidden;color:#e2e8f0}
+.enterprise-card.is-active{display:grid}
+.ent-copy{padding:34px 32px}
+.ent-copy h3{color:#fff;margin:.4rem 0 .6rem;font-size:1.5rem}
+.ent-copy .muted{color:#94a3b8}
+.ent-features{list-style:none;padding:0;margin:18px 0 0}
+.ent-features li{padding:6px 0 6px 22px;position:relative;color:#cbd5e1}
+.ent-features li::before{content:"→";position:absolute;left:0;color:var(--teal-400);font-weight:700}
+.ent-form{background:#fff;padding:30px 30px;color:var(--ink)}
+.ent-form h4{margin:0 0 16px}
+.ef-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.ent-form input,.ent-form textarea{width:100%;padding:10px 12px;border:1px solid var(--slate-300);border-radius:8px;font:inherit}
+.ent-form textarea{margin-bottom:14px}
+.form-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:9px 12px;border-radius:8px;margin-bottom:12px;font-size:.88rem}
+
+@media (max-width:720px){
+  .calc-body,.co-grid,.ef-row,.enterprise-card{grid-template-columns:1fr}
+}

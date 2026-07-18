@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(PackagesSeeder::class);
+        $this->call(PlanSeeder::class);
         $this->call(DemoUsersSeeder::class); // local env only
 
         // Dev bootstrap account — change the password before any shared use.

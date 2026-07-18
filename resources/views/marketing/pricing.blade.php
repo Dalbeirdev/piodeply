@@ -13,7 +13,7 @@
 
 <section class="section">
     <div class="container">
-        @include('marketing.partials.pricing')
+        @include('marketing.partials.plans')
     </div>
 </section>
 
