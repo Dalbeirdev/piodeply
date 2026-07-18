@@ -91,6 +91,61 @@ class Subscription extends Component
         $this->redirectRoute('billing.subscription', navigate: true);
     }
 
+    // ── Lifecycle actions (Phase 3) ────────────────────────────────────
+
+    /** Run a billing action, mapping any failure to a friendly message. */
+    private function run(callable $action, string $success): void
+    {
+        $this->authorize('manage-billing');
+        $this->errorMessage = null;
+
+        try {
+            $action();
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+
+            return;
+        }
+
+        $this->account->refresh();
+        session()->flash('status', $success);
+        $this->redirectRoute('billing.subscription', navigate: true);
+    }
+
+    public function changePlan(SubscriptionService $subscriptions): void
+    {
+        $this->validate();
+        $plan = Plan::findOrFail($this->planId);
+        $this->run(
+            fn () => $subscriptions->changePlan($this->account, $plan, $this->interval),
+            "Your plan is now {$plan->name} ({$this->interval}ly). Any difference is prorated."
+        );
+    }
+
+    public function cancel(SubscriptionService $subscriptions): void
+    {
+        $this->run(fn () => $subscriptions->cancel($this->account),
+            'Subscription cancelled — you keep access until the end of the paid period.');
+    }
+
+    public function resume(SubscriptionService $subscriptions): void
+    {
+        $this->run(fn () => $subscriptions->resume($this->account),
+            'Welcome back — your subscription has been resumed.');
+    }
+
+    public function pause(SubscriptionService $subscriptions): void
+    {
+        $this->run(fn () => $subscriptions->pause($this->account),
+            'Billing paused. Your fleet keeps running; resume anytime.');
+    }
+
+    public function unpause(SubscriptionService $subscriptions): void
+    {
+        $this->run(fn () => $subscriptions->unpause($this->account),
+            'Billing resumed.');
+    }
+
     public function render()
     {
         return view('livewire.billing.subscription', [

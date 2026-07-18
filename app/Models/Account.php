@@ -23,13 +23,14 @@ class Account extends Model
     protected $fillable = [
         'name', 'plan_id', 'billing_interval', 'status',
         'device_limit', 'device_limit_overridden', 'grace_ends_at',
-        'trial_reminder_sent_at',
+        'trial_reminder_sent_at', 'paused_at',
     ];
 
     protected $casts = [
         'trial_ends_at'           => 'datetime',
         'grace_ends_at'           => 'datetime',
         'trial_reminder_sent_at'  => 'datetime',
+        'paused_at'               => 'datetime',
         'device_limit'            => 'integer',
         'device_limit_overridden' => 'boolean',
     ];
@@ -115,6 +116,11 @@ class Account extends Model
     public function isSuspended(): bool
     {
         return $this->status === 'suspended';
+    }
+
+    public function isPaused(): bool
+    {
+        return $this->paused_at !== null;
     }
 
     public function inGracePeriod(): bool

@@ -183,11 +183,37 @@ live Stripe trial/SetupIntent path is verified manually in Stripe test mode.
 
 ---
 
+## Phase 3 — Checkout & subscription lifecycle
+
+All lifecycle actions live on `SubscriptionService` and the billing screen,
+gated by the account's current state.
+
+| Action | Method | Stripe behaviour |
+|---|---|---|
+| Upgrade / downgrade | `changePlan(account, plan, interval)` | Cashier `swap` — **prorated** automatically |
+| Cancel (period end) | `cancel()` | access continues to `ends_at` (grace) |
+| Cancel now | `cancelNow()` | ends immediately |
+| Resume | `resume()` | only while on grace |
+| Pause / unpause | `pause()` / `unpause()` | Stripe `pause_collection` (`void`) |
+
+**Status is derived, never guessed.** `deriveStatus(account)` reads the local
+Cashier subscription (+ our `paused_at`) and returns one of
+`none · trialing · active · grace · past_due · paused · canceled`. `state()`
+exposes `can_change / can_cancel / can_resume / can_pause` so the UI only offers
+valid actions. Because derivation reads local columns, it is fully unit-tested
+without Stripe (`tests/Feature/BillingLifecycleTest.php`, 12 tests). The swap /
+cancel / pause round-trips to Stripe are verified in test mode.
+
+The legacy graduated `BillingService` checkout still exists but is no longer the
+path forward; new subscriptions go through the trial + lifecycle above.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
 - [x] **Phase 2 — Cashier + Account (Billable) + card verification + 14-day trial**
-- [ ] Phase 3 — Checkout + subscription lifecycle (upgrade/downgrade/cancel/resume/pause) + proration
+- [x] **Phase 3 — Checkout + subscription lifecycle (upgrade/downgrade/cancel/resume/pause + proration)**
 - [ ] Phase 4 — Webhooks + idempotency + dashboard
 - [ ] Phase 5 — Customer billing portal + invoices + payment methods
 - [ ] Phase 6 — Device-limit enforcement + email notifications

@@ -52,7 +52,64 @@
                         @endif
                     </div>
 
-                    <p class="text-xs text-slate-400">Plan changes, invoices and the payment method move here in the next phase.</p>
+                    @if ($state['on_grace'] && $state['ends_at'])
+                        <p class="text-sm text-amber-700">Cancelled — access continues until {{ $state['ends_at']->toFormattedDayDateString() }}.</p>
+                    @endif
+                    @if ($state['paused'])
+                        <p class="text-sm text-slate-600">Billing is paused. Your fleet keeps running.</p>
+                    @endif
+
+                    @if ($errorMessage)
+                        <div class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">{{ $errorMessage }}</div>
+                    @endif
+
+                    {{-- Change plan --}}
+                    @if ($state['can_change'])
+                        <div class="border-t border-slate-100 pt-4 space-y-3">
+                            <p class="text-sm font-semibold text-slate-700">Change plan</p>
+                            <div class="inline-flex gap-1 p-1 bg-slate-100 rounded-full border border-slate-200 text-sm">
+                                <button type="button" wire:click="$set('interval','month')"
+                                    @class(['px-3 py-1 rounded-full font-semibold', 'bg-white text-teal-700 shadow-sm' => $interval==='month', 'text-slate-600' => $interval!=='month'])>Monthly</button>
+                                <button type="button" wire:click="$set('interval','year')"
+                                    @class(['px-3 py-1 rounded-full font-semibold', 'bg-white text-teal-700 shadow-sm' => $interval==='year', 'text-slate-600' => $interval!=='year'])>Yearly</button>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select wire:model.live="planId" class="rounded-lg border-slate-300 text-sm">
+                                    @foreach ($plans as $plan)
+                                        <option value="{{ $plan->id }}">{{ $plan->name }} — ${{ number_format(($interval==='year'?$plan->yearly_price_cents:$plan->monthly_price_cents)/100, 0) }}/{{ $interval }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" wire:click="changePlan"
+                                    wire:confirm="Change plan? The price difference is prorated on your next invoice."
+                                    class="px-4 py-2 bg-teal-700 text-white rounded-lg text-sm font-semibold hover:bg-teal-800">Change plan</button>
+                            </div>
+                            <p class="text-xs text-slate-400">Upgrades and downgrades take effect immediately and are prorated.</p>
+                        </div>
+                    @endif
+
+                    {{-- Cancel / resume / pause --}}
+                    <div class="border-t border-slate-100 pt-4 flex flex-wrap gap-2">
+                        @if ($state['can_pause'])
+                            <button type="button" wire:click="pause"
+                                wire:confirm="Pause billing? No charges until you resume; your fleet keeps running."
+                                class="px-3 py-2 text-sm font-semibold text-slate-600 border border-slate-300 rounded-lg hover:border-slate-400">Pause billing</button>
+                        @endif
+                        @if ($state['paused'])
+                            <button type="button" wire:click="unpause"
+                                class="px-3 py-2 text-sm font-semibold text-teal-700 border border-teal-300 rounded-lg hover:bg-teal-50">Resume billing</button>
+                        @endif
+                        @if ($state['can_resume'])
+                            <button type="button" wire:click="resume"
+                                class="px-3 py-2 text-sm font-semibold text-white bg-teal-700 rounded-lg hover:bg-teal-800">Resume subscription</button>
+                        @endif
+                        @if ($state['can_cancel'])
+                            <button type="button" wire:click="cancel"
+                                wire:confirm="Cancel your subscription? You keep access until the end of the current paid period."
+                                class="px-3 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50">Cancel subscription</button>
+                        @endif
+                    </div>
+
+                    <p class="text-xs text-slate-400">Invoices, payment method and billing history arrive in the next phase.</p>
                 </div>
             @elseif (! $this->billingConfigured())
                 <div class="pd-card p-6">
