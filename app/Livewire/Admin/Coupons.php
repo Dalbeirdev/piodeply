@@ -109,6 +109,7 @@ class Coupons extends Component
             ]
         );
 
+        activity('billing')->causedBy(auth()->user())->log(($this->editingId ? 'Coupon updated: ' : 'Coupon created: ') . strtoupper($data['code']));
         session()->flash('status', $this->editingId ? 'Coupon updated.' : 'Coupon created.');
         $this->resetForm();
         $this->showForm = false;

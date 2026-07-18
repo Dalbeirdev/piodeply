@@ -118,7 +118,8 @@ class AffiliateSystemTest extends TestCase
     public function test_invoice_paid_webhook_accrues_a_commission(): void
     {
         $affiliate = Affiliate::factory()->create(['commission_rate' => 25]);
-        Account::current()->update(['stripe_id' => 'cus_1', 'referred_by_affiliate_id' => $affiliate->id]);
+        // stripe_id is a Cashier-guarded column, so set it with forceFill.
+        Account::current()->forceFill(['stripe_id' => 'cus_1', 'referred_by_affiliate_id' => $affiliate->id])->save();
 
         app(WebhookService::class)->handle([
             'type' => 'invoice.paid',

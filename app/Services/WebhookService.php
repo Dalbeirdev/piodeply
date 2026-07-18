@@ -126,22 +126,27 @@ class WebhookService
             ]
         );
 
-        // Referral commission (no-op unless this account was referred).
+        // Referral commission (no-op unless this account was referred). Base it
+        // on the pre-tax subtotal so affiliates aren't paid a cut of the tax.
         app(AffiliateService::class)->accrueCommission(
             $account,
             $invoice['id'] ?? null,
-            (int) ($invoice['amount_paid'] ?? $invoice['total'] ?? 0),
+            (int) ($invoice['subtotal'] ?? $invoice['amount_paid'] ?? $invoice['total'] ?? 0),
         );
 
         return 'processed';
     }
 
-    /** Resolve the account from an invoice's customer id (single-install safe). */
+    /**
+     * Resolve the account strictly by the invoice's Stripe customer id. No
+     * fallback: an event for a customer we don't recognise (a stray/legacy
+     * customer under the same Stripe account) must not touch — let alone
+     * suspend or credit — the live account.
+     */
     private function accountFor(array $invoice): ?Account
     {
         $customer = $invoice['customer'] ?? null;
 
-        return ($customer ? Account::where('stripe_id', $customer)->first() : null)
-            ?? Account::query()->orderBy('id')->first();
+        return $customer ? Account::where('stripe_id', $customer)->first() : null;
     }
 }

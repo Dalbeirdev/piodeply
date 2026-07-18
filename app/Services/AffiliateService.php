@@ -98,20 +98,29 @@ class AffiliateService
         $commission->update(['status' => 'rejected']);
     }
 
-    /** Record a payout request for the affiliate's available balance. */
+    /**
+     * Record a payout request for the affiliate's available balance. Serialised
+     * with a row lock so two concurrent requests can't both pass the balance
+     * check and over-draw (double-payout race).
+     */
     public function requestWithdrawal(Affiliate $affiliate, int $amountCents, ?string $method = null): AffiliateWithdrawal
     {
-        $available = $affiliate->availableBalanceCents();
-        if ($amountCents < 1 || $amountCents > $available) {
-            throw new \RuntimeException('Withdrawal exceeds the available balance.');
-        }
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($affiliate, $amountCents, $method) {
+            // Lock the affiliate row; the second concurrent payout waits here.
+            $locked = Affiliate::whereKey($affiliate->id)->lockForUpdate()->firstOrFail();
+            $available = $locked->availableBalanceCents();
 
-        return AffiliateWithdrawal::create([
-            'affiliate_id' => $affiliate->id,
-            'amount_cents' => $amountCents,
-            'status'       => 'requested',
-            'method'       => $method,
-        ]);
+            if ($amountCents < 1 || $amountCents > $available) {
+                throw new \RuntimeException('Withdrawal exceeds the available balance.');
+            }
+
+            return AffiliateWithdrawal::create([
+                'affiliate_id' => $locked->id,
+                'amount_cents' => $amountCents,
+                'status'       => 'requested',
+                'method'       => $method,
+            ]);
+        });
     }
 
     public function payWithdrawal(AffiliateWithdrawal $withdrawal, ?string $reference = null): void

@@ -60,6 +60,7 @@ class Affiliates extends Component
 
     public function edit(int $id): void
     {
+        $this->authorize('manage-billing');
         $a = Affiliate::findOrFail($id);
         $this->editingId = $a->id;
         $this->name = $a->name;
@@ -95,11 +96,14 @@ class Affiliates extends Component
     {
         $this->authorize('manage-billing');
         abort_unless(in_array($status, ['pending', 'approved', 'rejected'], true), 400);
-        Affiliate::findOrFail($id)->update(['status' => $status]);
+        $affiliate = Affiliate::findOrFail($id);
+        $affiliate->update(['status' => $status]);
+        activity('billing')->causedBy(auth()->user())->log("Affiliate {$affiliate->code} set {$status}");
     }
 
     public function select(int $id): void
     {
+        $this->authorize('manage-billing');
         $this->selectedId = $this->selectedId === $id ? null : $id;
     }
 
@@ -130,6 +134,8 @@ class Affiliates extends Component
 
         $withdrawal = $affiliates->requestWithdrawal($affiliate, $amount, $affiliate->payout_method);
         $affiliates->payWithdrawal($withdrawal, 'admin-payout');
+        activity('billing')->causedBy(auth()->user())
+            ->log('Affiliate payout $' . number_format($amount / 100, 2) . " to {$affiliate->name}");
         session()->flash('status', 'Payout recorded.');
     }
 

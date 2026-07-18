@@ -130,7 +130,7 @@ class BillingEnforcementTest extends TestCase
         Notification::fake();
         $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(\App\Enums\Role::Admin->value));
         $plan = Plan::factory()->create();
-        Account::current()->update(['stripe_id' => 'cus_1', 'plan_id' => $plan->id]);
+        Account::current()->forceFill(['stripe_id' => 'cus_1', 'plan_id' => $plan->id])->save();
 
         app(WebhookService::class)->handle([
             'type' => 'invoice.paid',

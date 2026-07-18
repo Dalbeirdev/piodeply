@@ -108,6 +108,7 @@ class Subscription extends Component
     /** Validate the entered coupon against the selected plan and preview it. */
     public function checkCoupon(\App\Services\CouponService $coupons): void
     {
+        $this->authorize('manage-billing');
         $this->couponPreview = null;
         if (trim($this->couponCode) === '') {
             return;
@@ -143,6 +144,7 @@ class Subscription extends Component
         }
 
         $this->account->refresh();
+        activity('billing')->causedBy(auth()->user())->log($success);
         session()->flash('status', $success);
         $this->redirectRoute('billing.subscription', navigate: true);
     }
@@ -197,9 +199,11 @@ class Subscription extends Component
             $this->account->forceFill(['device_limit' => $this->account->plan?->device_limit])->save();
         }
 
-        session()->flash('status', $this->overrideLimit !== null
+        $msg = $this->overrideLimit !== null
             ? "Device limit overridden to {$this->overrideLimit}."
-            : 'Override cleared — using the plan limit.');
+            : 'Override cleared — using the plan limit.';
+        activity('billing')->causedBy(auth()->user())->log($msg);
+        session()->flash('status', $msg);
         $this->redirectRoute('billing.subscription', navigate: true);
     }
 
