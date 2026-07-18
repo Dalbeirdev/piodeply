@@ -742,3 +742,9 @@ p { margin:0 0 1rem; }
 @media (max-width:720px){
   .calc-body,.co-grid,.ef-row,.enterprise-card{grid-template-columns:1fr}
 }
+
+/* Full wordmark logo (470×150) in header & footer — height-based so the
+   aspect ratio is preserved instead of the square .logo-img sizing. */
+.brand .brand-full { height:38px; width:auto; display:block; }
+.footer .brand .brand-full { height:32px; width:auto; }
+@media (max-width:720px){ .brand .brand-full { height:32px; } }

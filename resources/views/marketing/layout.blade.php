@@ -9,15 +9,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=8">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=9">
     <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
     <header class="nav" id="siteNav">
         <div class="container nav-inner">
             <a href="{{ route('home') }}" class="brand">
-                <img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="52" height="52">
-                <span>PioDeploy @if ($house)<span class="sub">· {{ $house }}</span>@endif</span>
+                <img src="{{ asset('img/piodeploy-logo.svg') }}" class="brand-full" alt="PioDeploy">
+                @if ($house)<span class="sub">· {{ $house }}</span>@endif
             </a>
             {{-- display:contents on desktop, so this wrapper changes nothing
                  there — but on mobile the links AND the buttons collapse into
@@ -57,7 +57,7 @@
         <div class="container">
             <div class="footer-grid">
                 <div>
-                    <div class="brand"><img src="{{ asset('img/piodeploy-mark.svg') }}" class="logo-img" alt="PioDeploy" width="38" height="38"><span>PioDeploy</span></div>
+                    <div class="brand"><img src="{{ asset('img/piodeploy-logo-reverse.svg') }}" class="brand-full" alt="PioDeploy"></div>
                     <p class="fdesc">{{ $content->get('footer.tagline') }} Built for MSPs{{ $house ? ' by '.$house : '' }}.</p>
                 </div>
                 <div>
