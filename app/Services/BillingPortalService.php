@@ -92,23 +92,23 @@ class BillingPortalService
     }
 
     /**
-     * The invoice PDF response for download, or null if the invoice is not
-     * found / Stripe is not ready. The caller turns null into a 404.
+     * Stripe's hosted PDF URL for an invoice, or null if it isn't this
+     * customer's / Stripe is not ready. We redirect to Stripe's own PDF rather
+     * than render one locally (that needs the optional dompdf package, and
+     * Stripe's is the authoritative document). The caller turns null into 404.
      */
-    public function downloadInvoice(Account $account, string $invoiceId)
+    public function invoicePdfUrl(Account $account, string $invoiceId): ?string
     {
         if (! $this->stripeReady($account)) {
             return null;
         }
 
         // findInvoice returns null for an id that isn't this customer's.
-        if ($account->findInvoice($invoiceId) === null) {
+        $invoice = $account->findInvoice($invoiceId);
+        if ($invoice === null) {
             return null;
         }
 
-        return $account->downloadInvoice($invoiceId, [
-            'vendor'  => config('app.name'),
-            'product' => 'PioDeploy subscription',
-        ]);
+        return $invoice->asStripeInvoice()->invoice_pdf ?: null;
     }
 }

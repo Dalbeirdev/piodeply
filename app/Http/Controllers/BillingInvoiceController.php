@@ -16,10 +16,11 @@ class BillingInvoiceController extends Controller
     {
         abort_unless(Gate::allows('manage-billing'), 403);
 
-        $response = $portal->downloadInvoice(Account::current(), $invoiceId);
+        $url = $portal->invoicePdfUrl(Account::current(), $invoiceId);
 
-        abort_if($response === null, 404, 'Invoice not found.');
+        abort_if($url === null, 404, 'Invoice not found.');
 
-        return $response;
+        // Stripe's hosted, signed PDF.
+        return redirect()->away($url);
     }
 }
