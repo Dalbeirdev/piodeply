@@ -65,6 +65,10 @@ return [
 
     'currency' => env('CASHIER_CURRENCY', 'usd'),
 
+    // Automatic Stripe Tax. Off by default: it needs an origin address on the
+    // Stripe account, so enable it only once that is set (CASHIER_TAX=true).
+    'tax_enabled' => env('CASHIER_TAX', false),
+
     /*
     |--------------------------------------------------------------------------
     | Currency Locale

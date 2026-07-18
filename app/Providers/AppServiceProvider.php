@@ -33,7 +33,13 @@ class AppServiceProvider extends ServiceProvider
         // Billing is per MSP account, so the Cashier customer is the Account,
         // not a User. Currency comes from the billing settings.
         \Laravel\Cashier\Cashier::useCustomerModel(\App\Models\Account::class);
-        \Laravel\Cashier\Cashier::calculateTaxes(); // Stripe Tax on invoices
+
+        // Stripe Tax is opt-in: it requires an origin/head-office address on the
+        // Stripe account, so leave it off by default (set CASHIER_TAX=true once
+        // the address is configured) — otherwise every subscribe attempt errors.
+        if ((bool) config('cashier.tax_enabled', false)) {
+            \Laravel\Cashier\Cashier::calculateTaxes();
+        }
 
         // Compact pagination everywhere (Previous / Next + page summary).
         \Illuminate\Pagination\Paginator::defaultView('pagination.compact');
