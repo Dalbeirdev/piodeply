@@ -80,6 +80,13 @@ Route::middleware([
         ->middleware('permission:settings.manage')
         ->name('admin.coupons');
 
+    Route::get('/admin/billing-overview', \App\Livewire\Admin\BillingDashboard::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.billing-overview');
+    Route::get('/admin/billing-overview/export', [\App\Http\Controllers\BillingExportController::class, 'payments'])
+        ->middleware('permission:settings.manage')
+        ->name('billing.export');
+
     Route::get('/admin/affiliates', \App\Livewire\Admin\Affiliates::class)
         ->middleware('permission:settings.manage')
         ->name('admin.affiliates');

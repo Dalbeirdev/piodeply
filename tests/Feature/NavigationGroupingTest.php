@@ -42,7 +42,7 @@ class NavigationGroupingTest extends TestCase
         $groups = $this->nav()->groups($this->userWithRole(RoleEnum::Admin));
 
         $this->assertSame(
-            [null, NavigationService::FLEET, NavigationService::SOFTWARE, NavigationService::INSIGHTS, NavigationService::ADMIN],
+            [null, NavigationService::FLEET, NavigationService::SOFTWARE, NavigationService::INSIGHTS, NavigationService::ADMIN, NavigationService::BILLING],
             array_column($groups, 'label')
         );
     }

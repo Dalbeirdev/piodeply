@@ -113,6 +113,19 @@ class WebhookService
             $invoice['currency'] ?? 'usd',
         ));
 
+        // Record the payment for revenue reporting (idempotent by invoice id).
+        \App\Models\Payment::updateOrCreate(
+            ['reference' => $invoice['id'] ?? ('acct' . $account->id . '-' . now()->timestamp)],
+            [
+                'provider'       => 'stripe',
+                'customer_email' => $account->stripeEmail(),
+                'plan'           => $account->plan?->name,
+                'amount_total'   => (int) ($invoice['amount_paid'] ?? $invoice['total'] ?? 0),
+                'currency'       => $invoice['currency'] ?? 'usd',
+                'status'         => 'paid',
+            ]
+        );
+
         // Referral commission (no-op unless this account was referred).
         app(AffiliateService::class)->accrueCommission(
             $account,

@@ -20,6 +20,7 @@ class NavigationService
     public const FLEET = 'Fleet';
     public const SOFTWARE = 'Software';
     public const INSIGHTS = 'Insights';
+    public const BILLING = 'Billing';
     public const ADMIN = 'Administration';
 
     /**
@@ -69,8 +70,21 @@ class NavigationService
                 'icon' => '<path d="m22 7-10 6L2 7"/><rect x="2" y="5" width="20" height="14" rx="2"/>'],
             ['label' => 'Website', 'route' => 'admin.content', 'active' => 'admin.content*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M7 4v5"/>'],
-            ['label' => 'Billing', 'route' => 'admin.billing', 'active' => 'admin.billing*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
+            // Subscriptions, revenue, growth (Billing system).
+            ['label' => 'Overview', 'route' => 'admin.billing-overview', 'active' => 'admin.billing-overview*', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
+                'icon' => '<path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 5-6"/>'],
+            ['label' => 'Subscription', 'route' => 'billing.subscription', 'active' => 'billing.subscription*', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
                 'icon' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'],
+            ['label' => 'Invoices', 'route' => 'billing.invoices', 'active' => 'billing.invoices*', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
+                'icon' => '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>'],
+            ['label' => 'Coupons', 'route' => 'admin.coupons', 'active' => 'admin.coupons*', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
+                'icon' => '<path d="M20 12a2 2 0 0 1 2-2V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v3a2 2 0 0 1 0 4v3a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3a2 2 0 0 1-2-2z"/>'],
+            ['label' => 'Affiliates', 'route' => 'admin.affiliates', 'active' => 'admin.affiliates*', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
+                'icon' => '<circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>'],
+            ['label' => 'Webhooks', 'route' => 'admin.webhooks', 'active' => 'admin.webhooks*', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
+                'icon' => '<path d="M18 16.98h-5.99c-1.66 0-3.01-1.34-3.01-3S10.35 11 12 11h.01M6 8a4 4 0 1 0 4 4M15 16a4 4 0 1 0-4-4"/>'],
+            ['label' => 'Billing settings', 'route' => 'admin.billing', 'active' => 'admin.billing', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
+                'icon' => '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M5 12H3M21 12h-2"/>'],
             ['label' => 'Settings', 'route' => 'admin.settings', 'active' => 'admin.settings*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'],
         ];

@@ -360,6 +360,33 @@ approve→payout flow, admin CRUD + gating, CSV export gating, the self-dashboar
 
 ---
 
+## Phase 9 — Admin billing dashboard & admin panel
+
+`/admin/billing-overview` (`admin.billing-overview`, `settings.manage`) —
+`BillingMetricsService` rolls the local tables up into:
+
+| Metric | Source |
+|---|---|
+| **MRR / ARR** | sum of active accounts' monthly-equivalent plan price |
+| **Revenue + 12-month graph** | `payments` (a row is logged on every `invoice.paid`) |
+| **LTV** | total revenue ÷ paying accounts |
+| **Churn** | cancelled ÷ (active + cancelled) |
+| **Subscription funnel** | account status breakdown |
+| **Trials / expired / payment issues / refunds** | accounts + `webhook_events` |
+| **Coupons / affiliates** | redemptions + commission totals |
+
+Recent payments table + **CSV export** (`/admin/billing-overview/export`).
+
+**Admin panel (Module 16).** A dedicated **Billing** section in the sidebar
+now links Overview, Subscription, Invoices, Coupons, Affiliates, Webhooks and
+Billing settings — every admin surface built across Phases 1–9.
+
+Tests: `tests/Feature/BillingDashboardTest.php` (7) — MRR maths, revenue total +
+series, LTV, coupon/affiliate rollups, churn/status breakdown, dashboard gating,
+export gating.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
@@ -370,8 +397,9 @@ approve→payout flow, admin CRUD + gating, CSV export gating, the self-dashboar
 - [x] **Phase 6 — Device-limit enforcement + billing emails**
 - [x] **Phase 7 — Coupons**
 - [x] **Phase 8 — Affiliate / referral programme**
+- [x] **Phase 9 — Admin billing dashboard + admin panel + exports**
 
 
 
-- [ ] Phase 9 — Admin billing dashboard + admin panel + exports
+
 - [ ] Phase 10 — Security sweep + full test pass + documentation
