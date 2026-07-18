@@ -329,6 +329,37 @@ preview. The Stripe `withCoupon` round-trip is verified in test mode.
 
 ---
 
+## Phase 8 — Affiliate / referral programme
+
+Tables: `affiliates`, `affiliate_clicks`, `affiliate_commissions`,
+`affiliate_withdrawals`, plus `accounts.referred_by_affiliate_id`.
+
+**Attribution.** `CaptureReferral` middleware (web) logs a click and drops a
+30-day `pd_ref` cookie for any `?ref=CODE` that maps to a live affiliate.
+`startTrial()` stamps the account's referrer from that cookie — **first
+referrer wins, never overwritten**.
+
+**Commission.** On `invoice.paid`, `AffiliateService::accrueCommission()`
+creates a **pending** commission for the referring affiliate:
+- percentage or fixed (`commissionFor`), **idempotent per invoice**,
+- recurring affiliates earn every cycle; one-time only on the first invoice,
+- unreferred / unapproved → nothing.
+
+**Payouts.** approve / reject a commission; `availableBalance = approved −
+withdrawn`; a payout marks the covered commissions paid (oldest first).
+
+**Admin** `/admin/affiliates` — create/approve affiliates, review commissions,
+pay out balances, and **export commissions to CSV**. **Affiliate**
+`/affiliate` — their referral link, stats (clicks / conversions / revenue /
+commission), and a payout request.
+
+Tests: `tests/Feature/AffiliateSystemTest.php` (13) — code resolution, click +
+cookie capture, first-referrer stamping, commission maths, accrual idempotency,
+one-time vs recurring, unreferred no-op, the `invoice.paid` accrual, the
+approve→payout flow, admin CRUD + gating, CSV export gating, the self-dashboard.
+
+---
+
 ## Phase status
 
 - [x] **Phase 1 — Plans, Pricing Calculator, Enterprise Quotes** (no Stripe)
@@ -338,8 +369,9 @@ preview. The Stripe `withCoupon` round-trip is verified in test mode.
 - [x] **Phase 5 — Customer billing portal (invoices + PDF, upcoming, payment methods)**
 - [x] **Phase 6 — Device-limit enforcement + billing emails**
 - [x] **Phase 7 — Coupons**
+- [x] **Phase 8 — Affiliate / referral programme**
 
 
-- [ ] Phase 8 — Affiliate system
+
 - [ ] Phase 9 — Admin billing dashboard + admin panel + exports
 - [ ] Phase 10 — Security sweep + full test pass + documentation

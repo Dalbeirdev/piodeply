@@ -89,6 +89,9 @@ class Subscription extends Component
 
         $plan = Plan::findOrFail($this->planId);
 
+        // Attribute this install to the referring affiliate (from the ?ref cookie).
+        app(\App\Services\AffiliateService::class)->stampAccountReferrer($this->account, request()->cookie('pd_ref'));
+
         try {
             $subscriptions->startTrial($this->account, $plan, $this->interval, $this->paymentMethod, $this->couponCode ?: null);
         } catch (\Throwable $e) {

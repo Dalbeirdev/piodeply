@@ -80,6 +80,16 @@ Route::middleware([
         ->middleware('permission:settings.manage')
         ->name('admin.coupons');
 
+    Route::get('/admin/affiliates', \App\Livewire\Admin\Affiliates::class)
+        ->middleware('permission:settings.manage')
+        ->name('admin.affiliates');
+    Route::get('/admin/affiliates/export', [\App\Http\Controllers\AffiliateExportController::class, 'commissions'])
+        ->middleware('permission:settings.manage')
+        ->name('affiliates.export');
+
+    // An affiliate's own dashboard (any signed-in user; shows a notice if not one).
+    Route::get('/affiliate', \App\Livewire\Affiliate\Dashboard::class)->name('affiliate.dashboard');
+
     Route::get('/admin/content', \App\Livewire\Admin\ManageContent::class)
         ->middleware('permission:settings.manage')
         ->name('admin.content');

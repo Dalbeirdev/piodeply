@@ -23,7 +23,7 @@ class Account extends Model
     protected $fillable = [
         'name', 'plan_id', 'billing_interval', 'status',
         'device_limit', 'device_limit_overridden', 'grace_ends_at',
-        'trial_reminder_sent_at', 'paused_at',
+        'trial_reminder_sent_at', 'paused_at', 'referred_by_affiliate_id',
     ];
 
     protected $casts = [
@@ -50,6 +50,11 @@ class Account extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(Affiliate::class, 'referred_by_affiliate_id');
     }
 
     // ── Device limit (Module 11 basis) ─────────────────────────────────

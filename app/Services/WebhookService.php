@@ -113,6 +113,13 @@ class WebhookService
             $invoice['currency'] ?? 'usd',
         ));
 
+        // Referral commission (no-op unless this account was referred).
+        app(AffiliateService::class)->accrueCommission(
+            $account,
+            $invoice['id'] ?? null,
+            (int) ($invoice['amount_paid'] ?? $invoice['total'] ?? 0),
+        );
+
         return 'processed';
     }
 
