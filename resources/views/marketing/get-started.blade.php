@@ -12,6 +12,11 @@
             so your tenant is set up correctly and securely from day one. Tell us about your fleet and
             we'll get you started with a trial tenant and the agent.
         </p>
+        <p class="muted" style="margin:.8rem auto 0;font-size:.95rem;">
+            Still comparing? See the <a href="{{ route('pricing') }}" class="tlink">pricing</a>,
+            the <a href="{{ route('home') }}#features" class="tlink">features</a>,
+            or <a href="{{ route('about') }}" class="tlink">why we built it</a>.
+        </p>
     </div>
 </section>
 
@@ -56,10 +61,23 @@
                 </div>
                 <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center;">Request access →</button>
                 <p class="muted" style="text-align:center;font-size:.85rem;margin:14px 0 0;">
-                    Already have an account? <a href="{{ url('/login') }}" style="color:var(--teal-700);font-weight:600;">Log in →</a>
+                    Already have an account? <a href="{{ url('/login') }}" class="tlink">Log in →</a>
                 </p>
             </form>
         </div>
+    </div>
+</section>
+
+<section class="section alt">
+    <div class="container prose">
+        <h2 class="center" style="margin-bottom:28px;">What happens next</h2>
+        <ol class="next-steps">
+            <li><strong>We set up your tenant</strong> Within one business day we provision your isolated PioDeploy tenant and send your sign-in details.</li>
+            <li><strong>You enrol your first machines</strong> Push the lightweight agent through GPO, <a href="https://learn.microsoft.com/mem/intune/fundamentals/" target="_blank" rel="noopener noreferrer" class="tlink ext">Intune</a> or your RMM — or run the installer by hand. No domain required.</li>
+            <li><strong>Deploy, enforce and prove it</strong> Create a policy, watch it roll out silently, and see live compliance across every client from one portal.</li>
+        </ol>
+        <p class="center" style="margin-top:26px;">Prefer to talk it through first?
+            <a href="{{ route('contact') }}" class="tlink">Book a consultation →</a></p>
     </div>
 </section>
 @endsection

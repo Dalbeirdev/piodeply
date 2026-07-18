@@ -89,6 +89,11 @@
                 </div>
             @endforeach
         </div>
+        <div class="link-row">
+            <a href="#how">See the deployment workflow →</a>
+            <a href="{{ route('pricing') }}">View pricing →</a>
+            <a href="{{ route('about') }}">Why we built it →</a>
+        </div>
     </div>
 </section>
 
@@ -256,6 +261,9 @@
             <p>From <strong>$0.20 per machine</strong> at scale — cheaper than the usual per-machine rates.</p>
         </div>
         @include('marketing.partials.pricing')
+        <div class="link-row">
+            <a href="{{ route('pricing') }}">Compare all plans &amp; size your fleet →</a>
+        </div>
     </div>
 </section>
 
@@ -283,18 +291,21 @@
         <div class="section-head"><h2>Frequently asked</h2></div>
         <div class="faq">
             @php
+                // Answers carry trusted, author-controlled HTML (internal cross-links
+                // and outbound references), so they render raw via {!! !!}.
                 $faqs = [
                     ['Is the agent really silent?', 'Yes. It installs as a Windows service running as SYSTEM, and every deployment runs with no windows or prompts — invisible to the logged-in user.'],
-                    ['Do I need a domain or imaging server?', 'No. Push the agent once via GPO, Intune or your RMM. It works on standalone and domain-joined machines alike.'],
-                    ['Which package types are supported?', 'winget, Chocolatey, MSI, EXE, MSIX, ZIP/portable and custom PowerShell — install, update, repair, remove and version-pin.'],
+                    ['Do I need a domain or imaging server?', 'No. Push the agent once via GPO, <a href="https://learn.microsoft.com/mem/intune/fundamentals/" target="_blank" rel="noopener noreferrer" class="tlink ext">Microsoft Intune</a> or your RMM. It works on standalone and domain-joined machines alike.'],
+                    ['Which package types are supported?', '<a href="https://learn.microsoft.com/windows/package-manager/winget/" target="_blank" rel="noopener noreferrer" class="tlink ext">winget</a>, <a href="https://chocolatey.org/" target="_blank" rel="noopener noreferrer" class="tlink ext">Chocolatey</a>, MSI, EXE, <a href="https://learn.microsoft.com/windows/msix/overview" target="_blank" rel="noopener noreferrer" class="tlink ext">MSIX</a>, ZIP/portable and custom PowerShell — install, update, repair, remove and version-pin.'],
                     ['Can clients see their own data?', 'Yes. Client-role accounts are scoped to their own projects and machines only, read-only. Everything else stays with your team.'],
-                    ['How is it priced?', 'Per machine under management, billed monthly, on a graduated schedule that gets cheaper at scale. See the pricing above.'],
+                    ['How is it priced?', 'Per machine under management, billed monthly, on a graduated schedule that gets cheaper at scale. See <a href="'.route('pricing').'" class="tlink">full plans and the calculator</a>.'],
+                    ['Who is behind PioDeploy?', 'It was built inside a working MSP that needed exactly this. Read the <a href="'.route('about').'" class="tlink">story behind the product</a>.'],
                 ];
             @endphp
             @foreach ($faqs as $i => [$q,$a])
                 <div class="faq-item {{ $i === 0 ? 'open' : '' }}">
                     <div class="faq-q">{{ $q }} <span class="chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></div>
-                    <div class="faq-a" @if($i === 0) style="max-height:200px" @endif><p>{{ $a }}</p></div>
+                    <div class="faq-a" @if($i === 0) style="max-height:200px" @endif><p>{!! $a !!}</p></div>
                 </div>
             @endforeach
         </div>

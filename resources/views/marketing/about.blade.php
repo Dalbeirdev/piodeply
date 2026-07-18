@@ -26,9 +26,11 @@
             across dozens of client sites meant repetitive, error-prone work: chasing down machines that
             missed an update, re-running failed installs, and having no single view of what was actually
             deployed.</p>
-        <p>We wanted the power of enterprise tooling — desired-state configuration, staged rollouts,
-            compliance reporting — without needing a domain, an imaging server, or a six-figure contract.
-            One lightweight agent, one portal, and everything runs silently in the background.</p>
+        <p>We wanted the power of enterprise tooling —
+            <a href="https://learn.microsoft.com/powershell/dsc/overview/dscforengineers" target="_blank" rel="noopener noreferrer" class="tlink ext">desired-state configuration</a>,
+            staged rollouts, compliance reporting — without needing a domain, an imaging server, or a
+            six-figure contract. One lightweight agent, one portal, and everything runs silently in the
+            background. <a href="{{ route('home') }}#how" class="tlink">See how a deployment flows →</a></p>
 
         {{-- A quiet stat strip stands in for the old animated grid: three plain
              numbers carry the story without a fragile decorative section. --}}
@@ -69,8 +71,14 @@
         <h2>Where we're going</h2>
         <p>PioDeploy is actively developed: patch management, dynamic device collections, approval
             workflows and deeper RMM/PSA integrations are on the roadmap. If there's something your
-            MSP needs, <a href="{{ route('contact') }}" style="color:var(--teal-700);font-weight:600;">tell us</a> — we
+            MSP needs, <a href="{{ route('contact') }}" class="tlink">tell us</a> — we
             build for real operators.</p>
+
+        <div class="link-row">
+            <a href="{{ route('home') }}#features">Explore the features →</a>
+            <a href="{{ route('pricing') }}">See pricing →</a>
+            <a href="{{ route('get-started') }}">Request access →</a>
+        </div>
     </div>
 </section>
 

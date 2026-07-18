@@ -72,6 +72,10 @@
             <li>Don't recolour the deer, stretch it, add effects, or separate the mark from the wordmark in the primary lockup.</li>
             <li>Minimum size: the mark reads down to 24&nbsp;px; below that use the circle avatar.</li>
         </ul>
+        <div class="link-row">
+            <a href="{{ route('about') }}">About PioDeploy →</a>
+            <a href="{{ route('contact') }}">Press &amp; partnership enquiries →</a>
+        </div>
     </div>
 </section>
 @endsection

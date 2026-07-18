@@ -18,7 +18,9 @@
         <div class="contact-grid">
             <div class="contact-aside">
                 <h2>Ways to reach us</h2>
-                <p class="muted">A real person reads every message — there is no ticket queue to get lost in.</p>
+                <p class="muted">A real person reads every message — there is no ticket queue to get lost in.
+                    Ready to start? <a href="{{ route('get-started') }}" class="tlink">Request access</a>,
+                    or check the <a href="{{ route('pricing') }}" class="tlink">pricing</a> first.</p>
 
                 <div class="contact-item">
                     <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4zM4 6l8 6 8-6"/></svg></div>
