@@ -4,10 +4,16 @@
 
 @section('content')
 <section class="page-hero">
+    @include('marketing.partials.hero-bg')
     <div class="container">
-        <span class="eyebrow">Pricing</span>
-        <h1>Pay for what you manage</h1>
-        <p class="muted" style="max-width:52ch;margin:1rem auto 0;font-size:1.15rem;">{{ $content->get('pricing.intro') }}</p>
+        <span class="eyebrow"><span class="dot"></span> Pricing</span>
+        <h1>Pay for <span class="accent">what you manage</span></h1>
+        <p class="muted" style="max-width:52ch;margin:1rem auto 0;font-size:1.2rem;">{{ $content->get('pricing.intro') }}</p>
+        <div class="hero-trust">
+            <span class="t">14-day free trial</span>
+            <span class="t">No setup fees</span>
+            <span class="t">Cancel anytime</span>
+        </div>
     </div>
 </section>
 

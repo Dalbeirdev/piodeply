@@ -4,10 +4,16 @@
 
 @section('content')
 <section class="page-hero">
+    @include('marketing.partials.hero-bg')
     <div class="container">
-        <span class="eyebrow">About us</span>
-        <h1>Built by an MSP, for MSPs</h1>
-        <p class="muted" style="max-width:56ch;margin:1rem auto 0;font-size:1.15rem;">{{ $content->get('about.intro') }}</p>
+        <span class="eyebrow"><span class="dot"></span> About us</span>
+        <h1>Built by an MSP, <span class="accent">for MSPs</span></h1>
+        <p class="muted" style="max-width:56ch;margin:1rem auto 0;font-size:1.2rem;">{{ $content->get('about.intro') }}</p>
+        <div class="hero-trust">
+            <span class="t">One lightweight agent</span>
+            <span class="t">No domain required</span>
+            <span class="t">Silent by default</span>
+        </div>
     </div>
 </section>
 
@@ -57,6 +63,8 @@
 <section class="section alt">
     <div class="container">
         <div class="cta">
+            <span class="shape shape-1"></span>
+            <span class="shape shape-2"></span>
             <h2>See it on your own fleet</h2>
             <p>Request access and we'll set you up with a trial tenant and the agent for your first project.</p>
             <a href="{{ route('get-started') }}" class="btn btn-primary btn-lg">Request access →</a>

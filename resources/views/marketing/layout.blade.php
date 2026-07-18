@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=9">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=10">
     <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
@@ -132,7 +132,7 @@
             });
         }, { threshold: 0.2, rootMargin: '0px 0px -40px 0px' }) : null;
 
-        var reveals = document.querySelectorAll('.section-head, .feature, .why-item, .flow-step, .quote, .tier, .plan, .contact-item, .form-card, .value-grid > *, .gauge, .dash, .compare, .cta, .pricecalc, .metric, [data-count]');
+        var reveals = document.querySelectorAll('.section-head, .feature, .why-item, .flow-step, .quote, .tier, .plan, .plan-card, .calc-wrap, .enterprise-card, .hero-trust, .contact-item, .form-card, .value-grid > *, .gauge, .dash, .compare, .cta, .pricecalc, .metric, [data-count]');
         reveals.forEach(function (el, i) {
             if (!el.matches('[data-count]') && !el.classList.contains('reveal')) { el.classList.add('reveal'); el.style.transitionDelay = (i % 3) * 80 + 'ms'; }
             if (io) io.observe(el); else { el.classList.add('in'); }

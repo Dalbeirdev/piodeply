@@ -748,3 +748,29 @@ p { margin:0 0 1rem; }
 .brand .brand-full { height:38px; width:auto; display:block; }
 .footer .brand .brand-full { height:32px; width:auto; }
 @media (max-width:720px){ .brand .brand-full { height:32px; } }
+
+/* ============================================================
+   Interior pages (about / pricing) — bring the home hero's life:
+   animated backdrop, gradient headline, trust strip.
+   ============================================================ */
+.page-hero { padding:104px 0 80px; }
+.page-hero .container { position:relative; z-index:2; }
+.page-hero h1 { font-size:clamp(2.2rem,5.2vw,3.5rem); letter-spacing:-.02em; line-height:1.05; }
+.page-hero h1 .accent {
+    background:linear-gradient(120deg,var(--teal-500),var(--sky));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+/* the page-hero blobs sit a touch higher/softer than the tall home hero */
+.page-hero .blob { opacity:.42; }
+.page-hero .blob-1 { top:-140px; }
+.page-hero .blob-2 { top:-160px; }
+.page-hero .blob-3 { bottom:-200px; }
+
+.hero-trust { display:flex; gap:1.5rem; flex-wrap:wrap; justify-content:center; margin-top:2rem; color:var(--slate-500); font-weight:600; font-size:.95rem; }
+.hero-trust .t { display:inline-flex; align-items:center; gap:.5rem; }
+.hero-trust .t::before { content:""; width:16px; height:16px; border-radius:50%; flex:0 0 auto;
+    background:var(--teal-50) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/11px no-repeat; }
+
+/* Plan cards + calculator + enterprise card animate in on scroll like the
+   home page's cards (the reveal observer adds .reveal/.in). */
+.plan-card, .calc-wrap, .enterprise-card { will-change:transform, opacity; }
