@@ -504,6 +504,14 @@ class PolicyService
             return true;
         }
 
+        // Installs are paced too: if we successfully installed this package
+        // here within the window and the policy still reads it as missing,
+        // reality won't change by installing again — the inventory is what
+        // needs to catch up. One attempt per window, not seventeen.
+        if ($this->hasRecentSuccess($policy, $computer, JobAction::Install)) {
+            return true;
+        }
+
         // Force update: at most one reinstall per frequency window.
         if ($policy->action === PolicyAction::ForceUpdate
             && $this->hasRecentSuccess($policy, $computer, JobAction::Rollback)) {

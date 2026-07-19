@@ -240,15 +240,37 @@ class SmartDeploymentTest extends TestCase
         $this->assertTrue($result->queued());
     }
 
-    public function test_a_finished_job_does_not_block_a_later_legitimate_request(): void
+    public function test_a_succeeded_install_on_a_blind_scan_machine_reads_as_satisfied(): void
     {
+        // This machine reports no winget inventory at all (old agent), so
+        // after OUR install succeeded, "install it again" is a no-op — that
+        // loop produced seventeen identical jobs in the field. Force remains
+        // the operator's escape hatch for a genuinely broken install.
         $computer = Computer::factory()->create();
         $package = $this->wingetPackage();
 
         $first = $this->service()->queueIfNeeded($computer, $package, JobAction::Install);
         $first->job->update(['status' => JobStatus::Succeeded, 'finished_at' => now()]);
 
-        // Still not in the inventory, so the machine is not where we want it.
+        $second = $this->service()->queueIfNeeded($computer, $package, JobAction::Install);
+        $this->assertFalse($second->queued());
+
+        $forced = $this->service()->queueIfNeeded($computer, $package, JobAction::Install, force: true);
+        $this->assertTrue($forced->queued());
+        $this->assertNotSame($first->job->id, $forced->job->id);
+    }
+
+    public function test_a_finished_job_does_not_block_a_request_when_the_scan_shows_real_absence(): void
+    {
+        $computer = Computer::factory()->create();
+        // The winget scan works — it sees another app — so absence is real.
+        $this->installed($computer, 'Mozilla.Firefox', '130.0');
+        $package = $this->wingetPackage();
+
+        $first = $this->service()->queueIfNeeded($computer, $package, JobAction::Install);
+        $first->job->update(['status' => JobStatus::Succeeded, 'finished_at' => now()]);
+
+        // Inventory still doesn't show it → the machine is not where we want it.
         $second = $this->service()->queueIfNeeded($computer, $package, JobAction::Install);
 
         $this->assertTrue($second->queued());

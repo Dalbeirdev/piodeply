@@ -46,20 +46,40 @@ class InstalledStateService
                 ->where('name', $id)
                 ->first();
 
-            return ['present' => $row !== null, 'version' => $row?->version];
+            if ($row !== null) {
+                return ['present' => true, 'version' => $row->version];
+            }
+
+            // No row — but is the scan itself working? A machine whose agent
+            // cannot scan this manager (old agents can't run winget as
+            // SYSTEM) reports NO rows from that source at all. Reading that
+            // as "nothing installed" made policies reinstall every pass,
+            // forever, each run answering "already installed". If the scan
+            // is blind, fall back to our own job history instead.
+            $scanWorks = $computer->software()->where('source', $source)->exists();
+
+            if ($scanWorks) {
+                return ['present' => false, 'version' => null];
+            }
+
+            return ['present' => $this->everInstalledByUs($package, $computer), 'version' => null];
         }
 
         // Binary packages, and a package-manager package missing the id for
         // its own type: the inventory cannot answer, so fall back to whether
         // we ever installed it. Claiming "absent" here would be the reinstall
         // loop again, just from a misconfigured catalogue entry.
-        $present = DeploymentJob::where('computer_id', $computer->id)
+        return ['present' => $this->everInstalledByUs($package, $computer), 'version' => null];
+    }
+
+    /** A succeeded install/update of ours counts as "it is on the machine". */
+    private function everInstalledByUs(Package $package, Computer $computer): bool
+    {
+        return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $package->id)
             ->whereIn('action', [JobAction::Install, JobAction::Update])
             ->where('status', JobStatus::Succeeded)
             ->exists();
-
-        return ['present' => $present, 'version' => null];
     }
 
     /**
