@@ -55,6 +55,11 @@ class Computer extends Model
         return $this->hasMany(BrowserPolicyResult::class);
     }
 
+    public function groups(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(ComputerGroup::class)->withTimestamps();
+    }
+
     /** @return list<string> */
     public static function softwareSources(): array
     {

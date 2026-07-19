@@ -52,7 +52,7 @@ class NavigationGroupingTest extends TestCase
         $byGroup = $this->labelsByGroup($this->userWithRole(RoleEnum::Admin));
 
         $this->assertSame(['Dashboard'], $byGroup['']);
-        $this->assertSame(['Clients', 'Projects', 'Computers'], $byGroup[NavigationService::FLEET]);
+        $this->assertSame(['Clients', 'Projects', 'Computers', 'Device Groups'], $byGroup[NavigationService::FLEET]);
         $this->assertSame(
             ['Packages', 'Deployments', 'Policies', 'Browser Policies'],
             $byGroup[NavigationService::SOFTWARE]

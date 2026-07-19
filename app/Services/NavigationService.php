@@ -40,6 +40,8 @@ class NavigationService
                 'icon' => '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'],
             ['label' => 'Computers', 'route' => 'computers.index', 'active' => 'computers.*', 'permission' => Permission::ComputersView, 'group' => self::FLEET,
                 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],
+            ['label' => 'Device Groups', 'route' => 'computers.groups', 'active' => 'computers.groups', 'permission' => Permission::ComputersView, 'group' => self::FLEET, 'staffOnly' => true,
+                'icon' => '<path d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87"/><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/>'],
 
             // What we push: the catalogue, the jobs, and the rules behind them.
             ['label' => 'Packages', 'route' => 'packages.index', 'active' => 'packages.*', 'permission' => Permission::PackagesView, 'group' => self::SOFTWARE,
@@ -92,6 +94,8 @@ class NavigationService
         return collect($definition)
             ->filter(fn (array $item) => \Illuminate\Support\Facades\Route::has($item['route']))
             ->filter(fn (array $item) => $item['permission'] === null || $user->can($item['permission']->value))
+            // Cross-client surfaces (device groups) never appear for tenants.
+            ->filter(fn (array $item) => ! ($item['staffOnly'] ?? false) || $user->tenantClientId() === null)
             ->map(fn (array $item) => [
                 'label'  => $item['label'],
                 'route'  => $item['route'],

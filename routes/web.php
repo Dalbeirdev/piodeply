@@ -138,6 +138,8 @@ Route::middleware([
 
     Route::middleware('permission:computers.view')->group(function () {
         Route::get('/computers', \App\Livewire\Computers\ComputersIndex::class)->name('computers.index');
+        // Before {computer}, or "groups" would be swallowed by the binding.
+        Route::get('/computers/groups', \App\Livewire\Computers\ComputerGroups::class)->name('computers.groups');
         Route::get('/computers/{computer}', \App\Livewire\Computers\ComputerShow::class)->name('computers.show');
         Route::get('/computers/{computer}/edit', \App\Livewire\Computers\ComputerEdit::class)->name('computers.edit');
     });
