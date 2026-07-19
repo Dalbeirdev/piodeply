@@ -149,6 +149,34 @@ class DeploymentService
         return "{$package->name}{$at} is already installed on {$computer->hostname} — nothing to do.";
     }
 
+    /**
+     * The version this machine ran before its most recent change to this
+     * package — the natural "roll back to last known-good" target. Read from
+     * the installed_version_before we snapshot on every job, so no manual
+     * version hunting is needed. Null when the type can't roll back or there
+     * is no earlier version to return to.
+     */
+    public function previousGoodVersion(Package $package, Computer $computer): ?string
+    {
+        if (! $package->installer_type->supportsRollback()) {
+            return null;
+        }
+
+        $current = $this->installedState->stateOf($package, $computer)['version'];
+
+        return DeploymentJob::query()
+            ->where('computer_id', $computer->id)
+            ->where('package_id', $package->id)
+            ->where('status', JobStatus::Succeeded)
+            ->whereNotNull('installed_version_before')
+            ->orderByDesc('id')
+            ->pluck('installed_version_before')
+            // The most recent job whose "before" is genuinely older than what
+            // is on the machine now — i.e. the version we last upgraded away
+            // from. A no-op job (before == current) is skipped.
+            ->first(fn (string $before) => $current === null || version_compare($before, $current, '<'));
+    }
+
     public function pendingCountFor(Computer $computer): int
     {
         return DeploymentJob::where('computer_id', $computer->id)

@@ -280,6 +280,7 @@
   <div class="callout"><b>Tip:</b> open a policy to see its compliance drill-down — every machine's status (Protected / Pending / Failed / Scheduled) with reasons, plus per-machine <b>Exclude</b> for exceptions like a CEO laptop.</div>
   <h3>One-off deploy to a single machine</h3>
   <p>Open <b>Computers → a machine</b>, use <b>Quick deploy</b> to queue an install/update/remove immediately without a policy. The action list adapts to the package you pick — Rollback appears only for winget/Chocolatey, and Remove is hidden for types that can't be uninstalled — and the button states the outcome (e.g. "Upgrade 138.0 → 141.0", "Up to date") before you click.</p>
+  <p>When PioDeploy has version history for a winget/Chocolatey package on that machine, a one-click <b>&#8617; Roll back to <i>X</i></b> button appears next to the status. It queues a rollback to the exact version the machine ran before its most recent change — no version to look up by hand.</p>
 </section>
 
 <!-- 7 BROWSER POLICIES -->

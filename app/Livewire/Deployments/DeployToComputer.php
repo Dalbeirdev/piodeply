@@ -99,10 +99,46 @@ class DeployToComputer extends Component
         session()->flash('status', $result->message);
     }
 
-    public function render(InstalledStateService $installedState, WingetVersionService $wingetVersions)
+    /**
+     * One-click rollback: queue a rollback to the version the machine ran
+     * before its most recent change, read from job history — no need to look
+     * the version up by hand. Goes through the same guarded queue path.
+     */
+    public function rollbackToPrevious(DeploymentService $service): void
+    {
+        $this->authorize('create', DeploymentJob::class);
+
+        $package = Package::active()->findOrFail($this->package_id);
+        $version = $service->previousGoodVersion($package, $this->computer);
+
+        if ($version === null) {
+            session()->flash('status', 'No earlier version is on record for this package.');
+
+            return;
+        }
+
+        $result = $service->queueIfNeeded(
+            computer: $this->computer,
+            package: $package,
+            action: JobAction::Rollback,
+            priority: $this->priority,
+            createdBy: auth()->id(),
+            targetVersion: $version,
+        );
+
+        $this->dispatch('job-queued');
+        session()->flash('status', $result->message);
+    }
+
+    public function render(InstalledStateService $installedState, WingetVersionService $wingetVersions, DeploymentService $deployments)
     {
         $package = $this->package_id !== null
             ? Package::active()->find($this->package_id)
+            : null;
+
+        // The last known-good version to offer as a one-click rollback target.
+        $rollbackTo = $package !== null
+            ? $deployments->previousGoodVersion($package, $this->computer)
             : null;
 
         $action = JobAction::tryFrom($this->action);
@@ -130,6 +166,7 @@ class DeployToComputer extends Component
             // Null means we could not find out, which the form must not
             // present as "no versions exist" — it falls back to free text.
             'offeredVersions' => $package !== null ? $wingetVersions->versionsFor($package) : null,
+            'rollbackTo' => $rollbackTo,
         ]);
     }
 

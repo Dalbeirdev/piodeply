@@ -84,6 +84,16 @@
                     @endif
                 @endif
 
+                @if ($rollbackTo)
+                    {{-- One-click rollback to the version this machine ran
+                         before its most recent change (from job history). --}}
+                    <button type="button" wire:click="rollbackToPrevious"
+                            class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-md px-2.5 py-1 border bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-colors"
+                            title="Queue a rollback to the last version this machine ran">
+                        <span aria-hidden="true">&#8617;</span> Roll back to {{ $rollbackTo }}
+                    </button>
+                @endif
+
                 @if ($satisfied)
                     <label class="inline-flex items-center gap-1.5 text-slate-500 select-none">
                         <input type="checkbox" wire:model.live="force"

@@ -168,4 +168,74 @@ class RollbackCapabilityTest extends TestCase
         ]);
         $this->assertDatabaseMissing('deployment_jobs', ['package_id' => $msi->id, 'action' => 'rollback']);
     }
+
+    /* ---- One-click rollback to the last known-good version ---- */
+
+    private function chromeOn(Computer $computer, string $installed): Package
+    {
+        $chrome = Package::factory()->create(['name' => 'Google Chrome', 'winget_id' => 'Google.Chrome']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Google.Chrome', 'version' => $installed, 'source' => 'winget',
+        ]);
+
+        return $chrome;
+    }
+
+    public function test_previous_good_version_reads_the_pre_change_version(): void
+    {
+        $computer = Computer::factory()->create();
+        $chrome = $this->chromeOn($computer, '141.0');
+
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $chrome->id,
+            'action' => JobAction::Update, 'status' => \App\Enums\JobStatus::Succeeded,
+            'installed_version_before' => '138.0', 'installed_version_after' => '141.0',
+        ]);
+
+        $this->assertSame('138.0', app(DeploymentService::class)->previousGoodVersion($chrome, $computer));
+    }
+
+    public function test_previous_good_version_is_null_without_history(): void
+    {
+        $computer = Computer::factory()->create();
+        $chrome = $this->chromeOn($computer, '141.0');
+
+        $this->assertNull(app(DeploymentService::class)->previousGoodVersion($chrome, $computer));
+    }
+
+    public function test_previous_good_version_is_null_for_binary_types(): void
+    {
+        $computer = Computer::factory()->create();
+        $msi = Package::factory()->msi()->create();
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $msi->id,
+            'action' => JobAction::Install, 'status' => \App\Enums\JobStatus::Succeeded,
+            'installed_version_before' => '1.0',
+        ]);
+
+        $this->assertNull(app(DeploymentService::class)->previousGoodVersion($msi, $computer));
+    }
+
+    public function test_one_click_rollback_queues_a_rollback_to_the_previous_version(): void
+    {
+        $computer = Computer::factory()->create();
+        $chrome = $this->chromeOn($computer, '141.0');
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $chrome->id,
+            'action' => JobAction::Update, 'status' => \App\Enums\JobStatus::Succeeded,
+            'installed_version_before' => '138.0', 'installed_version_after' => '141.0',
+        ]);
+
+        $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
+
+        Livewire::actingAs($admin)
+            ->test(DeployToComputer::class, ['computer' => $computer])
+            ->set('package_id', $chrome->id)
+            ->assertSee('Roll back to 138.0')
+            ->call('rollbackToPrevious');
+
+        $this->assertDatabaseHas('deployment_jobs', [
+            'package_id' => $chrome->id, 'action' => 'rollback', 'target_version' => '138.0', 'status' => 'pending',
+        ]);
+    }
 }
