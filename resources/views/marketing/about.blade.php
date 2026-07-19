@@ -75,7 +75,7 @@
             build for real operators.</p>
 
         <div class="link-row">
-            <a href="{{ route('home') }}#features">Explore the features →</a>
+            <a href="{{ route('features') }}">Explore the features →</a>
             <a href="{{ route('pricing') }}">See pricing →</a>
             <a href="{{ route('get-started') }}">Request access →</a>
         </div>

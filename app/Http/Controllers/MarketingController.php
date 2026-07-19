@@ -18,6 +18,7 @@ use Illuminate\Validation\Rule;
 class MarketingController extends Controller
 {
     public function home()       { return view('marketing.home'); }
+    public function features()   { return view('marketing.features'); }
     public function about()      { return view('marketing.about'); }
     public function pricing(PricingService $pricing)
     {

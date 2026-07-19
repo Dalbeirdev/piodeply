@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=13">
+    <link rel="stylesheet" href="{{ asset('css/marketing.css') }}?v=14">
     <link rel="icon" type="image/svg+xml" href="{{ asset('img/piodeploy-mark.svg') }}">
 </head>
 <body>
@@ -25,7 +25,7 @@
                  fought the logo and the burger for a phone's width. --}}
             <div class="nav-drawer" id="navDrawer">
                 <nav class="nav-links">
-                    <a href="{{ route('home') }}#features" class="link">Features</a>
+                    <a href="{{ route('features') }}" class="link">Features</a>
                     <a href="{{ route('pricing') }}" class="link">Pricing</a>
                     <a href="{{ route('about') }}" class="link">About</a>
                     <a href="{{ route('contact') }}" class="link">Contact</a>
@@ -62,7 +62,7 @@
                 </div>
                 <div>
                     <h4>Product</h4>
-                    <a href="{{ route('home') }}#features">Features</a>
+                    <a href="{{ route('features') }}">Features</a>
                     <a href="{{ route('pricing') }}">Pricing</a>
                     <a href="{{ route('home') }}#how">How it works</a>
                     <a href="{{ asset('PioDeploy-User-Guide.pdf') }}" target="_blank" rel="noopener">User guide (PDF)</a>

@@ -14,7 +14,7 @@
         </p>
         <p class="muted" style="margin:.8rem auto 0;font-size:.95rem;">
             Still comparing? See the <a href="{{ route('pricing') }}" class="tlink">pricing</a>,
-            the <a href="{{ route('home') }}#features" class="tlink">features</a>,
+            the <a href="{{ route('features') }}" class="tlink">features</a>,
             or <a href="{{ route('about') }}" class="tlink">why we built it</a>.
         </p>
     </div>

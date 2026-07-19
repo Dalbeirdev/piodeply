@@ -31,6 +31,7 @@ class MarketingPagesRenderTest extends TestCase
     {
         return [
             'home'        => ['/'],
+            'features'    => ['/features'],
             'about'       => ['/about'],
             'pricing'     => ['/pricing'],
             'contact'     => ['/contact'],
@@ -45,6 +46,21 @@ class MarketingPagesRenderTest extends TestCase
         $this->get('/')->assertOk()
             ->assertSee('href="'.route('pricing').'"', false)
             ->assertSee('href="'.route('about').'"', false);
+    }
+
+    public function test_features_page_renders_capability_areas(): void
+    {
+        $this->get('/features')->assertOk()
+            ->assertSee('Deploy any software, silently')
+            ->assertSee('GPO-grade browser lockdown, without a domain')
+            ->assertSee('The complete capability list')
+            ->assertSee('href="'.route('pricing').'"', false);
+    }
+
+    public function test_nav_features_link_points_to_the_features_page(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('href="'.route('features').'"', false);
     }
 
     public function test_pricing_shows_secure_payment_trust_signal(): void

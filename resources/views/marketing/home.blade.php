@@ -90,9 +90,9 @@
             @endforeach
         </div>
         <div class="link-row">
+            <a href="{{ route('features') }}">Explore all features in detail →</a>
             <a href="#how">See the deployment workflow →</a>
             <a href="{{ route('pricing') }}">View pricing →</a>
-            <a href="{{ route('about') }}">Why we built it →</a>
         </div>
     </div>
 </section>
