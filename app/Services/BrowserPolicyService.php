@@ -29,12 +29,9 @@ class BrowserPolicyService
      */
     public function documentFor(Computer $computer): array
     {
-        $policies = BrowserPolicy::query()
-            ->where('project_id', $computer->project_id)
-            ->where('status', 'active')
-            ->whereDoesntHave('excludedComputers', fn ($q) => $q->whereKey($computer->id))
-            ->orderBy('id')
-            ->get();
+        // Scope resolution with inheritance: most specific policy per type
+        // wins (Computer > Group > Project > Client > All), exclusions out.
+        $policies = BrowserPolicy::resolveFor($computer)->sortBy('id')->values();
 
         return [
             'policies' => $policies->map(fn (BrowserPolicy $policy) => [
@@ -57,7 +54,9 @@ class BrowserPolicyService
      */
     public function ingestResults(Computer $computer, array $results): int
     {
-        $policyIds = BrowserPolicy::where('project_id', $computer->project_id)->pluck('id')->flip();
+        // Only accept results for policies that actually apply to this
+        // machine — an agent cannot write into another scope's rows.
+        $policyIds = BrowserPolicy::resolveFor($computer)->pluck('id')->flip();
 
         $stored = 0;
         foreach ($results as $result) {
@@ -113,13 +112,20 @@ class BrowserPolicyService
      *
      * @return Collection<int, array{computer: Computer, excluded: bool, browsers: array<string, ?BrowserPolicyResult>, worst: string}>
      */
-    public function complianceFor(BrowserPolicy $policy): Collection
+    public function complianceFor(BrowserPolicy $policy, ?int $onlyClientId = null): Collection
     {
         $excluded = $policy->excludedComputers()->pluck('computers.id')->flip();
         $results = $policy->results()->get()->groupBy('computer_id');
         $browsers = array_map(fn ($browser) => $browser->value, $policy->targetBrowsers());
 
-        return $policy->project->computers()->orderBy('hostname')->get()
+        return $policy->targetComputers()
+            // A shared (all/group) policy viewed through one client's lens
+            // counts that client's machines only.
+            ->when($onlyClientId !== null, fn ($q) => $q->whereHas(
+                'project',
+                fn ($p) => $p->withTrashed()->where('client_id', $onlyClientId)
+            ))
+            ->orderBy('hostname')->get()
             ->map(function (Computer $computer) use ($excluded, $results, $browsers) {
                 $own = $results->get($computer->id, collect())->keyBy('browser');
 
@@ -140,9 +146,9 @@ class BrowserPolicyService
     }
 
     /** @return array{target: int, protected: int, non_compliant: int, pending: int, unsupported: int, excluded: int, percent: ?float} */
-    public function complianceSummary(BrowserPolicy $policy): array
+    public function complianceSummary(BrowserPolicy $policy, ?int $onlyClientId = null): array
     {
-        $rows = $this->complianceFor($policy);
+        $rows = $this->complianceFor($policy, $onlyClientId);
 
         $counts = [
             'target'        => $rows->where('excluded', false)->count(),
@@ -165,16 +171,13 @@ class BrowserPolicyService
     {
         $policies = BrowserPolicy::with('project')
             ->where('status', 'active')
-            ->when($tenantClientId !== null, fn ($q) => $q->whereHas(
-                'project',
-                fn ($p) => $p->withTrashed()->where('client_id', $tenantClientId)
-            ))
+            ->visibleTo($tenantClientId)
             ->get();
 
         $totals = ['policies' => $policies->count(), 'target' => 0, 'protected' => 0, 'non_compliant' => 0, 'pending' => 0, 'unsupported' => 0];
 
         foreach ($policies as $policy) {
-            $summary = $this->complianceSummary($policy);
+            $summary = $this->complianceSummary($policy, $tenantClientId);
             foreach (['target', 'protected', 'non_compliant', 'pending', 'unsupported'] as $key) {
                 $totals[$key] += $summary[$key];
             }

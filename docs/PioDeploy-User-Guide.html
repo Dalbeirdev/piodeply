@@ -308,6 +308,10 @@
   </table>
   <p><span class="num">3</span> Choose browsers (or <b>All</b>) and set <b>Active</b>. Save.</p>
   <p>The agent applies the corresponding registry values (Chrome/Edge/Brave) or <code>policies.json</code> (Firefox) silently. Browsers already open show "pending restart" until reopened. Deleting the policy rolls the setting back automatically.</p>
+  <h3>Assignment &amp; inheritance</h3>
+  <p>Each policy is assigned to a scope: <b>All machines</b>, a <b>Client</b> (every project it has), a <b>Project</b>, a <b>Device group</b> (a hand-picked set of machines that can cut across clients — manage them under <b>Fleet → Device Groups</b>), or a <b>Single computer</b>. When policies of the same type overlap on one machine, the most specific wins:</p>
+  <p style="text-align:center;font-weight:bold;">Computer &nbsp;›&nbsp; Device group &nbsp;›&nbsp; Project &nbsp;›&nbsp; Client &nbsp;›&nbsp; All machines</p>
+  <p>So a company-wide "block incognito" can coexist with a developer group that explicitly allows it — the group rule wins on those machines and the company rule everywhere else. Per-machine <b>exclusions</b> still override everything.</p>
   <div class="callout"><b>Value policies need agent 1.4.0+.</b> Policies that carry a value — a forced homepage/new-tab URL or a force-installed extension list — use new operation types the agent learned in <b>1.4.0</b>. Older agents report them as "unsupported" until they self-update on their next check-in. For extensions, enter the 32-letter ID from the Chrome Web Store URL (one per line); forced extensions install silently and cannot be removed by users.</div>
   <h3>Policy templates</h3>
   <p>From <b>Browser Policies → Templates</b>, apply a whole bundle in one click. Seven built-in templates ship with the platform — <b>High Security</b>, <b>Standard Office</b>, <b>Developer</b>, <b>Kiosk</b>, <b>Finance</b>, <b>Healthcare</b> and <b>Education</b> — each creating its policies on the chosen project (types the project already has are skipped, never overwritten). You can also <b>save any project's current policies as a custom template</b> and reuse it across clients.</p>

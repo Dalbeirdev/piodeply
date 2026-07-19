@@ -68,6 +68,13 @@ class BrowserPolicyShow extends Component
     {
         $rows = $service->complianceFor($this->policy);
 
+        // A shared (all/group) policy can be visible to a tenant, but the
+        // machines listed must still be their own only.
+        $tenantId = auth()->user()->tenantClientId();
+        if ($tenantId !== null) {
+            $rows = $rows->filter(fn (array $row) => $row['computer']->project()->withTrashed()->first()?->client_id === $tenantId)->values();
+        }
+
         $filtered = match ($this->statusFilter) {
             '' => $rows,
             'non_compliant' => $rows->whereIn('worst', ['non_compliant', 'error']),

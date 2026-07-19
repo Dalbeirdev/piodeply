@@ -46,10 +46,7 @@ class BrowserPoliciesIndex extends Component
 
         $policies = BrowserPolicy::query()
             ->with(['project.client'])
-            ->when($tenantId !== null, fn ($q) => $q->whereHas(
-                'project',
-                fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
-            ))
+            ->visibleTo($tenantId)
             // Grouped, or the project branch escapes the tenancy filter above
             // (AND binds tighter than OR) and leaks another client's policies.
             ->when($this->search !== '', fn ($q) => $q->where(fn ($w) => $w

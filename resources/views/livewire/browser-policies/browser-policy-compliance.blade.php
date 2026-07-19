@@ -70,8 +70,10 @@
                                     <p class="text-xs text-slate-500">{{ $row['policy']->label() }}</p>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600 text-sm">
-                                    {{ $row['policy']->project->client->company_name }}
-                                    <p class="text-xs text-slate-500">{{ $row['policy']->project->name }}</p>
+                                    {{ $row['policy']->scopeName() }}
+                                    @if ($row['policy']->project !== null)
+                                        <p class="text-xs text-slate-500">{{ $row['policy']->project->client->company_name }}</p>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     <div class="flex items-center gap-2">

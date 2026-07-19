@@ -27,15 +27,12 @@ class BrowserPolicyCompliance extends Component
         $policies = BrowserPolicy::query()
             ->with(['project.client'])
             ->where('status', 'active')
-            ->when($tenantId !== null, fn ($q) => $q->whereHas(
-                'project',
-                fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
-            ))
+            ->visibleTo($tenantId)
             ->orderBy('name')
             ->get();
 
-        $rows = $policies->map(function (BrowserPolicy $policy) use ($service) {
-            $summary = $service->complianceSummary($policy);
+        $rows = $policies->map(function (BrowserPolicy $policy) use ($service, $tenantId) {
+            $summary = $service->complianceSummary($policy, $tenantId);
             $summary['policy'] = $policy;
             $summary['last_report'] = $policy->results()->max('reported_at');
 
@@ -53,10 +50,13 @@ class BrowserPolicyCompliance extends Component
             ->whereIn('status', ['non_compliant', 'error'])
             ->whereHas('policy', fn ($q) => $q
                 ->where('status', 'active')
-                ->when($tenantId !== null, fn ($p) => $p->whereHas(
-                    'project',
-                    fn ($pr) => $pr->withTrashed()->where('client_id', $tenantId)
-                )))
+                ->visibleTo($tenantId))
+            // A shared (all/group) policy may be visible to a tenant, but the
+            // failing MACHINES shown must still be their own only.
+            ->when($tenantId !== null, fn ($q) => $q->whereHas(
+                'computer',
+                fn ($c) => $c->whereHas('project', fn ($p) => $p->withTrashed()->where('client_id', $tenantId))
+            ))
             ->orderByDesc('reported_at')
             ->limit(25)
             ->get();

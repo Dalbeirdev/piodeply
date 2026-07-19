@@ -15,18 +15,41 @@
                     <x-input-error for="name" class="mt-1" />
                 </div>
 
-                <div>
-                    <x-label for="project_id" value="Project (all its computers are targeted)" />
-                    <select id="project_id" wire:model="project_id"
-                            class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
-                        <option value="">— select project —</option>
-                        @foreach ($projects as $project)
-                            <option value="{{ $project->id }}">{{ $project->name }}</option>
-                        @endforeach
-                    </select>
-                    <p class="mt-1 text-xs text-slate-500">Exclude individual machines from the policy page after creating.</p>
-                    <x-input-error for="project_id" class="mt-1" />
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <x-label for="scope_type" value="Assign to" />
+                        <select id="scope_type" wire:model.live="scope_type"
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                            <option value="all">All machines (whole instance)</option>
+                            <option value="client">Client — every project it has</option>
+                            <option value="project">Project</option>
+                            <option value="group">Device group</option>
+                            <option value="computer">Single computer</option>
+                        </select>
+                        <x-input-error for="scope_type" class="mt-1" />
+                    </div>
+                    <div>
+                        @if ($scope_type !== 'all')
+                            <x-label for="scope_id" value="Target" />
+                            <select id="scope_id" wire:model="scope_id"
+                                    class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                                <option value="">— select —</option>
+                                @foreach ($scopeOptions as $option)
+                                    <option value="{{ $option['id'] }}">{{ $option['label'] }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error for="scope_id" class="mt-1" />
+                        @else
+                            <x-label value="Target" />
+                            <p class="mt-2.5 text-sm text-slate-500">Every enrolled machine, present and future.</p>
+                        @endif
+                    </div>
                 </div>
+                <p class="-mt-2 text-xs text-slate-500">
+                    When policies of the same type overlap, the most specific wins:
+                    <b>Computer&nbsp;›&nbsp;Group&nbsp;›&nbsp;Project&nbsp;›&nbsp;Client&nbsp;›&nbsp;All</b>.
+                    Individual machines can still be excluded from the policy page after creating.
+                </p>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>

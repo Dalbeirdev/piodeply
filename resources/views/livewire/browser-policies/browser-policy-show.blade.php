@@ -4,7 +4,7 @@
             <div>
                 <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ $policy->name }}</h2>
                 <p class="text-sm text-slate-500 mt-0.5">
-                    {{ $policy->label() }} · {{ $policy->project->name }} · {{ $policy->project->client->company_name }}
+                    {{ $policy->label() }} · {{ $policy->scopeName() }}{{ $policy->project !== null ? ' · '.$policy->project->client->company_name : '' }}
                     · {{ ucfirst($policy->status) }}
                     @if ($policy->creator) · created by {{ $policy->creator->name }} @endif
                 </p>
