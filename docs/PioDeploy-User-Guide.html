@@ -266,6 +266,11 @@
     <tr><td>Remove</td><td>Uninstall wherever it's found.</td></tr>
     <tr><td>Block</td><td>Forbidden software — removed whenever detected.</td></tr>
   </table>
+  <div class="callout"><b>How enforcement decides — install once, then update.</b> On every pass the policy first checks what the machine actually reports:<br>
+    <span class="num">1</span> <b>Not installed</b> → one install job is queued (latest version, or the pinned one). Installs are paced to <b>one successful attempt per frequency window</b> — never repeated back-to-back.<br>
+    <span class="num">2</span> <b>Already installed</b> → nothing is installed again. An <b>Auto update</b> policy takes over: it queues an update only when one is due, at most once per frequency window (daily/weekly/monthly), inside the maintenance window and ring schedule you set.<br>
+    <span class="num">3</span> A machine whose agent cannot scan winget still counts a succeeded PioDeploy install as installed, so a blind scan can never cause repeat installs. Failed attempts back off before retrying; an in-flight job is never duplicated.
+  </div>
   <div class="callout"><b>Rollback &amp; exact-version pinning.</b> Rolling back — or pinning to an exact earlier version — means reinstalling a specific published build. Only <b>winget</b> and <b>Chocolatey</b> packages can do this: they fetch any version from their repository on demand. <b>MSI, EXE, ZIP, MSIX</b> and <b>portable</b> packages carry a single installer, so they cannot roll back — a <b>Force update</b> on those simply reinstalls the current version. PioDeploy only offers Rollback (and exact/maximum version pinning) for packages that support it.</div>
   <table>
     <tr><th>Package type</th><th>Install / Update</th><th>Remove (uninstall)</th><th>Rollback / pin exact version</th></tr>
@@ -337,7 +342,8 @@
   <p>Click any machine to see hardware, health checks (disk, secure boot, last check-in), its deployment history and browser-policy status.</p>
 
   <h4>Installed software</h4>
-  <p>Filter by <b>In catalogue</b>, <b>Deployed by PioDeploy</b> (software a job of yours actually installed, as opposed to software that was simply already there), <b>Update available</b>, or <b>All software</b>. A version reading <code>138.0 → 141.0</code> means the machine's own package manager is offering something newer.</p>
+  <p>A patch-status table per machine: <b>Application</b> (with publisher and source/managed/PioDeploy chips), <b>Installed (current)</b>, <b>Latest</b> (what the machine's own package manager offers — "—" when nothing newer is published), <b>Update required</b> (Yes/No badge) and <b>Status</b>. The view opens on <b>Deployed by PioDeploy</b> — what you are accountable for — with <b>In catalogue</b>, <b>Update available</b> and <b>All software</b> one click away.</p>
+  <p>The <b>Status</b> column is actionable: an outdated app that matches a catalogue package shows <b>Update now →</b>, which queues an update job on that machine immediately (clicking twice while it runs never duplicates). Outdated apps outside the catalogue read <i>Update available</i> — add them as a package to manage their updates. Everything current reads <i>Up to date</i>.</p>
   <div class="callout"><b>Only the machine knows.</b> The portal knows your catalogue and what is installed; it has no idea a new Chrome shipped this morning. The agent asks winget and reports back — which is why a package can be <b>Compliant</b> and still show an update: your policy asked for it to be installed, and it is. Whether to update is your call, or a job for an <b>Update</b> policy.</div>
 
   <h4>Software status</h4>
@@ -347,7 +353,7 @@
   <p>Every client can get a <b>branded compliance PDF</b> — fleet overview, software- and browser-policy compliance, 30-day deployment activity and a machine list. Download it any time from the <b>PDF</b> link on the Clients list; client-portal users have a <b>Compliance report</b> button on their own dashboard. Tick <b>Monthly</b> on a client row to email the PDF to that client's portal users automatically on the 1st of each month (off by default).</p>
 
   <h4>Deployment log</h4>
-  <p>Every attempt and the reason it ended that way, with the agent's own output behind a toggle. Note that “Succeeded” is not always “installed something”: <b>Already installed — nothing was changed</b> means winget found the package present and did nothing, which is a success worth telling apart from real work.</p>
+  <p>Every attempt and the reason it ended that way, with the agent's own output behind a toggle. The log is <b>collapsed by default</b> — the header shows the attempt count; click <b>Show log</b> to expand. Note that “Succeeded” is not always “installed something”: <b>Already installed — nothing was changed</b> means winget found the package present and did nothing, which is a success worth telling apart from real work.</p>
 
   <h3>Deployments</h3>
   <p>The live job queue and history — filter by status/action, retry failed jobs, cancel pending ones. Repeats of the same task on the same machine fold into one row with a <code>×N</code> badge; tick <b>Show full history</b> for every attempt.</p>
