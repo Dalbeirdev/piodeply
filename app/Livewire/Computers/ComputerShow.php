@@ -31,6 +31,37 @@ class ComputerShow extends Component
     }
 
     /**
+     * One-click "Update now" from the software table: queues an update job
+     * for the catalogue package behind an outdated winget row, through the
+     * same guarded path as the deploy form.
+     */
+    public function queueUpdate(int $softwareId, \App\Services\DeploymentService $deployments): void
+    {
+        $this->authorize('create', \App\Models\DeploymentJob::class);
+
+        $item = $this->computer->software()->findOrFail($softwareId);
+
+        $package = \App\Models\Package::active()
+            ->where('winget_id', $item->name)
+            ->first();
+
+        if ($package === null) {
+            session()->flash('status', "{$item->name} is not in the catalogue — add it as a package to manage its updates.");
+
+            return;
+        }
+
+        $result = $deployments->queueIfNeeded(
+            computer: $this->computer,
+            package: $package,
+            action: \App\Enums\JobAction::Update,
+            createdBy: auth()->id(),
+        );
+
+        session()->flash('status', $result->message);
+    }
+
+    /**
      * MSP-style health checks derived from inventory + heartbeat data.
      *
      * @return list<array{level: string, message: string}>

@@ -223,4 +223,55 @@ class UpdateAvailableTest extends TestCase
         $this->assertSame('138.0', $row->version);
         $this->assertNull($row->available_version);
     }
+
+    /* ── The Action1-style status column + one-click update ───────────── */
+
+    public function test_the_table_shows_update_required_and_status_columns(): void
+    {
+        $this->chrome();
+        $this->installed('138.0', '141.0');
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->computer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '130.0', 'available_version' => null, 'source' => 'winget',
+        ]);
+
+        $this->page()
+            ->set('softwareFilter', 'all')
+            ->assertSee('Update required')
+            ->assertSee('Update now')     // outdated + managed → actionable
+            ->assertSee('Up to date');    // current row → green status
+    }
+
+    public function test_update_now_queues_an_update_job_through_the_guarded_path(): void
+    {
+        $this->chrome();
+        $row = $this->installed('138.0', '141.0');
+
+        $this->page()
+            ->set('softwareFilter', 'all')
+            ->call('queueUpdate', $row->id);
+
+        $this->assertDatabaseHas('deployment_jobs', [
+            'computer_id' => $this->computer->id, 'action' => 'update', 'status' => 'pending',
+        ]);
+
+        // Clicking again while the job is in flight does not duplicate it.
+        $this->page()->call('queueUpdate', $row->id);
+        $this->assertSame(1, \App\Models\DeploymentJob::count());
+    }
+
+    public function test_update_now_on_an_uncatalogued_row_queues_nothing(): void
+    {
+        // Outdated, but no matching package in the catalogue.
+        $row = ComputerSoftware::factory()->create([
+            'computer_id' => $this->computer->id, 'name' => 'Some.RandomApp',
+            'version' => '1.0', 'available_version' => '2.0', 'source' => 'winget',
+        ]);
+
+        $this->page()
+            ->set('softwareFilter', 'all')
+            ->call('queueUpdate', $row->id);
+
+        $this->assertSame(0, \App\Models\DeploymentJob::count());
+    }
 }

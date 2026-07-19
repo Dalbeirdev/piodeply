@@ -304,51 +304,64 @@
                     <table class="min-w-full divide-y divide-slate-100">
                         <thead>
                             <tr>
-                                <th class="pd-th">Name</th>
-                                <th class="pd-th">Version</th>
-                                <th class="pd-th">Publisher</th>
-                                <th class="pd-th">Source</th>
-                                <th class="pd-th">Catalogue</th>
-                                <th class="pd-th">Installed by</th>
+                                <th class="pd-th">Application</th>
+                                <th class="pd-th">Installed (current)</th>
+                                <th class="pd-th">Latest</th>
+                                <th class="pd-th">Update required</th>
+                                <th class="pd-th">Status</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @forelse ($softwareItems as $item)
                                 <tr>
-                                    <td class="px-6 py-2.5 text-sm text-slate-800 {{ $item->source === 'winget' ? 'font-mono text-[13px]' : '' }}">{{ $item->name }}</td>
-                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 font-mono text-[13px]">
-                                        {{ $item->version ?? '—' }}
+                                    <td class="px-6 py-2.5 text-sm text-slate-800">
+                                        <span class="{{ $item->source === 'winget' ? 'font-mono text-[13px]' : 'font-medium' }}">{{ $item->name }}</span>
+                                        <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                                            @if ($item->publisher)<span class="max-w-[14rem] truncate">{{ $item->publisher }}</span>@endif
+                                            <span class="pd-badge {{ $item->source === 'winget' ? 'pd-badge-sky' : ($item->source === 'choco' ? 'pd-badge-amber' : 'pd-badge-slate') }}">{{ $item->source }}</span>
+                                            @if ($item->source === 'winget' && $managedPackages->has($item->name))
+                                                <a href="{{ route('packages.show', $managedPackages[$item->name]) }}"
+                                                   class="pd-badge pd-badge-teal hover:bg-teal-100">managed</a>
+                                            @endif
+                                            @if ($deployedNames->contains($item->name))
+                                                <span class="pd-badge pd-badge-sky" title="A PioDeploy job installed this on {{ $computer->hostname }}">PioDeploy</span>
+                                            @endif
+                                        </p>
+                                    </td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-600 font-mono text-[13px]">{{ $item->version ?? '—' }}</td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm font-mono text-[13px] {{ $item->hasUpdate() ? 'text-amber-600 font-semibold' : 'text-slate-400' }}">
+                                        {{ $item->available_version ?? '—' }}
+                                    </td>
+                                    <td class="px-6 py-2.5 whitespace-nowrap">
                                         @if ($item->hasUpdate())
-                                            <span class="text-amber-600" title="{{ $item->available_version }} is available from the package source">
-                                                → {{ $item->available_version }}
-                                            </span>
-                                        @endif
-                                    </td>
-                                    <td class="px-6 py-2.5 whitespace-nowrap text-sm text-slate-500 max-w-[16rem] truncate">{{ $item->publisher ?? '—' }}</td>
-                                    <td class="px-6 py-2.5 whitespace-nowrap">
-                                        <span class="pd-badge {{ $item->source === 'winget' ? 'pd-badge-sky' : ($item->source === 'choco' ? 'pd-badge-amber' : 'pd-badge-slate') }}">{{ $item->source }}</span>
-                                    </td>
-                                    <td class="px-6 py-2.5 whitespace-nowrap">
-                                        @if ($item->source === 'winget' && $managedPackages->has($item->name))
-                                            <a href="{{ route('packages.show', $managedPackages[$item->name]) }}"
-                                               class="pd-badge pd-badge-teal hover:bg-teal-100">managed</a>
+                                            <span class="inline-flex text-xs font-semibold rounded-md px-2 py-0.5 border bg-amber-50 text-amber-700 border-amber-300">Yes</span>
                                         @else
-                                            <span class="text-xs text-slate-300">—</span>
+                                            <span class="inline-flex text-xs font-semibold rounded-md px-2 py-0.5 border bg-green-50 text-green-700 border-green-300">No</span>
                                         @endif
                                     </td>
                                     <td class="px-6 py-2.5 whitespace-nowrap">
-                                        @if ($deployedNames->contains($item->name))
-                                            <span class="pd-badge pd-badge-sky"
-                                                  title="A PioDeploy job installed this on {{ $computer->hostname }}">PioDeploy</span>
+                                        @if ($item->hasUpdate())
+                                            @if ($item->source === 'winget' && $managedPackages->has($item->name))
+                                                @can('create', \App\Models\DeploymentJob::class)
+                                                    <button type="button" wire:click="queueUpdate({{ $item->id }})"
+                                                            class="inline-flex items-center text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 transition-colors"
+                                                            title="Queue an update to {{ $item->available_version }} on {{ $computer->hostname }}">
+                                                        Update now →
+                                                    </button>
+                                                @else
+                                                    <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300">Update available</span>
+                                                @endcan
+                                            @else
+                                                <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300"
+                                                      title="Not in the PioDeploy catalogue — add it as a package to manage updates">Update available</span>
+                                            @endif
                                         @else
-                                            {{-- Absence of a job is not proof it predates us, so say
-                                                 nothing rather than claim "pre-existing". --}}
-                                            <span class="text-xs text-slate-300" title="No PioDeploy install job for this package on this machine">—</span>
+                                            <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-green-50 text-green-700 border-green-300">Up to date</span>
                                         @endif
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">
+                                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">
                                     @if ($softwareTotal === 0)
                                         No software inventory reported yet — it arrives with the agent's next report.
                                     @elseif ($softwareSearch !== '')
