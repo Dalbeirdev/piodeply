@@ -2,8 +2,12 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Browser Policies') }}</h2>
-            @can('create', \App\Models\BrowserPolicy::class)
-                <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2">
+                <a href="{{ route('browser-policies.compliance') }}"
+                   class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
+                    Compliance
+                </a>
+                @can('create', \App\Models\BrowserPolicy::class)
                     <a href="{{ route('browser-policies.templates') }}"
                        class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
                         Templates
@@ -12,8 +16,8 @@
                        class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
                         New policy
                     </a>
-                </div>
-            @endcan
+                @endcan
+            </div>
         </div>
     </x-slot>
 
