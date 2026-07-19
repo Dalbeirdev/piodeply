@@ -31,10 +31,14 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <x-label for="type" value="Restriction" />
-                        <select id="type" wire:model="type"
+                        <select id="type" wire:model.live="type"
                                 class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
-                            @foreach ($types as $typeOption)
-                                <option value="{{ $typeOption->value }}">{{ $typeOption->label() }}</option>
+                            @foreach ($typesByCategory as $category => $categoryTypes)
+                                <optgroup label="{{ $category }}">
+                                    @foreach ($categoryTypes as $typeOption)
+                                        <option value="{{ $typeOption->value }}">{{ $typeOption->label() }}</option>
+                                    @endforeach
+                                </optgroup>
                             @endforeach
                         </select>
                         <x-input-error for="type" class="mt-1" />
@@ -49,6 +53,20 @@
                         <x-input-error for="action" class="mt-1" />
                     </div>
                 </div>
+
+                @if ($selectedType)
+                    <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm">
+                        <p class="text-slate-700">{{ $selectedType->description() }}</p>
+                        <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                            <span>
+                                <span class="font-semibold text-slate-600">Supported:</span>
+                                {{ collect($selectedType->supportedBrowsers())->map->label()->implode(', ') ?: 'none' }}
+                            </span>
+                            <span><span class="font-semibold text-slate-600">Requires restart:</span> {{ $selectedType->requiresRestart() ? 'Yes' : 'No' }}</span>
+                            <span><span class="font-semibold text-slate-600">Platform:</span> {{ $selectedType->platform() }}</span>
+                        </div>
+                    </div>
+                @endif
 
                 <div>
                     <x-label value="Browsers" />

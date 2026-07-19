@@ -92,9 +92,10 @@ class BrowserPolicyForm extends Component
     public function render()
     {
         return view('livewire.browser-policies.browser-policy-form', [
-            'projects'    => Project::orderBy('name')->get(['id', 'name']),
-            'types'       => BrowserPolicyType::cases(),
-            'allBrowsers' => Browser::cases(),
+            'projects'        => Project::orderBy('name')->get(['id', 'name']),
+            'typesByCategory' => BrowserPolicyType::byCategory(),
+            'selectedType'    => BrowserPolicyType::tryFrom($this->type),
+            'allBrowsers'     => Browser::cases(),
         ])->layout('layouts.app');
     }
 }
