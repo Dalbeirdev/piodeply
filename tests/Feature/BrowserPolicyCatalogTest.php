@@ -92,6 +92,32 @@ class BrowserPolicyCatalogTest extends TestCase
         );
     }
 
+    public function test_batch3_policies_map_to_the_expected_registry_values(): void
+    {
+        // Downloads: 3 blocks everything, 0 restores.
+        $this->assertSame(
+            ['kind' => 'registry', 'path' => 'SOFTWARE\\Policies\\Google\\Chrome', 'name' => 'DownloadRestrictions', 'value' => 3],
+            BrowserPolicyType::DisableDownloads->operationFor(Browser::Chrome, 'disable'),
+        );
+        $this->assertSame(0, BrowserPolicyType::DisableDownloads->operationFor(Browser::Brave, 'enable')['value']);
+
+        // AI assistants: a different vendor policy per browser.
+        $this->assertSame('GeminiSettings', BrowserPolicyType::DisableAiAssistants->operationFor(Browser::Chrome, 'disable')['name']);
+        $this->assertSame(
+            ['kind' => 'registry', 'path' => 'SOFTWARE\\Policies\\Microsoft\\Edge', 'name' => 'HubsSidebarEnabled', 'value' => 0],
+            BrowserPolicyType::DisableAiAssistants->operationFor(Browser::Edge, 'disable'),
+        );
+        $this->assertSame('BraveAIChatEnabled', BrowserPolicyType::DisableAiAssistants->operationFor(Browser::Brave, 'disable')['name']);
+
+        // Edge-exclusive features are unsupported everywhere else.
+        $this->assertSame([Browser::Edge], BrowserPolicyType::DisableMicrosoftRewards->supportedBrowsers());
+        $this->assertSame([Browser::Edge], BrowserPolicyType::DisableBrowserGames->supportedBrowsers());
+        $this->assertSame('unsupported', BrowserPolicyType::DisableNewTabFeed->operationFor(Browser::Chrome, 'disable')['kind']);
+
+        // Session-only cookies use DefaultCookiesSetting 4.
+        $this->assertSame(4, BrowserPolicyType::ClearCookiesOnExit->operationFor(Browser::Edge, 'disable')['value']);
+    }
+
     public function test_the_form_lists_policies_grouped_by_category(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);

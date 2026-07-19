@@ -290,13 +290,20 @@
   <h2>7. Browser policies</h2>
   <p>Lock down browsers like enterprise Group Policy — without a domain. Supported: Chrome, Edge, Firefox, Brave (Opera reports "unsupported").</p>
   <p><span class="num">1</span> Sidebar → <b>Browser Policies</b> → <b>New policy</b>.</p>
-  <p><span class="num">2</span> Name it, pick the project, and choose the restriction:</p>
-  <ul>
-    <li><b>Disable incognito / private browsing</b></li>
-    <li><b>Disable guest mode</b></li>
-    <li><b>Disable password saving</b></li>
-    <li><b>Disable developer tools</b></li>
-  </ul>
+  <p><span class="num">2</span> Name it, pick the project, and choose the restriction. The catalogue offers <b>30+ policies grouped by category</b> — selecting one shows its description, which browsers support it, and whether a restart is needed:</p>
+  <table>
+    <tr><th>Category</th><th>Examples</th></tr>
+    <tr><td>Password Management</td><td>Password saving, leak detection</td></tr>
+    <tr><td>Private Browsing</td><td>Incognito / InPrivate, guest mode</td></tr>
+    <tr><td>Autofill</td><td>Addresses, credit cards</td></tr>
+    <tr><td>Sync &amp; Sign-in</td><td>Browser sync, browser sign-in</td></tr>
+    <tr><td>Browser Security</td><td>Developer tools, QUIC, screen capture</td></tr>
+    <tr><td>Downloads &amp; Cookies</td><td>Block all downloads, third-party cookies, session-only cookies</td></tr>
+    <tr><td>Site Permissions</td><td>Notifications, pop-ups, location, camera, microphone, clipboard</td></tr>
+    <tr><td>Lockdown</td><td>Printing, browsing history, bookmark editing</td></tr>
+    <tr><td>AI &amp; Extras</td><td>Gemini / Copilot / Leo, shopping assistant, new-tab feed, Rewards, games</td></tr>
+    <tr><td>Advanced</td><td>Translate, WebUSB, WebBluetooth, WebSerial</td></tr>
+  </table>
   <p><span class="num">3</span> Choose browsers (or <b>All</b>) and set <b>Active</b>. Save.</p>
   <p>The agent applies the corresponding registry values (Chrome/Edge/Brave) or <code>policies.json</code> (Firefox) silently. Browsers already open show "pending restart" until reopened. Deleting the policy rolls the setting back automatically.</p>
   <div class="callout"><b>Example:</b> "Block incognito — all browsers" on <i>Acme HQ Laptops</i> disables private browsing across every Chromium browser and Firefox on every machine in that project.</div>

@@ -46,9 +46,18 @@ enum BrowserPolicyType: string
 
     // ── Browser Security ─────────────────────────────────────────────────
     case DisableQuic = 'disable_quic';
+    case DisableScreenCapture = 'disable_screen_capture';
 
-    // ── Notifications ────────────────────────────────────────────────────
+    // ── Downloads ────────────────────────────────────────────────────────
+    case DisableDownloads = 'disable_downloads';
+
+    // ── Cookies ──────────────────────────────────────────────────────────
+    case BlockThirdPartyCookies = 'block_third_party_cookies';
+    case ClearCookiesOnExit = 'clear_cookies_on_exit';
+
+    // ── Notifications & Popups ───────────────────────────────────────────
     case DisableNotifications = 'disable_notifications';
+    case DisablePopups = 'disable_popups';
 
     // ── Location ─────────────────────────────────────────────────────────
     case DisableLocation = 'disable_location';
@@ -63,6 +72,19 @@ enum BrowserPolicyType: string
     // ── Printing ─────────────────────────────────────────────────────────
     case DisablePrinting = 'disable_printing';
 
+    // ── Browser Lockdown ─────────────────────────────────────────────────
+    case DisableBrowsingHistory = 'disable_browsing_history';
+    case DisableBookmarkEditing = 'disable_bookmark_editing';
+
+    // ── AI Features ──────────────────────────────────────────────────────
+    case DisableAiAssistants = 'disable_ai_assistants';
+
+    // ── Sidebar & Feeds ──────────────────────────────────────────────────
+    case DisableShoppingAssistant = 'disable_shopping_assistant';
+    case DisableNewTabFeed = 'disable_new_tab_feed';
+    case DisableMicrosoftRewards = 'disable_microsoft_rewards';
+    case DisableBrowserGames = 'disable_browser_games';
+
     // ── Advanced Enterprise ──────────────────────────────────────────────
     case DisableTranslate = 'disable_translate';
     case DisableWebUsb = 'disable_web_usb';
@@ -72,8 +94,10 @@ enum BrowserPolicyType: string
     /** Category display order for grouped UIs. */
     public const CATEGORY_ORDER = [
         'Password Management', 'Private Browsing', 'Autofill', 'Browser Sync & Sign-in',
-        'Developer Tools', 'Browser Security', 'Notifications', 'Location',
-        'Camera & Microphone', 'Clipboard', 'Printing', 'Advanced Enterprise',
+        'Developer Tools', 'Browser Security', 'Downloads', 'Cookies',
+        'Notifications & Popups', 'Location', 'Camera & Microphone', 'Clipboard',
+        'Printing', 'Browser Lockdown', 'AI Features', 'Sidebar & Feeds',
+        'Advanced Enterprise',
     ];
 
     /** @return list<string> */
@@ -104,12 +128,18 @@ enum BrowserPolicyType: string
             self::DisableAddressAutofill, self::DisableCreditCardAutofill => 'Autofill',
             self::DisableBrowserSync, self::DisableBrowserSignin => 'Browser Sync & Sign-in',
             self::DisableDeveloperTools => 'Developer Tools',
-            self::DisableQuic => 'Browser Security',
-            self::DisableNotifications => 'Notifications',
+            self::DisableQuic, self::DisableScreenCapture => 'Browser Security',
+            self::DisableDownloads => 'Downloads',
+            self::BlockThirdPartyCookies, self::ClearCookiesOnExit => 'Cookies',
+            self::DisableNotifications, self::DisablePopups => 'Notifications & Popups',
             self::DisableLocation => 'Location',
             self::DisableCamera, self::DisableMicrophone => 'Camera & Microphone',
             self::DisableClipboard => 'Clipboard',
             self::DisablePrinting => 'Printing',
+            self::DisableBrowsingHistory, self::DisableBookmarkEditing => 'Browser Lockdown',
+            self::DisableAiAssistants => 'AI Features',
+            self::DisableShoppingAssistant, self::DisableNewTabFeed,
+            self::DisableMicrosoftRewards, self::DisableBrowserGames => 'Sidebar & Feeds',
             self::DisableTranslate, self::DisableWebUsb, self::DisableWebBluetooth, self::DisableWebSerial => 'Advanced Enterprise',
         };
     }
@@ -127,12 +157,24 @@ enum BrowserPolicyType: string
             self::DisableBrowserSignin => 'Browser sign-in',
             self::DisableDeveloperTools => 'Developer tools',
             self::DisableQuic => 'QUIC protocol',
+            self::DisableScreenCapture => 'Screen capture / sharing',
+            self::DisableDownloads => 'File downloads',
+            self::BlockThirdPartyCookies => 'Third-party cookies',
+            self::ClearCookiesOnExit => 'Cookies kept between sessions',
             self::DisableNotifications => 'Web notifications',
+            self::DisablePopups => 'Pop-up windows',
             self::DisableLocation => 'Location access',
             self::DisableCamera => 'Camera access',
             self::DisableMicrophone => 'Microphone access',
             self::DisableClipboard => 'Clipboard access',
             self::DisablePrinting => 'Printing',
+            self::DisableBrowsingHistory => 'Browsing history',
+            self::DisableBookmarkEditing => 'Bookmark editing',
+            self::DisableAiAssistants => 'AI assistants (Gemini / Copilot / Leo)',
+            self::DisableShoppingAssistant => 'Shopping assistant',
+            self::DisableNewTabFeed => 'New-tab news feed',
+            self::DisableMicrosoftRewards => 'Microsoft Rewards',
+            self::DisableBrowserGames => 'Built-in browser games',
             self::DisableTranslate => 'Page translation',
             self::DisableWebUsb => 'WebUSB',
             self::DisableWebBluetooth => 'WebBluetooth',
@@ -153,12 +195,24 @@ enum BrowserPolicyType: string
             self::DisableBrowserSignin => 'Prevents users from signing into the browser with an account.',
             self::DisableDeveloperTools => 'Blocks DevTools, view-source and the JavaScript console.',
             self::DisableQuic => 'Disables the QUIC transport protocol (forces classic TLS/TCP).',
+            self::DisableScreenCapture => 'Blocks websites from capturing or sharing the screen (getDisplayMedia).',
+            self::DisableDownloads => 'Blocks all file downloads from the browser.',
+            self::BlockThirdPartyCookies => 'Blocks cookies set by sites other than the one being visited.',
+            self::ClearCookiesOnExit => 'Keeps cookies for the session only — everything is cleared when the browser closes.',
             self::DisableNotifications => 'Blocks websites from showing desktop notifications.',
+            self::DisablePopups => 'Blocks websites from opening pop-up windows.',
             self::DisableLocation => 'Blocks websites from requesting device location.',
             self::DisableCamera => 'Blocks websites from accessing the camera.',
             self::DisableMicrophone => 'Blocks websites from accessing the microphone.',
             self::DisableClipboard => 'Blocks websites from reading the system clipboard.',
             self::DisablePrinting => 'Disables printing from the browser.',
+            self::DisableBrowsingHistory => 'Stops the browser from saving any browsing history.',
+            self::DisableBookmarkEditing => 'Prevents users from adding, editing or removing bookmarks.',
+            self::DisableAiAssistants => 'Disables built-in AI assistants: Gemini (Chrome), the Copilot sidebar (Edge) and Leo (Brave).',
+            self::DisableShoppingAssistant => 'Turns off shopping suggestions and price-comparison features.',
+            self::DisableNewTabFeed => 'Removes the news/content feed from the Edge new-tab page.',
+            self::DisableMicrosoftRewards => 'Hides Microsoft Rewards in Edge.',
+            self::DisableBrowserGames => 'Disables the built-in browser games (e.g. the Edge surf game).',
             self::DisableTranslate => 'Turns off the built-in page-translation feature.',
             self::DisableWebUsb => 'Blocks websites from connecting to USB devices (WebUSB).',
             self::DisableWebBluetooth => 'Blocks websites from connecting to Bluetooth devices (WebBluetooth).',
@@ -243,14 +297,45 @@ enum BrowserPolicyType: string
             },
 
             self::DisableQuic => self::chromiumOnly($browser, 'QuicAllowed', $disable ? 0 : 1),
+            self::DisableScreenCapture => self::chromiumOnly($browser, 'ScreenCaptureAllowed', $disable ? 0 : 1),
+
+            // DownloadRestrictions: 0 = none, 3 = block all downloads.
+            self::DisableDownloads => self::chromiumOnly($browser, 'DownloadRestrictions', $disable ? 3 : 0),
+
+            self::BlockThirdPartyCookies => self::chromiumOnly($browser, 'BlockThirdPartyCookies', $disable ? 1 : 0),
+            // DefaultCookiesSetting: 1 = allow, 4 = keep for session only.
+            self::ClearCookiesOnExit => self::chromiumOnly($browser, 'DefaultCookiesSetting', $disable ? 4 : 1),
 
             self::DisableNotifications => self::chromiumOnly($browser, 'DefaultNotificationsSetting', $disable ? 2 : 1),
+            self::DisablePopups => self::chromiumOnly($browser, 'DefaultPopupsSetting', $disable ? 2 : 1),
             self::DisableLocation => self::chromiumOnly($browser, 'DefaultGeolocationSetting', $disable ? 2 : 1),
             self::DisableCamera => self::chromiumOnly($browser, 'VideoCaptureAllowed', $disable ? 0 : 1),
             self::DisableMicrophone => self::chromiumOnly($browser, 'AudioCaptureAllowed', $disable ? 0 : 1),
             self::DisableClipboard => self::chromiumOnly($browser, 'DefaultClipboardSetting', $disable ? 2 : 1),
 
             self::DisablePrinting => self::chromiumOnly($browser, 'PrintingEnabled', $disable ? 0 : 1),
+
+            self::DisableBrowsingHistory => self::chromiumOnly($browser, 'SavingBrowserHistoryDisabled', $disable ? 1 : 0),
+            self::DisableBookmarkEditing => self::chromiumOnly($browser, 'EditBookmarksEnabled', $disable ? 0 : 1),
+
+            // Each vendor names its assistant policy differently. Edge's
+            // Copilot lives in the Hubs sidebar, so that switch carries it.
+            self::DisableAiAssistants => match ($browser) {
+                Browser::Chrome => self::registry(self::CHROME, 'GeminiSettings', $disable ? 1 : 0),
+                Browser::Edge => self::registry(self::EDGE, 'HubsSidebarEnabled', $disable ? 0 : 1),
+                Browser::Brave => self::registry(self::BRAVE, 'BraveAIChatEnabled', $disable ? 0 : 1),
+                Browser::Firefox, Browser::Opera => self::unsupported(),
+            },
+
+            self::DisableShoppingAssistant => match ($browser) {
+                Browser::Chrome => self::registry(self::CHROME, 'ShoppingListEnabled', $disable ? 0 : 1),
+                Browser::Edge => self::registry(self::EDGE, 'EdgeShoppingAssistantEnabled', $disable ? 0 : 1),
+                Browser::Brave, Browser::Firefox, Browser::Opera => self::unsupported(),
+            },
+            self::DisableNewTabFeed => self::edgeOnly($browser, 'NewTabPageContentEnabled', $disable ? 0 : 1),
+            self::DisableMicrosoftRewards => self::edgeOnly($browser, 'ShowMicrosoftRewards', $disable ? 0 : 1),
+            self::DisableBrowserGames => self::edgeOnly($browser, 'AllowSurfGame', $disable ? 0 : 1),
+
             self::DisableTranslate => self::chromiumOnly($browser, 'TranslateEnabled', $disable ? 0 : 1),
 
             self::DisableWebUsb => self::chromiumOnly($browser, 'DefaultWebUsbGuardSetting', $disable ? 2 : 3),
@@ -279,6 +364,14 @@ enum BrowserPolicyType: string
             Browser::Chrome, Browser::Edge, Browser::Brave => self::chromium($browser, $name, $value),
             Browser::Firefox, Browser::Opera => self::unsupported(),
         };
+    }
+
+    /** An Edge-exclusive feature (Rewards, surf game, new-tab feed…). */
+    private static function edgeOnly(Browser $browser, string $name, int $value): array
+    {
+        return $browser === Browser::Edge
+            ? self::registry(self::EDGE, $name, $value)
+            : self::unsupported();
     }
 
     private static function registry(string $path, string $name, int $value): array
