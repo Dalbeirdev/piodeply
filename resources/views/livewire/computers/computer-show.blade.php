@@ -498,15 +498,23 @@
             </div>
 
             {{-- Deployment log: every attempt with the reason it ended that
-                 way, and the agent's own output behind it. --}}
-            <div class="pd-card">
-                <div class="px-6 pt-5 pb-2">
+                 way, and the agent's own output behind it. Collapsed by
+                 default — it grows long and is a drill-down, not a summary. --}}
+            <div class="pd-card" x-data="{ showLog: false }">
+                <div class="px-6 py-5 flex items-center justify-between gap-3">
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
                         Deployment log
-                        <span class="ml-1 text-slate-400 font-normal normal-case">— every attempt and why it ended that way</span>
+                        <span class="ml-1 text-slate-400 font-normal normal-case">— {{ $jobLog->count() }} {{ Str::plural('attempt', $jobLog->count()) }} and why each ended that way</span>
                     </h3>
+                    <button type="button" @click="showLog = !showLog"
+                            class="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-600">
+                        <span x-text="showLog ? 'Hide log' : 'Show log'"></span>
+                        <svg class="h-3.5 w-3.5 transition-transform" :class="showLog ? 'rotate-180' : ''"
+                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
                 </div>
-                <ul class="divide-y divide-slate-100">
+                <ul class="divide-y divide-slate-100" x-show="showLog" x-cloak style="display: none;">
                     @forelse ($jobLog as $job)
                         @php
                             $dot = match ($job->status) {
