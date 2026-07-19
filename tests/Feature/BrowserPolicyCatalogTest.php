@@ -49,7 +49,7 @@ class BrowserPolicyCatalogTest extends TestCase
 
     public function test_every_operation_is_valid_for_every_browser_and_action(): void
     {
-        $validKinds = ['registry', 'firefox_json', 'unsupported'];
+        $validKinds = ['registry', 'registry_sz', 'registry_list', 'firefox_json', 'unsupported'];
 
         foreach (BrowserPolicyType::cases() as $type) {
             foreach (Browser::cases() as $browser) {
@@ -62,9 +62,43 @@ class BrowserPolicyCatalogTest extends TestCase
                         $this->assertArrayHasKey('name', $op);
                         $this->assertIsInt($op['value']);
                     }
+
+                    if ($op['kind'] === 'registry_sz') {
+                        $this->assertArrayHasKey('path', $op);
+                        $this->assertArrayHasKey('name', $op);
+                        $this->assertIsString($op['value']);
+                    }
+
+                    if ($op['kind'] === 'registry_list') {
+                        $this->assertArrayHasKey('path', $op);
+                        $this->assertIsArray($op['values']);
+                    }
                 }
             }
         }
+    }
+
+    public function test_value_typed_policies_embed_their_settings(): void
+    {
+        // Forced homepage: the URL travels as a REG_SZ.
+        $op = BrowserPolicyType::ForceHomepage->operationFor(Browser::Chrome, 'disable', ['url' => 'https://intranet.acme.com']);
+        $this->assertSame(
+            ['kind' => 'registry_sz', 'path' => 'SOFTWARE\\Policies\\Google\\Chrome', 'name' => 'HomepageLocation', 'value' => 'https://intranet.acme.com'],
+            $op,
+        );
+
+        // Forcelist: id becomes "<id>;<web store update url>", per browser root.
+        $op = BrowserPolicyType::ForceInstallExtensions->operationFor(Browser::Edge, 'disable', ['ids' => ['cjpalhdlnbpafiamejdnhcphjbkeiagm']]);
+        $this->assertSame('registry_list', $op['kind']);
+        $this->assertSame('SOFTWARE\\Policies\\Microsoft\\Edge\\ExtensionInstallForcelist', $op['path']);
+        $this->assertSame(['cjpalhdlnbpafiamejdnhcphjbkeiagm;https://clients2.google.com/service/update2/crx'], $op['values']);
+
+        // Block-all installs needs no settings at all.
+        $op = BrowserPolicyType::BlockExtensionInstalls->operationFor(Browser::Brave, 'disable');
+        $this->assertSame(['*'], $op['values']);
+
+        // New-tab URL is honestly unsupported on Brave.
+        $this->assertSame('unsupported', BrowserPolicyType::ForceNewTabUrl->operationFor(Browser::Brave, 'disable')['kind']);
     }
 
     public function test_supported_browsers_reflects_the_operation_map(): void
@@ -116,6 +150,49 @@ class BrowserPolicyCatalogTest extends TestCase
 
         // Session-only cookies use DefaultCookiesSetting 4.
         $this->assertSame(4, BrowserPolicyType::ClearCookiesOnExit->operationFor(Browser::Edge, 'disable')['value']);
+    }
+
+    public function test_the_form_saves_a_value_typed_policy_and_the_agent_document_carries_it(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
+        $project = \App\Models\Project::factory()->create();
+        $computer = \App\Models\Computer::factory()->create(['project_id' => $project->id]);
+
+        Livewire::actingAs($admin)
+            ->test(BrowserPolicyForm::class)
+            ->set('name', 'Intranet homepage')
+            ->set('project_id', $project->id)
+            ->set('type', 'force_homepage')
+            ->set('value_url', 'https://intranet.acme.com')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $policy = \App\Models\BrowserPolicy::firstOrFail();
+        $this->assertSame(['url' => 'https://intranet.acme.com'], $policy->settings);
+
+        $document = app(\App\Services\BrowserPolicyService::class)->documentFor($computer);
+        $chromeOp = $document['policies'][0]['operations']['chrome'];
+        $this->assertSame('registry_sz', $chromeOp['kind']);
+        $this->assertSame('https://intranet.acme.com', $chromeOp['value']);
+    }
+
+    public function test_the_form_rejects_a_malformed_extension_id(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
+        $project = \App\Models\Project::factory()->create();
+
+        Livewire::actingAs($admin)
+            ->test(BrowserPolicyForm::class)
+            ->set('name', 'Force uBlock')
+            ->set('project_id', $project->id)
+            ->set('type', 'force_install_extensions')
+            ->set('value_ids', "cjpalhdlnbpafiamejdnhcphjbkeiagm\nnot-a-real-id")
+            ->call('save')
+            ->assertHasErrors('value_ids');
+
+        $this->assertDatabaseCount('browser_policies', 0);
     }
 
     public function test_the_form_lists_policies_grouped_by_category(): void

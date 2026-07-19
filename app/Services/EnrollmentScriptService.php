@@ -18,7 +18,7 @@ class EnrollmentScriptService
      * agent/src/PioDeploy.Agent/PioDeploy.Agent.csproj — it is what makes
      * the GPO script upgrade an already-enrolled fleet rather than skip it.
      */
-    public const CURRENT_AGENT_VERSION = '1.3.5';
+    public const CURRENT_AGENT_VERSION = '1.4.0';
 
     /** Shown when the operator has not pasted their key yet. */
     public const KEY_PLACEHOLDER = 'pio_PASTE_YOUR_PROJECT_API_KEY_HERE';

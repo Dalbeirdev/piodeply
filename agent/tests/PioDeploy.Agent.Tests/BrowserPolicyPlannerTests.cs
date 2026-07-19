@@ -32,6 +32,63 @@ public class BrowserPolicyPlannerTests
     }
 
     [Fact]
+    public void ShrinkingAListRemovesOnlyTheStaleNumberedEntries()
+    {
+        // A forcelist that had three extensions now wants two: entry "3"
+        // must be deleted, "1" and "2" kept — pure manifest diff.
+        const string path = @"SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist";
+
+        var previous = new BrowserPolicyManifest
+        {
+            RegistryValues =
+            [
+                new ManagedRegistryValue { Path = path, Name = "1" },
+                new ManagedRegistryValue { Path = path, Name = "2" },
+                new ManagedRegistryValue { Path = path, Name = "3" },
+            ],
+        };
+
+        var desired = new[]
+        {
+            new ManagedRegistryValue { Path = path, Name = "1" },
+            new ManagedRegistryValue { Path = path, Name = "2" },
+        };
+
+        var stale = BrowserPolicyPlanner.RegistryValuesToRemove(previous, desired);
+
+        Assert.Single(stale);
+        Assert.Equal("3", stale[0].Name);
+    }
+
+    /* ── Operation payload parsing (registry_sz / registry_list) ──────── */
+
+    [Fact]
+    public void DeserializesStringAndListOperations()
+    {
+        const string json = """
+        {
+            "policies": [{
+                "policy_id": 7,
+                "type": "force_homepage",
+                "action": "disable",
+                "operations": {
+                    "chrome": { "kind": "registry_sz", "path": "SOFTWARE\\Policies\\Google\\Chrome", "name": "HomepageLocation", "value": "https://intranet.example.com" },
+                    "edge": { "kind": "registry_list", "path": "SOFTWARE\\Policies\\Microsoft\\Edge\\ExtensionInstallForcelist", "values": ["abc;https://example.com/crx", "def;https://example.com/crx"] }
+                }
+            }]
+        }
+        """;
+
+        var document = System.Text.Json.JsonSerializer.Deserialize<BrowserPolicyDocument>(json)!;
+        var operations = document.Policies[0].Operations;
+
+        Assert.Equal("https://intranet.example.com", operations["chrome"].StringValue());
+        Assert.Equal("registry_sz", operations["chrome"].Kind);
+        Assert.Equal(2, operations["edge"].Values!.Count);
+        Assert.StartsWith("abc;", operations["edge"].Values![0]);
+    }
+
+    [Fact]
     public void RegistryComparisonIsCaseInsensitive()
     {
         var previous = new BrowserPolicyManifest

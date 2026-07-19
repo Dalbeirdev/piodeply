@@ -28,6 +28,11 @@ class BrowserPolicyForm extends Component
 
     public ?string $description = null;
 
+    /** Value-typed payloads: a URL, or extension ids one per line. */
+    public string $value_url = '';
+
+    public string $value_ids = '';
+
     public function mount(?BrowserPolicy $policy = null): void
     {
         if ($policy !== null && $policy->exists) {
@@ -40,6 +45,8 @@ class BrowserPolicyForm extends Component
             $this->action = $policy->action;
             $this->status = $policy->status;
             $this->description = $policy->description;
+            $this->value_url = $policy->settings['url'] ?? '';
+            $this->value_ids = implode("\n", $policy->settings['ids'] ?? []);
         } else {
             $this->authorize('create', BrowserPolicy::class);
         }
@@ -48,6 +55,8 @@ class BrowserPolicyForm extends Component
     public function save()
     {
         $this->authorize($this->policy ? 'update' : 'create', $this->policy ?? BrowserPolicy::class);
+
+        $valueKind = BrowserPolicyType::tryFrom($this->type)?->valueKind();
 
         $validated = $this->validate([
             'name'        => ['required', 'string', 'max:255'],
@@ -58,12 +67,42 @@ class BrowserPolicyForm extends Component
             'action'      => ['required', Rule::in(BrowserPolicy::ACTIONS)],
             'status'      => ['required', Rule::in(BrowserPolicy::STATUSES)],
             'description' => ['nullable', 'string', 'max:1000'],
-        ], [], ['project_id' => 'project']);
+            'value_url'   => [Rule::requiredIf($valueKind === 'url'), 'nullable', 'url:http,https', 'max:500'],
+            'value_ids'   => [Rule::requiredIf($valueKind === 'ids'), 'nullable', 'string', 'max:4000'],
+        ], [
+            'value_url.required' => 'This policy needs the URL to enforce.',
+            'value_ids.required' => 'List at least one extension ID (one per line).',
+        ], ['project_id' => 'project', 'value_url' => 'URL', 'value_ids' => 'extension IDs']);
 
         // "All browsers" swallows individual selections.
         $validated['browsers'] = in_array('all', $validated['browsers'], true)
             ? ['all']
             : array_values($validated['browsers']);
+
+        // The value payload, shaped for the type. Chrome Web Store ids are
+        // 32 letters a–p; rejecting anything else stops a typo becoming a
+        // registry entry no browser will ever match.
+        $settings = null;
+        if ($valueKind === 'url') {
+            $settings = ['url' => trim($this->value_url)];
+        } elseif ($valueKind === 'ids') {
+            $ids = collect(preg_split('/\R+/', trim($this->value_ids)))
+                ->map(fn ($id) => strtolower(trim($id)))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $invalid = $ids->first(fn ($id) => preg_match('/^[a-p]{32}$/', $id) !== 1);
+            if ($invalid !== null) {
+                $this->addError('value_ids', "\"{$invalid}\" is not a valid extension ID (32 letters a–p, from the Web Store URL).");
+
+                return null;
+            }
+
+            $settings = ['ids' => $ids->all()];
+        }
+        $validated['settings'] = $settings;
+        unset($validated['value_url'], $validated['value_ids']);
 
         // One rule per project+type — two policies fighting over the same
         // registry value would be a conflict, not a configuration.

@@ -59,6 +59,14 @@ public sealed class BrowserPolicyEnforcer : IBrowserPolicyEnforcer
                         results.Add(ApplyRegistry(policy.PolicyId, browser, operation, manifest));
                         break;
 
+                    case "registry_sz":
+                        results.Add(ApplyRegistryString(policy.PolicyId, browser, operation, manifest));
+                        break;
+
+                    case "registry_list":
+                        results.Add(ApplyRegistryList(policy.PolicyId, browser, operation, manifest));
+                        break;
+
                     case "firefox_json":
                         // Firefox writes are batched into one file update below.
                         firefoxSetKeys[operation.Key!] = operation.BoolValue();
@@ -148,6 +156,137 @@ public sealed class BrowserPolicyEnforcer : IBrowserPolicyEnforcer
             report.Status = "error";
             report.Detail = Truncate(ex.Message, 450);
             _logger.LogWarning(ex, "Browser policy registry apply failed for {Browser}", browser);
+        }
+
+        return report;
+    }
+
+    /// <summary>REG_SZ policies (homepage URL, new-tab URL…). Same manifest
+    /// flow as DWORDs, so deletion/rollback needs nothing new.</summary>
+    private BrowserPolicyResultReport ApplyRegistryString(long policyId, string browser, BrowserOperation operation, BrowserPolicyManifest manifest)
+    {
+        var report = new BrowserPolicyResultReport { PolicyId = policyId, Browser = browser };
+
+        try
+        {
+            manifest.RegistryValues.Add(new ManagedRegistryValue { Path = operation.Path!, Name = operation.Name! });
+
+            if (!IsBrowserInstalled(browser))
+            {
+                report.Status = "not_installed";
+                report.Detail = "Browser not detected on this machine.";
+                return report;
+            }
+
+            var desired = operation.StringValue();
+
+            using var key = Registry.LocalMachine.CreateSubKey(operation.Path!, writable: true)
+                ?? throw new InvalidOperationException($"Cannot open HKLM\\{operation.Path}");
+
+            var before = key.GetValue(operation.Name!);
+            var changed = before is not string current || !string.Equals(current, desired, StringComparison.Ordinal);
+
+            if (changed)
+            {
+                key.SetValue(operation.Name!, desired, RegistryValueKind.String);
+                _logger.LogInformation("Browser policy: HKLM\\{Path}\\{Name} = \"{Value}\" (was {Before})",
+                    operation.Path, operation.Name, desired, before ?? "unset");
+            }
+
+            var after = key.GetValue(operation.Name!);
+            var correct = after is string verified && string.Equals(verified, desired, StringComparison.Ordinal);
+
+            report.OldValue = before?.ToString();
+            report.NewValue = after?.ToString();
+            report.Status = BrowserPolicyPlanner.StatusFor(
+                installed: true,
+                supported: true,
+                valueCorrect: correct,
+                changedThisRun: changed,
+                browserRunning: IsBrowserRunning(browser));
+            if (!correct)
+            {
+                report.Detail = "Verification failed: value did not persist.";
+            }
+        }
+        catch (Exception ex)
+        {
+            report.Status = "error";
+            report.Detail = Truncate(ex.Message, 450);
+            _logger.LogWarning(ex, "Browser policy registry_sz apply failed for {Browser}", browser);
+        }
+
+        return report;
+    }
+
+    /// <summary>Chromium list policies (ExtensionInstallBlocklist,
+    /// ExtensionInstallForcelist…): entries live as numbered REG_SZ values
+    /// "1".."N" under the policy subkey. Each entry is tracked in the
+    /// manifest individually, so when a list shrinks — or the policy goes —
+    /// the ordinary manifest diff deletes exactly the stale numbers.</summary>
+    private BrowserPolicyResultReport ApplyRegistryList(long policyId, string browser, BrowserOperation operation, BrowserPolicyManifest manifest)
+    {
+        var report = new BrowserPolicyResultReport { PolicyId = policyId, Browser = browser };
+
+        try
+        {
+            var entries = operation.Values ?? [];
+
+            for (var i = 1; i <= entries.Count; i++)
+            {
+                manifest.RegistryValues.Add(new ManagedRegistryValue { Path = operation.Path!, Name = i.ToString() });
+            }
+
+            if (!IsBrowserInstalled(browser))
+            {
+                report.Status = "not_installed";
+                report.Detail = "Browser not detected on this machine.";
+                return report;
+            }
+
+            using var key = Registry.LocalMachine.CreateSubKey(operation.Path!, writable: true)
+                ?? throw new InvalidOperationException($"Cannot open HKLM\\{operation.Path}");
+
+            var changed = false;
+            var correct = true;
+
+            for (var i = 1; i <= entries.Count; i++)
+            {
+                var name = i.ToString();
+                var desired = entries[i - 1];
+                var before = key.GetValue(name);
+
+                if (before is not string current || !string.Equals(current, desired, StringComparison.Ordinal))
+                {
+                    key.SetValue(name, desired, RegistryValueKind.String);
+                    changed = true;
+                }
+
+                correct &= key.GetValue(name) is string verified && string.Equals(verified, desired, StringComparison.Ordinal);
+            }
+
+            if (changed)
+            {
+                _logger.LogInformation("Browser policy: HKLM\\{Path} list set to {Count} entries", operation.Path, entries.Count);
+            }
+
+            report.NewValue = string.Join(", ", entries);
+            report.Status = BrowserPolicyPlanner.StatusFor(
+                installed: true,
+                supported: true,
+                valueCorrect: correct,
+                changedThisRun: changed,
+                browserRunning: IsBrowserRunning(browser));
+            if (!correct)
+            {
+                report.Detail = "Verification failed: one or more list entries did not persist.";
+            }
+        }
+        catch (Exception ex)
+        {
+            report.Status = "error";
+            report.Detail = Truncate(ex.Message, 450);
+            _logger.LogWarning(ex, "Browser policy registry_list apply failed for {Browser}", browser);
         }
 
         return report;

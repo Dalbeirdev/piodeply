@@ -72,6 +72,14 @@ enum BrowserPolicyType: string
     // ── Printing ─────────────────────────────────────────────────────────
     case DisablePrinting = 'disable_printing';
 
+    // ── Homepage & Startup (value-typed: settings.url) ───────────────────
+    case ForceHomepage = 'force_homepage';
+    case ForceNewTabUrl = 'force_new_tab_url';
+
+    // ── Extensions ───────────────────────────────────────────────────────
+    case BlockExtensionInstalls = 'block_extension_installs';
+    case ForceInstallExtensions = 'force_install_extensions'; // settings.ids
+
     // ── Browser Lockdown ─────────────────────────────────────────────────
     case DisableBrowsingHistory = 'disable_browsing_history';
     case DisableBookmarkEditing = 'disable_bookmark_editing';
@@ -96,8 +104,8 @@ enum BrowserPolicyType: string
         'Password Management', 'Private Browsing', 'Autofill', 'Browser Sync & Sign-in',
         'Developer Tools', 'Browser Security', 'Downloads', 'Cookies',
         'Notifications & Popups', 'Location', 'Camera & Microphone', 'Clipboard',
-        'Printing', 'Browser Lockdown', 'AI Features', 'Sidebar & Feeds',
-        'Advanced Enterprise',
+        'Printing', 'Homepage & Startup', 'Extensions', 'Browser Lockdown',
+        'AI Features', 'Sidebar & Feeds', 'Advanced Enterprise',
     ];
 
     /** @return list<string> */
@@ -136,6 +144,8 @@ enum BrowserPolicyType: string
             self::DisableCamera, self::DisableMicrophone => 'Camera & Microphone',
             self::DisableClipboard => 'Clipboard',
             self::DisablePrinting => 'Printing',
+            self::ForceHomepage, self::ForceNewTabUrl => 'Homepage & Startup',
+            self::BlockExtensionInstalls, self::ForceInstallExtensions => 'Extensions',
             self::DisableBrowsingHistory, self::DisableBookmarkEditing => 'Browser Lockdown',
             self::DisableAiAssistants => 'AI Features',
             self::DisableShoppingAssistant, self::DisableNewTabFeed,
@@ -168,6 +178,10 @@ enum BrowserPolicyType: string
             self::DisableMicrophone => 'Microphone access',
             self::DisableClipboard => 'Clipboard access',
             self::DisablePrinting => 'Printing',
+            self::ForceHomepage => 'Forced homepage URL',
+            self::ForceNewTabUrl => 'Forced new-tab URL',
+            self::BlockExtensionInstalls => 'Extension installation',
+            self::ForceInstallExtensions => 'Force-installed extensions',
             self::DisableBrowsingHistory => 'Browsing history',
             self::DisableBookmarkEditing => 'Bookmark editing',
             self::DisableAiAssistants => 'AI assistants (Gemini / Copilot / Leo)',
@@ -206,6 +220,10 @@ enum BrowserPolicyType: string
             self::DisableMicrophone => 'Blocks websites from accessing the microphone.',
             self::DisableClipboard => 'Blocks websites from reading the system clipboard.',
             self::DisablePrinting => 'Disables printing from the browser.',
+            self::ForceHomepage => 'Locks the browser homepage to the URL you set — users cannot change it.',
+            self::ForceNewTabUrl => 'Makes new tabs open the URL you set instead of the default new-tab page.',
+            self::BlockExtensionInstalls => 'Blocks users from installing any browser extension.',
+            self::ForceInstallExtensions => 'Silently installs and pins the extensions you list (users cannot remove them).',
             self::DisableBrowsingHistory => 'Stops the browser from saving any browsing history.',
             self::DisableBookmarkEditing => 'Prevents users from adding, editing or removing bookmarks.',
             self::DisableAiAssistants => 'Disables built-in AI assistants: Gemini (Chrome), the Copilot sidebar (Edge) and Leo (Brave).',
@@ -224,6 +242,21 @@ enum BrowserPolicyType: string
     public function requiresRestart(): bool
     {
         return true;
+    }
+
+    /**
+     * What extra input this policy needs from the admin, if any:
+     * 'url' (a single URL), 'ids' (a list of extension ids), or null for
+     * plain toggles. Value-typed policies always enforce — removing them is
+     * done by deleting/deactivating the policy (the agent rolls back).
+     */
+    public function valueKind(): ?string
+    {
+        return match ($this) {
+            self::ForceHomepage, self::ForceNewTabUrl => 'url',
+            self::ForceInstallExtensions => 'ids',
+            default => null,
+        };
     }
 
     /** The agent enforces via the Windows registry / Firefox policies file. */
@@ -249,10 +282,13 @@ enum BrowserPolicyType: string
     /**
      * The concrete operation for one browser under enable/disable.
      * "disable" applies the restriction; "enable" explicitly allows.
+     * Value-typed policies read their payload from $settings and always
+     * enforce regardless of action (removal = delete the policy).
      *
-     * @return array{kind: string, path?: string, name?: string, value?: int|bool, key?: string}
+     * @param  array{url?: string, ids?: list<string>}|null  $settings
+     * @return array{kind: string, path?: string, name?: string, value?: int|bool|string, values?: list<string>, key?: string}
      */
-    public function operationFor(Browser $browser, string $action): array
+    public function operationFor(Browser $browser, string $action, ?array $settings = null): array
     {
         $disable = $action === 'disable';
 
@@ -314,6 +350,38 @@ enum BrowserPolicyType: string
             self::DisableClipboard => self::chromiumOnly($browser, 'DefaultClipboardSetting', $disable ? 2 : 1),
 
             self::DisablePrinting => self::chromiumOnly($browser, 'PrintingEnabled', $disable ? 0 : 1),
+
+            self::ForceHomepage => match ($browser) {
+                Browser::Chrome => self::registrySz(self::CHROME, 'HomepageLocation', $settings['url'] ?? ''),
+                Browser::Edge => self::registrySz(self::EDGE, 'HomepageLocation', $settings['url'] ?? ''),
+                Browser::Brave => self::registrySz(self::BRAVE, 'HomepageLocation', $settings['url'] ?? ''),
+                Browser::Firefox, Browser::Opera => self::unsupported(),
+            },
+
+            // Brave keeps its own new-tab experience; the policy is ignored
+            // there, so it is honestly unsupported rather than silently inert.
+            self::ForceNewTabUrl => match ($browser) {
+                Browser::Chrome => self::registrySz(self::CHROME, 'NewTabPageLocation', $settings['url'] ?? ''),
+                Browser::Edge => self::registrySz(self::EDGE, 'NewTabPageLocation', $settings['url'] ?? ''),
+                Browser::Brave, Browser::Firefox, Browser::Opera => self::unsupported(),
+            },
+
+            // "*" in the blocklist forbids every extension install.
+            self::BlockExtensionInstalls => match ($browser) {
+                Browser::Chrome => self::registryList(self::CHROME.'\\ExtensionInstallBlocklist', ['*']),
+                Browser::Edge => self::registryList(self::EDGE.'\\ExtensionInstallBlocklist', ['*']),
+                Browser::Brave => self::registryList(self::BRAVE.'\\ExtensionInstallBlocklist', ['*']),
+                Browser::Firefox, Browser::Opera => self::unsupported(),
+            },
+
+            // Forcelist entries are "<id>;<update url>" — all three Chromium
+            // browsers can force-install Chrome Web Store extensions.
+            self::ForceInstallExtensions => match ($browser) {
+                Browser::Chrome => self::registryList(self::CHROME.'\\ExtensionInstallForcelist', self::forcelist($settings)),
+                Browser::Edge => self::registryList(self::EDGE.'\\ExtensionInstallForcelist', self::forcelist($settings)),
+                Browser::Brave => self::registryList(self::BRAVE.'\\ExtensionInstallForcelist', self::forcelist($settings)),
+                Browser::Firefox, Browser::Opera => self::unsupported(),
+            },
 
             self::DisableBrowsingHistory => self::chromiumOnly($browser, 'SavingBrowserHistoryDisabled', $disable ? 1 : 0),
             self::DisableBookmarkEditing => self::chromiumOnly($browser, 'EditBookmarksEnabled', $disable ? 0 : 1),
@@ -377,6 +445,30 @@ enum BrowserPolicyType: string
     private static function registry(string $path, string $name, int $value): array
     {
         return ['kind' => 'registry', 'path' => $path, 'name' => $name, 'value' => $value];
+    }
+
+    private static function registrySz(string $path, string $name, string $value): array
+    {
+        return ['kind' => 'registry_sz', 'path' => $path, 'name' => $name, 'value' => $value];
+    }
+
+    /** @param list<string> $values */
+    private static function registryList(string $path, array $values): array
+    {
+        return ['kind' => 'registry_list', 'path' => $path, 'values' => $values];
+    }
+
+    /**
+     * "<extension id>;<Chrome Web Store update url>" per forcelist entry.
+     *
+     * @return list<string>
+     */
+    private static function forcelist(?array $settings): array
+    {
+        return array_values(array_map(
+            fn (string $id) => $id.';https://clients2.google.com/service/update2/crx',
+            $settings['ids'] ?? [],
+        ));
     }
 
     private static function firefox(string $key, bool $value): array

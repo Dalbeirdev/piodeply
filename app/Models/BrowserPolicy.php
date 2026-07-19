@@ -23,7 +23,7 @@ class BrowserPolicy extends Model
 
     protected $fillable = [
         'name', 'project_id', 'type', 'browsers', 'action',
-        'status', 'description', 'created_by',
+        'settings', 'status', 'description', 'created_by',
     ];
 
     protected function casts(): array
@@ -31,6 +31,7 @@ class BrowserPolicy extends Model
         return [
             'type'     => BrowserPolicyType::class,
             'browsers' => 'array',
+            'settings' => 'array',
         ];
     }
 
@@ -74,9 +75,17 @@ class BrowserPolicy extends Model
         )));
     }
 
-    /** e.g. "Disable incognito / private browsing". */
+    /**
+     * e.g. "Disable incognito / private browsing". Value-typed policies
+     * (forced homepage, forcelist) carry no meaningful enable/disable, so
+     * they read as their own label.
+     */
     public function label(): string
     {
+        if ($this->type->valueKind() !== null) {
+            return $this->type->label();
+        }
+
         return ucfirst($this->action) . ' ' . lcfirst($this->type->label());
     }
 
@@ -89,7 +98,7 @@ class BrowserPolicy extends Model
     {
         $map = [];
         foreach ($this->targetBrowsers() as $browser) {
-            $map[$browser->value] = $this->type->operationFor($browser, $this->action);
+            $map[$browser->value] = $this->type->operationFor($browser, $this->action, $this->settings);
         }
 
         return $map;

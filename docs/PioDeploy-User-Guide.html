@@ -300,12 +300,15 @@
     <tr><td>Browser Security</td><td>Developer tools, QUIC, screen capture</td></tr>
     <tr><td>Downloads &amp; Cookies</td><td>Block all downloads, third-party cookies, session-only cookies</td></tr>
     <tr><td>Site Permissions</td><td>Notifications, pop-ups, location, camera, microphone, clipboard</td></tr>
+    <tr><td>Homepage &amp; Startup</td><td>Forced homepage URL, forced new-tab URL</td></tr>
+    <tr><td>Extensions</td><td>Block all installs, force-install extensions by ID</td></tr>
     <tr><td>Lockdown</td><td>Printing, browsing history, bookmark editing</td></tr>
     <tr><td>AI &amp; Extras</td><td>Gemini / Copilot / Leo, shopping assistant, new-tab feed, Rewards, games</td></tr>
     <tr><td>Advanced</td><td>Translate, WebUSB, WebBluetooth, WebSerial</td></tr>
   </table>
   <p><span class="num">3</span> Choose browsers (or <b>All</b>) and set <b>Active</b>. Save.</p>
   <p>The agent applies the corresponding registry values (Chrome/Edge/Brave) or <code>policies.json</code> (Firefox) silently. Browsers already open show "pending restart" until reopened. Deleting the policy rolls the setting back automatically.</p>
+  <div class="callout"><b>Value policies need agent 1.4.0+.</b> Policies that carry a value — a forced homepage/new-tab URL or a force-installed extension list — use new operation types the agent learned in <b>1.4.0</b>. Older agents report them as "unsupported" until they self-update on their next check-in. For extensions, enter the 32-letter ID from the Chrome Web Store URL (one per line); forced extensions install silently and cannot be removed by users.</div>
   <h3>Policy templates</h3>
   <p>From <b>Browser Policies → Templates</b>, apply a whole bundle in one click. Seven built-in templates ship with the platform — <b>High Security</b>, <b>Standard Office</b>, <b>Developer</b>, <b>Kiosk</b>, <b>Finance</b>, <b>Healthcare</b> and <b>Education</b> — each creating its policies on the chosen project (types the project already has are skipped, never overwritten). You can also <b>save any project's current policies as a custom template</b> and reuse it across clients.</p>
   <h3>Compliance dashboard</h3>

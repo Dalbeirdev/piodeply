@@ -14,7 +14,8 @@ public sealed class BrowserPolicyItem
     [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
     [JsonPropertyName("action")] public string Action { get; set; } = "disable";
 
-    /// <summary>Browser value → operation. Kinds: registry, firefox_json, unsupported.</summary>
+    /// <summary>Browser value → operation. Kinds: registry, registry_sz,
+    /// registry_list, firefox_json, unsupported.</summary>
     [JsonPropertyName("operations")] public Dictionary<string, BrowserOperation> Operations { get; set; } = [];
 }
 
@@ -22,10 +23,14 @@ public sealed class BrowserOperation
 {
     [JsonPropertyName("kind")] public string Kind { get; set; } = string.Empty;
 
-    // registry
+    // registry / registry_sz
     [JsonPropertyName("path")] public string? Path { get; set; }
     [JsonPropertyName("name")] public string? Name { get; set; }
     [JsonPropertyName("value")] public System.Text.Json.JsonElement? Value { get; set; }
+
+    // registry_list — string entries written as numbered values "1".."N"
+    // directly under Path (the Chromium list-policy convention).
+    [JsonPropertyName("values")] public List<string>? Values { get; set; }
 
     // firefox_json
     [JsonPropertyName("key")] public string? Key { get; set; }
@@ -33,6 +38,8 @@ public sealed class BrowserOperation
     public int RegistryValue() => Value?.GetInt32() ?? 0;
 
     public bool BoolValue() => Value?.GetBoolean() ?? false;
+
+    public string StringValue() => Value?.GetString() ?? string.Empty;
 }
 
 public sealed class BrowserPolicyResultReport

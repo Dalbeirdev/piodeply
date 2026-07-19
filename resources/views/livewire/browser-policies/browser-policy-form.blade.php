@@ -44,15 +44,39 @@
                         <x-input-error for="type" class="mt-1" />
                     </div>
                     <div>
-                        <x-label for="action" value="Action" />
-                        <select id="action" wire:model="action"
-                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
-                            <option value="disable">Disable — block the feature</option>
-                            <option value="enable">Enable — explicitly allow it</option>
-                        </select>
-                        <x-input-error for="action" class="mt-1" />
+                        @if ($selectedType?->valueKind() === null)
+                            <x-label for="action" value="Action" />
+                            <select id="action" wire:model="action"
+                                    class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                                <option value="disable">Disable — block the feature</option>
+                                <option value="enable">Enable — explicitly allow it</option>
+                            </select>
+                            <x-input-error for="action" class="mt-1" />
+                        @else
+                            {{-- Value policies always enforce; removal = delete the policy. --}}
+                            <x-label value="Action" />
+                            <p class="mt-2.5 text-sm text-slate-500">Enforced while active — delete or deactivate the policy to roll it back.</p>
+                        @endif
                     </div>
                 </div>
+
+                @if ($selectedType?->valueKind() === 'url')
+                    <div>
+                        <x-label for="value_url" value="URL to enforce" />
+                        <x-input id="value_url" type="url" class="mt-1 block w-full" wire:model="value_url"
+                                 placeholder="https://intranet.example.com" />
+                        <x-input-error for="value_url" class="mt-1" />
+                    </div>
+                @elseif ($selectedType?->valueKind() === 'ids')
+                    <div>
+                        <x-label for="value_ids" value="Extension IDs (one per line)" />
+                        <textarea id="value_ids" rows="3" wire:model="value_ids"
+                                  placeholder="cjpalhdlnbpafiamejdnhcphjbkeiagm"
+                                  class="mt-1 block w-full font-mono text-sm border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm"></textarea>
+                        <p class="mt-1 text-xs text-slate-500">The 32-letter ID from the Chrome Web Store URL. Extensions install silently and cannot be removed by users.</p>
+                        <x-input-error for="value_ids" class="mt-1" />
+                    </div>
+                @endif
 
                 @if ($selectedType)
                     <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm">
