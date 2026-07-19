@@ -3,8 +3,46 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', $company . ' — Software deployment & policy management for MSPs')</title>
-    <meta name="description" content="@yield('meta', 'Deploy, update and lock down software across your entire Windows fleet from one portal. Silent installs, desired-state policies, real-time compliance.')">
+    @php
+        // Shared defaults so the <title>, Open Graph and Twitter tags never
+        // drift apart; pages override via @section('title') / @section('meta').
+        $defaultTitle = $company . ' — Software deployment & policy management for MSPs';
+        $defaultMeta  = 'Deploy, update and lock down software across your entire Windows fleet from one portal. Silent installs, desired-state policies, real-time compliance.';
+        $ogImage      = asset('img/og-image.png');
+        $canonical    = url()->current();
+    @endphp
+    <title>@yield('title', $defaultTitle)</title>
+    <meta name="description" content="@yield('meta', $defaultMeta)">
+    <link rel="canonical" href="{{ $canonical }}">
+    <meta name="theme-color" content="#0d9488">
+
+    {{-- Open Graph (LinkedIn, Facebook, Slack, WhatsApp) --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $company }}">
+    <meta property="og:title" content="@yield('title', $defaultTitle)">
+    <meta property="og:description" content="@yield('meta', $defaultMeta)">
+    <meta property="og:url" content="{{ $canonical }}">
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    {{-- Twitter / X --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('title', $defaultTitle)">
+    <meta name="twitter:description" content="@yield('meta', $defaultMeta)">
+    <meta name="twitter:image" content="{{ $ogImage }}">
+
+    {{-- Structured data: the company site-wide, plus anything a page pushes. --}}
+    <script type="application/ld+json">{!! json_encode([
+        '@context' => 'https://schema.org',
+        '@type'    => 'Organization',
+        'name'     => $company,
+        'url'      => config('app.url'),
+        'logo'     => asset('img/piodeploy-logo.svg'),
+        'description' => $defaultMeta,
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    @stack('jsonld')
+
     <link rel="preconnect" href="{{ url('/') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

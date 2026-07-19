@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 
 // Public marketing site.
 Route::get('/', [\App\Http\Controllers\MarketingController::class, 'home'])->name('home');
+Route::get('/sitemap.xml', [\App\Http\Controllers\SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [\App\Http\Controllers\SeoController::class, 'robots'])->name('robots');
+
 Route::get('/features', [\App\Http\Controllers\MarketingController::class, 'features'])->name('features');
 Route::get('/about', [\App\Http\Controllers\MarketingController::class, 'about'])->name('about');
 Route::get('/pricing', [\App\Http\Controllers\MarketingController::class, 'pricing'])->name('pricing');

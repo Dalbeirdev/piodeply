@@ -56,4 +56,16 @@
             or read <a href="{{ route('about') }}" class="tlink">why we built PioDeploy</a>.</p>
     </div>
 </section>
+
+@push('jsonld')
+<script type="application/ld+json">{!! json_encode([
+    '@context'   => 'https://schema.org',
+    '@type'      => 'FAQPage',
+    'mainEntity' => collect($faqs)->map(fn ($f) => [
+        '@type' => 'Question',
+        'name'  => $f[0],
+        'acceptedAnswer' => ['@type' => 'Answer', 'text' => strip_tags($f[1])],
+    ])->all(),
+], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+@endpush
 @endsection
