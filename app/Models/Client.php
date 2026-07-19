@@ -22,7 +22,7 @@ class Client extends Model
     protected $fillable = [
         'company_name', 'email', 'phone',
         'address_line1', 'address_line2', 'city', 'state', 'postal_code', 'country',
-        'timezone', 'logo_path', 'status',
+        'timezone', 'logo_path', 'status', 'monthly_report',
         'billing_email', 'billing_address', 'billing_tax_id',
         'notes',
     ];
@@ -31,6 +31,7 @@ class Client extends Model
     {
         return [
             'status' => ClientStatus::class,
+            'monthly_report' => 'boolean',
         ];
     }
 

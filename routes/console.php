@@ -30,3 +30,6 @@ Schedule::command('billing:trial-reminders')->dailyAt('09:00');
 
 // Paced follow-ups for unpaid subscriptions (post-Stripe-retry dunning).
 Schedule::command('billing:dunning-reminders')->dailyAt('09:30');
+
+// Monthly compliance PDFs for opted-in clients.
+Schedule::command('reports:client-compliance')->monthlyOn(1, '07:00');

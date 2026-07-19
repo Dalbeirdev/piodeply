@@ -1,8 +1,14 @@
 <div wire:poll.30s>
     <x-slot name="header">
-        <div>
-            <h2 class="font-semibold text-xl text-slate-900 leading-tight">{{ $client->company_name }} — Portal</h2>
-            <p class="text-sm text-slate-500 mt-0.5">Your fleet, deployments and agent downloads</p>
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <h2 class="font-semibold text-xl text-slate-900 leading-tight">{{ $client->company_name }} — Portal</h2>
+                <p class="text-sm text-slate-500 mt-0.5">Your fleet, deployments and agent downloads</p>
+            </div>
+            <a href="{{ route('clients.compliance-report', $client) }}"
+               class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50 whitespace-nowrap">
+                Compliance report (PDF)
+            </a>
         </div>
     </x-slot>
 

@@ -40,6 +40,15 @@ class ClientsIndex extends Component
         $this->resetPage();
     }
 
+    /** Opt a client in/out of the monthly emailed compliance PDF. */
+    public function toggleMonthlyReport(int $clientId): void
+    {
+        $client = Client::findOrFail($clientId);
+        $this->authorize('update', $client);
+
+        $client->update(['monthly_report' => ! $client->monthly_report]);
+    }
+
     public function delete(int $clientId, ClientService $service): void
     {
         $client = Client::findOrFail($clientId);

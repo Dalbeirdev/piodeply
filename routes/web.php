@@ -154,6 +154,11 @@ Route::middleware([
         Route::get('/deployments/bulk', \App\Livewire\Deployments\BulkDeploy::class)->name('deployments.bulk');
     });
 
+    // The controller authorizes internally: staff need reports.view, while a
+    // client-portal user may download their own client's report.
+    Route::get('/clients/{client}/compliance-report', [\App\Http\Controllers\ClientComplianceReportController::class, 'download'])
+        ->name('clients.compliance-report');
+
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('/reports', \App\Livewire\Reports\ReportsIndex::class)->name('reports.index');
         Route::get('/reports/compliance', \App\Livewire\Reports\ComplianceReport::class)->name('reports.compliance');

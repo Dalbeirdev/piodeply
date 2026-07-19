@@ -102,7 +102,21 @@
                                             <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $client->id }})" />
                                         @endcan
                                     @else
+                                        @can('reports.view')
+                                            <a href="{{ route('clients.compliance-report', $client) }}"
+                                               class="inline-flex items-center text-xs font-semibold text-teal-700 hover:text-teal-600 mr-1"
+                                               title="Download this client's branded compliance PDF">
+                                                PDF
+                                            </a>
+                                        @endcan
                                         @can('update', $client)
+                                            <label class="inline-flex items-center gap-1 text-xs text-slate-500 mr-1 select-none"
+                                                   title="Email the compliance PDF to this client's portal users on the 1st of each month">
+                                                <input type="checkbox" @checked($client->monthly_report)
+                                                       wire:click="toggleMonthlyReport({{ $client->id }})"
+                                                       class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                                                Monthly
+                                            </label>
                                             <x-icon-button icon="edit" label="Edit" :href="route('clients.edit', $client)" />
                                         @endcan
                                         @can('delete', $client)
