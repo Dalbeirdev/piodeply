@@ -25,3 +25,5 @@ Thumbs.db
 
 /agent/publish-out
 composer.phar
+
+/.claude/
