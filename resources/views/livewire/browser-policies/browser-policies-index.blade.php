@@ -3,10 +3,16 @@
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Browser Policies') }}</h2>
             @can('create', \App\Models\BrowserPolicy::class)
-                <a href="{{ route('browser-policies.create') }}"
-                   class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
-                    New policy
-                </a>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('browser-policies.templates') }}"
+                       class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
+                        Templates
+                    </a>
+                    <a href="{{ route('browser-policies.create') }}"
+                       class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
+                        New policy
+                    </a>
+                </div>
             @endcan
         </div>
     </x-slot>

@@ -169,6 +169,8 @@ Route::middleware([
 
         Route::get('/browser-policies', \App\Livewire\BrowserPolicies\BrowserPoliciesIndex::class)->name('browser-policies.index');
         Route::get('/browser-policies/create', \App\Livewire\BrowserPolicies\BrowserPolicyForm::class)->name('browser-policies.create');
+        // Before {policy}, or "templates" would be swallowed by the binding.
+        Route::get('/browser-policies/templates', \App\Livewire\BrowserPolicies\BrowserPolicyTemplates::class)->name('browser-policies.templates');
         Route::get('/browser-policies/{policy}', \App\Livewire\BrowserPolicies\BrowserPolicyShow::class)->name('browser-policies.show');
         Route::get('/browser-policies/{policy}/edit', \App\Livewire\BrowserPolicies\BrowserPolicyForm::class)->name('browser-policies.edit');
     });
