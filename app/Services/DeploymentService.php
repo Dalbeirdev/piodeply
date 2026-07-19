@@ -76,6 +76,20 @@ class DeploymentService
         ?string $targetVersion = null,
         bool $force = false,
     ): QueueResult {
+        // The package's installer type has to be able to carry out the action
+        // at all. A rollback on an MSI, or an uninstall on a portable EXE, can
+        // never succeed — refuse it here instead of queueing three doomed
+        // attempts. This mirrors InstallerType's capability matrix.
+        if (! $package->installer_type->supports($action)) {
+            return new QueueResult(
+                QueueOutcome::Invalid,
+                null,
+                $action === JobAction::Rollback
+                    ? "{$package->name} is a {$package->installer_type->label()} package — rollback only works for winget and Chocolatey, which can reinstall a specific earlier version."
+                    : "{$package->name} is a {$package->installer_type->label()} package, which does not support {$action->label()}.",
+            );
+        }
+
         // Roll back to what? The agent can build no command from this, so the
         // job fails, retries twice more, and reports something unhelpful. The
         // policy engine never asks for this; only a hand-made request can.

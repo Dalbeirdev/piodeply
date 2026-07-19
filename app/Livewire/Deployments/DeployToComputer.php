@@ -37,6 +37,23 @@ class DeployToComputer extends Component
     }
 
     /**
+     * When the package changes, drop an action the new type can't perform
+     * (e.g. Rollback selected, then switched to an MSI) back to Install, and
+     * clear any pinned version so the form never offers a doomed job.
+     */
+    public function updatedPackageId(): void
+    {
+        $this->target_version = null;
+
+        $package = $this->package_id !== null ? Package::active()->find($this->package_id) : null;
+        $action = JobAction::tryFrom($this->action);
+
+        if ($package !== null && $action !== null && ! $package->installer_type->supports($action)) {
+            $this->action = JobAction::Install->value;
+        }
+    }
+
+    /**
      * The action deliberately does not follow the installed state. Flipping
      * to Update when a package is present would invite a job winget answers
      * with "no applicable upgrade" — the same pointless row this set of
@@ -98,7 +115,11 @@ class DeployToComputer extends Component
 
         return view('livewire.deployments.deploy-to-computer', [
             'packages'  => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
-            'actions'   => JobAction::cases(),
+            // Only offer actions the selected package's type can actually
+            // carry out — no Rollback on an MSI, no Uninstall on a portable EXE.
+            'actions'   => $package !== null
+                ? array_values(array_filter(JobAction::cases(), fn (JobAction $a) => $package->installer_type->supports($a)))
+                : JobAction::cases(),
             'package'   => $package,
             'state'     => $state,
             'satisfied' => $satisfied,

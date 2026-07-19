@@ -85,22 +85,15 @@ class MarketingSiteTest extends TestCase
             ->assertDontSee('Already a customer?');
     }
 
-    public function test_the_about_page_tells_the_story_in_motion(): void
+    public function test_the_about_page_shows_the_stat_strip(): void
     {
-        $response = $this->get('/about')->assertOk();
-
-        $html = $response->getContent();
-
-        // The grid the whole animation runs on: 8x3, each card carrying its
-        // paint order and its distance from the portal.
-        $this->assertSame(24, substr_count($html, '--i:'), 'expected a full 8x3 grid of machines');
-        $this->assertStringContainsString('data-story-caption', $html);
-
-        // The refusal is the point of this section — the three costs we would
-        // not pay are named, not implied.
-        foreach (['A domain', 'An imaging server', 'A six-figure contract'] as $cost) {
-            $response->assertSee($cost);
-        }
+        // The fragile animated grid was replaced with a plain, always-visible
+        // three-number stat strip. Assert the numbers and their labels.
+        $this->get('/about')->assertOk()
+            ->assertSee('story-stats', false)
+            ->assertSee('agent per machine')
+            ->assertSee('domains or imaging servers')
+            ->assertSee('silent, unattended installs');
     }
 
     /** The motion is decorative; the prose beside it has to carry the story. */

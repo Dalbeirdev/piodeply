@@ -172,13 +172,27 @@ class PolicyService
                 : $this->versionRemediation($policy, $state['version'])),
 
             PolicyAction::ForceUpdate => $state['present'] && $policy->desired_version !== null
-                ? ['action' => JobAction::Rollback, 'version' => $policy->desired_version]
+                ? $this->forceUpdateRemediation($policy)
                 : null,
 
             PolicyAction::Uninstall, PolicyAction::Block => $state['present']
                 ? ['action' => JobAction::Uninstall, 'version' => null]
                 : null,
         };
+    }
+
+    /**
+     * Force update on a package manager reinstalls the exact desired version
+     * (a rollback job). Binary installers cannot fetch an arbitrary version,
+     * so the honest action is to reinstall the package's current installer.
+     *
+     * @return array{action: JobAction, version: ?string}
+     */
+    private function forceUpdateRemediation(SoftwarePolicy $policy): array
+    {
+        return $policy->package->installer_type->supportsRollback()
+            ? ['action' => JobAction::Rollback, 'version' => $policy->desired_version]
+            : ['action' => JobAction::Install, 'version' => null];
     }
 
     /** @return array{action: JobAction, version: ?string}|null */
@@ -190,9 +204,13 @@ class PolicyService
 
         return match ($policy->version_mode) {
             // Exact and Freeze can mean a downgrade — the agent runs
-            // rollback as `winget install --version X --force`.
+            // rollback as `winget install --version X --force`. Only package
+            // managers can do this; on binary installers a specific earlier
+            // version is unreachable, so there is no remediation to queue.
             PolicyVersionMode::Exact,
-            PolicyVersionMode::Maximum => ['action' => JobAction::Rollback, 'version' => $policy->desired_version],
+            PolicyVersionMode::Maximum => $policy->package->installer_type->supportsRollback()
+                ? ['action' => JobAction::Rollback, 'version' => $policy->desired_version]
+                : null,
             PolicyVersionMode::Minimum => ['action' => JobAction::Update, 'version' => null],
             PolicyVersionMode::Latest => null,
         };

@@ -266,11 +266,20 @@
     <tr><td>Remove</td><td>Uninstall wherever it's found.</td></tr>
     <tr><td>Block</td><td>Forbidden software — removed whenever detected.</td></tr>
   </table>
+  <div class="callout"><b>Rollback &amp; exact-version pinning.</b> Rolling back — or pinning to an exact earlier version — means reinstalling a specific published build. Only <b>winget</b> and <b>Chocolatey</b> packages can do this: they fetch any version from their repository on demand. <b>MSI, EXE, ZIP, MSIX</b> and <b>portable</b> packages carry a single installer, so they cannot roll back — a <b>Force update</b> on those simply reinstalls the current version. PioDeploy only offers Rollback (and exact/maximum version pinning) for packages that support it.</div>
+  <table>
+    <tr><th>Package type</th><th>Install / Update</th><th>Remove (uninstall)</th><th>Rollback / pin exact version</th></tr>
+    <tr><td>winget</td><td>Yes</td><td>Yes</td><td>Yes*</td></tr>
+    <tr><td>Chocolatey</td><td>Yes</td><td>Yes</td><td>Yes*</td></tr>
+    <tr><td>MSI</td><td>Yes</td><td>Yes</td><td>No — reinstalls current</td></tr>
+    <tr><td>EXE / ZIP / MSIX / portable</td><td>Yes</td><td>No</td><td>No — reinstalls current</td></tr>
+  </table>
+  <p style="font-size:.86em;color:#64748b;margin-top:-6px;">*Rollback also needs the target version to still be published by the source. Some vendors (Chrome especially) publish only the current version, so rollback isn't possible even on winget — the version dropdown lists what can actually be installed.</p>
   <p><span class="num">4</span> Optionally set a <b>version</b> (Latest / Exact e.g. <code>24.09</code> / Minimum / Freeze), <b>priority</b>, <b>maintenance window</b> (e.g. Sat 02:00–05:00), <b>frequency</b>, and <b>deployment rings</b> (Pilot first, Production after N days).</p>
   <p><span class="num">5</span> Choose the <b>mode</b>: <b>Enforce</b> (queues jobs) or <b>Audit only</b> (reports compliance, changes nothing). Save.</p>
   <div class="callout"><b>Tip:</b> open a policy to see its compliance drill-down — every machine's status (Protected / Pending / Failed / Scheduled) with reasons, plus per-machine <b>Exclude</b> for exceptions like a CEO laptop.</div>
   <h3>One-off deploy to a single machine</h3>
-  <p>Open <b>Computers → a machine</b>, use <b>Quick deploy</b> to queue an install/update/remove immediately without a policy.</p>
+  <p>Open <b>Computers → a machine</b>, use <b>Quick deploy</b> to queue an install/update/remove immediately without a policy. The action list adapts to the package you pick — Rollback appears only for winget/Chocolatey, and Remove is hidden for types that can't be uninstalled — and the button states the outcome (e.g. "Upgrade 138.0 → 141.0", "Up to date") before you click.</p>
 </section>
 
 <!-- 7 BROWSER POLICIES -->
