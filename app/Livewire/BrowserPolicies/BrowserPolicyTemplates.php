@@ -8,14 +8,22 @@ use App\Models\Project;
 use App\Services\BrowserPolicyTemplateService;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 /**
  * Policy templates: apply a built-in or custom bundle to a project in one
- * click, save a project's current policies as a new template, and delete
- * custom templates. Gated by the browser-policy create ability.
+ * click, save a project's current policies as a new template, delete custom
+ * templates, and import/export portable JSON policy sets. Gated by the
+ * browser-policy create ability.
  */
 class BrowserPolicyTemplates extends Component
 {
+    use WithFileUploads;
+
+    /** Uploaded .json export to import as a custom template. */
+    public $importFile = null;
+
+    public string $importName = '';
     /** Template key being applied (from the Apply modal row). */
     public ?string $applyKey = null;
 
@@ -96,6 +104,41 @@ class BrowserPolicyTemplates extends Component
 
         $this->reset(['captureProjectId', 'captureName', 'captureDescription']);
         session()->flash('status', 'Template saved. Apply it to any project from the list below.');
+    }
+
+    public function import(BrowserPolicyTemplateService $templates): void
+    {
+        $this->authorize('create', BrowserPolicy::class);
+
+        $this->validate([
+            'importFile' => ['required', 'file', 'max:256', 'mimetypes:application/json,text/plain'],
+            'importName' => ['required', 'string', 'max:255', Rule::unique('browser_policy_templates', 'name')],
+        ], [], ['importFile' => 'export file', 'importName' => 'template name']);
+
+        $payload = json_decode($this->importFile->get(), true);
+
+        if (! is_array($payload)) {
+            $this->addError('importFile', 'That file is not valid JSON.');
+
+            return;
+        }
+
+        try {
+            $result = $templates->import($payload, $this->importName, auth()->id());
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('importFile', $e->getMessage());
+
+            return;
+        }
+
+        $this->reset(['importFile', 'importName']);
+        session()->flash('status', sprintf(
+            'Imported %d %s as "%s"%s. Apply it to a project below.',
+            $result['imported'],
+            str('policy')->plural($result['imported']),
+            $result['template']->name,
+            $result['skipped'] > 0 ? " ({$result['skipped']} unknown to this catalogue were skipped)" : '',
+        ));
     }
 
     public function deleteTemplate(int $templateId): void

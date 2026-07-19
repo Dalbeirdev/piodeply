@@ -52,6 +52,8 @@
                                             wire:confirm="Delete the “{{ $template['name'] }}” template? Policies it already created stay in place."
                                             class="text-xs font-semibold text-red-600 hover:text-red-700">Delete</button>
                                 @endif
+                                <a href="{{ route('browser-policies.export.template', ['key' => $template['key']]) }}"
+                                   class="text-xs font-semibold text-slate-500 hover:text-slate-700" title="Download as JSON">Export</a>
                                 <button type="button" wire:click="startApply('{{ $template['key'] }}')"
                                         class="inline-flex items-center px-3 py-1.5 bg-teal-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
                                     Apply…
@@ -83,10 +85,35 @@
                 @endforeach
             </div>
 
+            {{-- Import a portable JSON export as a custom template --}}
+            <div class="pd-card p-5">
+                <h3 class="font-semibold text-slate-800">Import a policy set</h3>
+                <p class="text-sm text-slate-500 mt-1">
+                    Upload a <code class="font-mono text-xs">.piodeploy-policies.json</code> export (from any
+                    project or template, on any PioDeploy instance). It becomes a custom template you can apply anywhere.
+                </p>
+                <form wire:submit="import" class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+                    <div>
+                        <input type="file" wire:model="importFile" accept=".json,application/json" aria-label="Export file"
+                               class="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:text-xs file:font-semibold file:text-slate-700 hover:file:bg-slate-50">
+                        <x-input-error for="importFile" class="mt-1" />
+                    </div>
+                    <div>
+                        <input type="text" wire:model="importName" placeholder="Template name"
+                               class="block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm text-sm">
+                        <x-input-error for="importName" class="mt-1" />
+                    </div>
+                    <div>
+                        <x-button type="submit" class="whitespace-nowrap">Import</x-button>
+                    </div>
+                </form>
+            </div>
+
             {{-- Save a project's policies as a custom template --}}
             <div class="pd-card p-5">
                 <h3 class="font-semibold text-slate-800">Save a project as a template</h3>
-                <p class="text-sm text-slate-500 mt-1">Capture everything a project currently enforces and reuse it elsewhere.</p>
+                <p class="text-sm text-slate-500 mt-1">Capture everything a project currently enforces and reuse it elsewhere —
+                    or <span class="text-slate-600 font-medium">export a project</span> straight to JSON with the button that appears once you pick one.</p>
                 <form wire:submit="capture" class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
                     <div>
                         <select wire:model="captureProjectId" aria-label="Source project"
@@ -107,6 +134,12 @@
                         <input type="text" wire:model="captureDescription" placeholder="Description (optional)"
                                class="block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm text-sm">
                         <x-button type="submit" class="whitespace-nowrap">Save</x-button>
+                        @if ($captureProjectId)
+                            <a href="{{ route('browser-policies.export.project', ['project' => $captureProjectId]) }}"
+                               class="inline-flex items-center px-3 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50 whitespace-nowrap">
+                                Export JSON
+                            </a>
+                        @endif
                     </div>
                 </form>
             </div>

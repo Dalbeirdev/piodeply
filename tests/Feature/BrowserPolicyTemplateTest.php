@@ -149,4 +149,83 @@ class BrowserPolicyTemplateTest extends TestCase
             ->test(BrowserPolicyTemplates::class)
             ->assertForbidden();
     }
+
+    /* ─────────────────────── Import / export ─────────────────────────── */
+
+    public function test_project_export_round_trips_through_import_with_settings_intact(): void
+    {
+        $source = Project::factory()->create(['name' => 'Acme HQ']);
+        BrowserPolicy::factory()->create(['project_id' => $source->id, 'type' => 'disable_incognito']);
+        BrowserPolicy::factory()->create([
+            'project_id' => $source->id, 'type' => 'force_homepage',
+            'settings' => ['url' => 'https://intranet.acme.com'], 'browsers' => ['chrome', 'edge'],
+        ]);
+
+        $document = $this->actingAs($this->admin())
+            ->get(route('browser-policies.export.project', $source))
+            ->assertOk()
+            ->assertHeader('Content-Disposition')
+            ->json();
+
+        $this->assertSame('piodeploy.browser-policies', $document['format']);
+        $this->assertCount(2, $document['policies']);
+
+        // Import it back as a template, apply to a fresh project: the value
+        // policy must arrive with its URL and browser scope intact.
+        $service = app(BrowserPolicyTemplateService::class);
+        $result = $service->import($document, 'Acme baseline');
+        $this->assertSame(2, $result['imported']);
+
+        $target = Project::factory()->create();
+        $service->apply($service->find('custom-'.$result['template']->id), $target);
+
+        $applied = BrowserPolicy::where('project_id', $target->id)->where('type', 'force_homepage')->firstOrFail();
+        $this->assertSame(['url' => 'https://intranet.acme.com'], $applied->settings);
+        $this->assertSame(['chrome', 'edge'], $applied->browsers);
+    }
+
+    public function test_builtin_templates_can_be_exported_by_key(): void
+    {
+        $this->actingAs($this->admin())
+            ->get(route('browser-policies.export.template', ['key' => 'high-security']))
+            ->assertOk()
+            ->assertJsonPath('format', 'piodeploy.browser-policies')
+            ->assertJsonPath('name', 'High Security');
+
+        $this->actingAs($this->admin())
+            ->get(route('browser-policies.export.template', ['key' => 'no-such-template']))
+            ->assertNotFound();
+    }
+
+    public function test_import_skips_unknown_types_and_rejects_foreign_documents(): void
+    {
+        $service = app(BrowserPolicyTemplateService::class);
+
+        $result = $service->import([
+            'format' => 'piodeploy.browser-policies',
+            'version' => 1,
+            'policies' => [
+                ['type' => 'disable_incognito', 'action' => 'disable'],
+                ['type' => 'policy_from_the_future', 'action' => 'disable'],
+            ],
+        ], 'Mixed import');
+
+        $this->assertSame(1, $result['imported']);
+        $this->assertSame(1, $result['skipped']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->import(['something' => 'else'], 'Garbage');
+    }
+
+    public function test_export_requires_manage_permission(): void
+    {
+        $project = Project::factory()->create();
+        BrowserPolicy::factory()->create(['project_id' => $project->id]);
+
+        $viewer = User::factory()->create(); // no roles
+
+        $this->actingAs($viewer)
+            ->get(route('browser-policies.export.project', $project))
+            ->assertForbidden();
+    }
 }

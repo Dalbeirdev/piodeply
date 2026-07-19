@@ -107,22 +107,46 @@ class BrowserPolicyTemplateService
     }
 
     /**
-     * Every template the UI offers: built-ins first, then custom ones.
+     * Every template the UI offers: built-ins first, then custom ones. Each
+     * carries 'entries' (full per-policy definitions: type/action/browsers/
+     * settings) and 'types' (just the enum cases, for chips and counts).
      *
-     * @return Collection<int, array{key: string, name: string, description: ?string, types: list<T>, custom: bool, model: ?BrowserPolicyTemplate}>
+     * @return Collection<int, array{key: string, name: string, description: ?string, types: list<T>, entries: list<array>, custom: bool, model: ?BrowserPolicyTemplate}>
      */
     public function all(): Collection
     {
-        $builtin = collect(self::builtins())->map(fn (array $t, string $key) => [
-            'key' => $key, 'name' => $t['name'], 'description' => $t['description'],
-            'types' => $t['types'], 'custom' => false, 'model' => null,
-        ])->values();
+        $builtin = collect(self::builtins())->map(function (array $t, string $key) {
+            $entries = array_map(fn (T $type) => [
+                'type' => $type, 'action' => 'disable', 'browsers' => ['all'], 'settings' => null,
+            ], $t['types']);
 
-        $custom = BrowserPolicyTemplate::orderBy('name')->get()->map(fn ($m) => [
-            'key' => 'custom-'.$m->id, 'name' => $m->name, 'description' => $m->description,
-            'types' => collect($m->policies)->map(fn ($p) => T::tryFrom($p['type'] ?? ''))->filter()->values()->all(),
-            'custom' => true, 'model' => $m,
-        ]);
+            return [
+                'key' => $key, 'name' => $t['name'], 'description' => $t['description'],
+                'types' => $t['types'], 'entries' => $entries, 'custom' => false, 'model' => null,
+            ];
+        })->values();
+
+        $custom = BrowserPolicyTemplate::orderBy('name')->get()->map(function ($m) {
+            $entries = collect($m->policies)
+                ->map(function (array $p) {
+                    $type = T::tryFrom($p['type'] ?? '');
+
+                    return $type === null ? null : [
+                        'type'     => $type,
+                        'action'   => in_array($p['action'] ?? 'disable', ['disable', 'enable'], true) ? ($p['action'] ?? 'disable') : 'disable',
+                        'browsers' => $p['browsers'] ?? ['all'],
+                        'settings' => $p['settings'] ?? null,
+                    ];
+                })
+                ->filter()
+                ->values();
+
+            return [
+                'key' => 'custom-'.$m->id, 'name' => $m->name, 'description' => $m->description,
+                'types' => $entries->pluck('type')->all(), 'entries' => $entries->all(),
+                'custom' => true, 'model' => $m,
+            ];
+        });
 
         return $builtin->concat($custom);
     }
@@ -137,7 +161,7 @@ class BrowserPolicyTemplateService
      * Create one BrowserPolicy per template entry on the project. Types the
      * project already has are skipped, not overwritten.
      *
-     * @param  array{name: string, types: list<T>}  $template
+     * @param  array{name: string, entries: list<array{type: T, action: string, browsers: array, settings: ?array}>}  $template
      * @return array{created: int, skipped: int}
      */
     public function apply(array $template, Project $project, ?int $userId = null): array
@@ -147,7 +171,9 @@ class BrowserPolicyTemplateService
 
         $created = $skipped = 0;
 
-        foreach ($template['types'] as $type) {
+        foreach ($template['entries'] as $entry) {
+            $type = $entry['type'];
+
             if (in_array($type->value, $existing, true)) {
                 $skipped++;
 
@@ -158,8 +184,9 @@ class BrowserPolicyTemplateService
                 'name'        => "{$template['name']}: {$type->label()}",
                 'project_id'  => $project->id,
                 'type'        => $type->value,
-                'browsers'    => ['all'],
-                'action'      => 'disable',
+                'browsers'    => $entry['browsers'] ?: ['all'],
+                'action'      => $entry['action'],
+                'settings'    => $entry['settings'],
                 'status'      => 'active',
                 'description' => "Applied from the {$template['name']} template.",
                 'created_by'  => $userId,
@@ -175,7 +202,12 @@ class BrowserPolicyTemplateService
     {
         $policies = BrowserPolicy::where('project_id', $project->id)
             ->get()
-            ->map(fn (BrowserPolicy $p) => ['type' => $p->type->value, 'action' => $p->action])
+            ->map(fn (BrowserPolicy $p) => [
+                'type'     => $p->type->value,
+                'action'   => $p->action,
+                'browsers' => $p->browsers ?? ['all'],
+                'settings' => $p->settings,
+            ])
             ->values()
             ->all();
 
@@ -185,5 +217,100 @@ class BrowserPolicyTemplateService
             'policies'    => $policies,
             'created_by'  => $userId,
         ]);
+    }
+
+    /* ─────────────────────── Import / export ─────────────────────────── */
+
+    public const EXPORT_FORMAT = 'piodeploy.browser-policies';
+
+    public const EXPORT_VERSION = 1;
+
+    /**
+     * A portable JSON document from a template definition (built-in or
+     * custom) — the same shape import consumes.
+     */
+    public function exportTemplate(array $template): array
+    {
+        return [
+            'format'      => self::EXPORT_FORMAT,
+            'version'     => self::EXPORT_VERSION,
+            'name'        => $template['name'],
+            'description' => $template['description'],
+            'policies'    => array_map(fn (array $entry) => [
+                'type'     => $entry['type']->value,
+                'action'   => $entry['action'],
+                'browsers' => $entry['browsers'],
+                'settings' => $entry['settings'],
+            ], $template['entries']),
+        ];
+    }
+
+    /** A portable JSON document from a project's current policies. */
+    public function exportProject(Project $project): array
+    {
+        $captured = BrowserPolicy::where('project_id', $project->id)->get()
+            ->map(fn (BrowserPolicy $p) => [
+                'type'     => $p->type->value,
+                'action'   => $p->action,
+                'browsers' => $p->browsers ?? ['all'],
+                'settings' => $p->settings,
+            ])->values()->all();
+
+        return [
+            'format'      => self::EXPORT_FORMAT,
+            'version'     => self::EXPORT_VERSION,
+            'name'        => "{$project->name} browser policies",
+            'description' => 'Exported from '.config('app.name').' on '.now()->toDateString().'.',
+            'policies'    => $captured,
+        ];
+    }
+
+    /**
+     * Import a document as a custom template. Unknown policy types (from a
+     * newer or older catalogue) are skipped, not fatal — the count is
+     * reported so nothing is silently lost.
+     *
+     * @return array{template: BrowserPolicyTemplate, imported: int, skipped: int}
+     *
+     * @throws \InvalidArgumentException when the document is not ours.
+     */
+    public function import(array $payload, string $name, ?int $userId = null): array
+    {
+        if (($payload['format'] ?? null) !== self::EXPORT_FORMAT || ! is_array($payload['policies'] ?? null)) {
+            throw new \InvalidArgumentException('Not a PioDeploy browser-policy export.');
+        }
+
+        $imported = [];
+        $skipped = 0;
+
+        foreach ($payload['policies'] as $entry) {
+            $type = T::tryFrom($entry['type'] ?? '');
+
+            if ($type === null) {
+                $skipped++;
+
+                continue;
+            }
+
+            $imported[] = [
+                'type'     => $type->value,
+                'action'   => in_array($entry['action'] ?? 'disable', ['disable', 'enable'], true) ? ($entry['action'] ?? 'disable') : 'disable',
+                'browsers' => is_array($entry['browsers'] ?? null) ? $entry['browsers'] : ['all'],
+                'settings' => is_array($entry['settings'] ?? null) ? $entry['settings'] : null,
+            ];
+        }
+
+        if ($imported === []) {
+            throw new \InvalidArgumentException('The file contains no policies this catalogue recognises.');
+        }
+
+        $template = BrowserPolicyTemplate::create([
+            'name'        => $name,
+            'description' => is_string($payload['description'] ?? null) ? $payload['description'] : null,
+            'policies'    => $imported,
+            'created_by'  => $userId,
+        ]);
+
+        return ['template' => $template, 'imported' => count($imported), 'skipped' => $skipped];
     }
 }

@@ -172,6 +172,8 @@ Route::middleware([
         // Before {policy}, or these would be swallowed by the binding.
         Route::get('/browser-policies/templates', \App\Livewire\BrowserPolicies\BrowserPolicyTemplates::class)->name('browser-policies.templates');
         Route::get('/browser-policies/compliance', \App\Livewire\BrowserPolicies\BrowserPolicyCompliance::class)->name('browser-policies.compliance');
+        Route::get('/browser-policies/export/project/{project}', [\App\Http\Controllers\BrowserPolicyExportController::class, 'project'])->name('browser-policies.export.project');
+        Route::get('/browser-policies/export/template/{key}', [\App\Http\Controllers\BrowserPolicyExportController::class, 'template'])->name('browser-policies.export.template');
         Route::get('/browser-policies/{policy}', \App\Livewire\BrowserPolicies\BrowserPolicyShow::class)->name('browser-policies.show');
         Route::get('/browser-policies/{policy}/edit', \App\Livewire\BrowserPolicies\BrowserPolicyForm::class)->name('browser-policies.edit');
     });
