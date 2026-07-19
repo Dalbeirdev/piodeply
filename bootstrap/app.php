@@ -24,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Capture ?ref= affiliate links across the site.
         $middleware->web(append: \App\Http\Middleware\CaptureReferral::class);
 
+        // Optional 2FA enforcement (security.require_two_factor setting).
+        $middleware->web(append: \App\Http\Middleware\RequireTwoFactor::class);
+
         // Stripe posts here from outside the session; the request is
         // HMAC-verified in the controller instead of by CSRF token.
         $middleware->validateCsrfTokens(except: ['billing/webhook', 'stripe/webhook']);

@@ -73,6 +73,24 @@
                     </div>
                 </div>
 
+                <div class="border-t pt-5">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Security</h3>
+                    <div class="max-w-sm">
+                        <x-label for="require_two_factor" value="Require two-factor authentication" />
+                        <select id="require_two_factor" wire:model="require_two_factor"
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                            <option value="off">Off — 2FA stays optional</option>
+                            <option value="staff">Staff — everyone except client-portal users</option>
+                            <option value="all">Everyone — including client users</option>
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">
+                            Users without 2FA are sent to their profile to enrol before they can continue.
+                            Nobody is signed out — enrolment happens on their next page load.
+                        </p>
+                        <x-input-error for="require_two_factor" class="mt-1" />
+                    </div>
+                </div>
+
                 <div class="flex justify-end border-t pt-4">
                     <x-button>Save settings</x-button>
                 </div>

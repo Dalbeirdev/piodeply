@@ -24,6 +24,8 @@ class SettingsService
             'deployments.default_max_attempts'  => 3,
             'policies.failure_backoff_hours'    => 23,
             'retention.activity_days'           => 180,
+            // 'off' | 'staff' (everyone but client-portal users) | 'all'
+            'security.require_two_factor'       => 'off',
         ];
     }
 

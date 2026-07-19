@@ -364,9 +364,11 @@
 <section>
   <h2>10. Administration</h2>
   <h3>Users &amp; roles</h3>
-  <p><b>Users → Add user</b> creates a team account with a role. Roles (Super Admin, Admin, Manager, Technician, Client, Viewer) are permission sets you can edit on the <b>Roles</b> matrix — tick a box to grant a permission to a role. <b>Client</b> users are scoped to their own client's data only.</p>
+  <p><b>Users → Add user</b> creates a team account with a role. Roles (Super Admin, Admin, Manager, Technician, Client, Viewer) are permission sets you can edit on the <b>Roles</b> matrix — tick a box to grant a permission to a role. <b>Client</b> users are scoped to their own client's data only. The user list shows a <b>2FA</b> badge per account, so you can see at a glance who has two-factor authentication enabled.</p>
+  <h3>Two-factor authentication</h3>
+  <p>Every user can enable authenticator-app 2FA (with recovery codes) on their <b>Profile</b> page. To make it mandatory, set <b>Settings → Security → Require two-factor authentication</b> to <b>Staff</b> (everyone except client-portal users) or <b>Everyone</b>. Users without 2FA are then routed to their profile to enrol before they can continue — nobody is signed out, and the profile always stays reachable so enrolment can't dead-lock.</p>
   <h3>Settings</h3>
-  <p>Company name, agent online threshold, offline-alert delay, default job retries, policy backoff, and activity-log retention — all editable, no redeploy.</p>
+  <p>Company name, agent online threshold, offline-alert delay, default job retries, policy backoff, activity-log retention, and 2FA enforcement — all editable, no redeploy.</p>
 
   <h3>Email (SMTP)</h3>
   <p><b>Administration → Email</b> is where outgoing mail is configured — in the portal, not over SSH. Choose your provider (Hostinger, Gmail, Microsoft 365, Postmark, SendGrid, Brevo, Mailgun, SES, or a custom relay) and the server details fill themselves in; you supply the username, password and sender. Then <b>Send test email</b>, because saving proves nothing and sending does. A failure shows your provider's own words plus what to do about them.</p>

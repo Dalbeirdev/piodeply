@@ -91,6 +91,7 @@
                             <th class="pd-th">Email</th>
                             <th class="pd-th">Role</th>
                             <th class="pd-th">Client binding</th>
+                            <th class="pd-th">2FA</th>
                             <th class="pd-th">Joined</th>
                             <th class="px-6 py-3"></th>
                         </tr>
@@ -126,6 +127,18 @@
                                         </select>
                                     @else
                                         <span class="text-sm text-slate-600">{{ $user->client?->company_name ?? '—' }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-3 whitespace-nowrap">
+                                    @if ($user->two_factor_confirmed_at !== null)
+                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-0.5 border bg-green-50 text-green-700 border-green-200"
+                                              title="Enabled {{ $user->two_factor_confirmed_at->format('Y-m-d') }}">
+                                            Enabled
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center text-xs font-semibold rounded-full px-2 py-0.5 border bg-slate-100 text-slate-500 border-slate-200">
+                                            Off
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500">{{ $user->created_at->format('Y-m-d') }}</td>

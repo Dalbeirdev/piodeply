@@ -20,6 +20,8 @@ class SettingsPage extends Component
 
     public int $activity_retention_days = 180;
 
+    public string $require_two_factor = 'off';
+
     public function mount(SettingsService $settings): void
     {
         $this->authorizeManage();
@@ -30,6 +32,7 @@ class SettingsPage extends Component
         $this->default_max_attempts = (int) $settings->get('deployments.default_max_attempts');
         $this->failure_backoff_hours = (int) $settings->get('policies.failure_backoff_hours');
         $this->activity_retention_days = (int) $settings->get('retention.activity_days');
+        $this->require_two_factor = (string) $settings->get('security.require_two_factor');
     }
 
     public function save(SettingsService $settings): void
@@ -43,6 +46,7 @@ class SettingsPage extends Component
             'default_max_attempts'     => ['required', 'integer', 'between:1,10'],
             'failure_backoff_hours'    => ['required', 'integer', 'between:1,168'],
             'activity_retention_days'  => ['required', 'integer', 'between:7,3650'],
+            'require_two_factor'       => ['required', 'in:off,staff,all'],
         ]);
 
         $map = [
@@ -52,6 +56,7 @@ class SettingsPage extends Component
             'deployments.default_max_attempts'     => (int) $validated['default_max_attempts'],
             'policies.failure_backoff_hours'       => (int) $validated['failure_backoff_hours'],
             'retention.activity_days'              => (int) $validated['activity_retention_days'],
+            'security.require_two_factor'          => $validated['require_two_factor'],
         ];
 
         foreach ($map as $key => $value) {

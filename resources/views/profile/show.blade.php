@@ -7,6 +7,13 @@
 
     <div>
         <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+            @if (session('two_factor_required'))
+                <div class="mb-6 rounded-md bg-amber-50 border border-amber-300 p-4 text-sm text-amber-800" role="alert">
+                    <b>Two-factor authentication required.</b>
+                    {{ session('two_factor_required') }}
+                </div>
+            @endif
+
             @if (Laravel\Fortify\Features::canUpdateProfileInformation())
                 @livewire('profile.update-profile-information-form')
 
