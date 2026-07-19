@@ -283,7 +283,9 @@ class ComputerManagementTest extends TestCase
             ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
             ->assertSee('Installed software')
             ->assertSee('1 managed · 2 detected')
-            // Catalogue-only is the default view:
+            // "Deployed by PioDeploy" is the default view; switch to the
+            // catalogue lens for this assertion:
+            ->set('softwareFilter', 'managed')
             ->assertSee('Git.Git')
             ->assertSee('managed')
             ->assertDontSee('Random Tool')
@@ -357,6 +359,7 @@ class ComputerManagementTest extends TestCase
 
         Livewire::actingAs($this->admin())
             ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->set('softwareFilter', 'managed') // the hint lives in the catalogue empty state
             ->assertSee('Agents before 1.3.1 cannot scan winget as SYSTEM');
     }
 

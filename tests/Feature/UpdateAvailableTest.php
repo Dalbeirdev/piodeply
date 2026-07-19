@@ -98,6 +98,7 @@ class UpdateAvailableTest extends TestCase
         $this->installed('138.0.7615.129', '141.0.7390.55');
 
         $this->page()
+            ->set('softwareFilter', 'managed') // nothing was deployed by a job here
             ->assertSee('138.0.7615.129')
             ->assertSee('141.0.7390.55')
             ->assertSee('1 outdated');

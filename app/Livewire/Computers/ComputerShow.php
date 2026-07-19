@@ -17,12 +17,12 @@ class ComputerShow extends Component
     public string $softwareSearch = '';
 
     /**
-     * managed   — matches a catalogue package (the default; the rest is noise)
-     * deployed  — PioDeploy put it here: there is a succeeded install/update
+     * deployed  — PioDeploy put it here (the default: what we're accountable for)
+     * managed   — matches a catalogue package, however it arrived
      * outdated  — the machine's package manager is offering something newer
      * all       — everything the machine reported
      */
-    public string $softwareFilter = 'managed';
+    public string $softwareFilter = 'deployed';
 
     public function mount(Computer $computer): void
     {
