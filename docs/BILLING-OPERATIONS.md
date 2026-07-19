@@ -94,6 +94,22 @@ Billing schedule entry (see `routes/console.php`):
 | Command | Cadence | What |
 |---|---|---|
 | `billing:trial-reminders` | daily 09:00 | emails the 3-days-left notice, once per trial |
+| `billing:dunning-reminders` | daily 09:30 | follow-ups for unpaid accounts, paced every 3 days |
+
+### Dunning (failed-payment recovery)
+
+1. **Stripe retries** a failed charge on its own schedule; each failed attempt
+   fires `invoice.payment_failed`, which emails the billing contact
+   (`PaymentFailedNotification`) with the next retry date and marks the
+   account `past_due` (or `suspended` when no retry remains).
+2. **In-app banner** — every staff page shows an amber (past due) or red
+   (suspended) bar with an *Update payment method* link until the card is
+   fixed. Client-portal users never see it.
+3. **Paced follow-ups** — after Stripe gives up, `billing:dunning-reminders`
+   emails the billing contact every 3 days (`accounts.dunning_notified_at`
+   paces it) until payment succeeds or the subscription is cancelled.
+4. **Recovery** — a successful `invoice.paid` clears the grace window and the
+   dunning timestamp, sends the receipt, and the banner disappears.
 
 **Queues** — notifications (`TrialStarted`, `TrialEnding`, `PaymentFailed`,
 `PaymentReceipt`, `SubscriptionCancelled`) implement `ShouldQueue`. Run a worker:

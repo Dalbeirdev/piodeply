@@ -104,7 +104,9 @@ class WebhookService
             return 'skipped';
         }
 
-        $account->forceFill(['grace_ends_at' => null])->save();
+        // Recovery also resets the dunning cadence, so a future failure
+        // starts its reminders fresh instead of inheriting an old timestamp.
+        $account->forceFill(['grace_ends_at' => null, 'dunning_notified_at' => null])->save();
         $this->subscriptions->syncStatus($account);
 
         $account->billingContact()?->notify(new \App\Notifications\PaymentReceiptNotification(

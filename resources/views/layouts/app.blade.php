@@ -19,6 +19,36 @@
     <body class="font-sans antialiased">
         <x-banner />
 
+        {{-- Unpaid-subscription banner: staff see it everywhere until the
+             payment method is fixed. Client-portal users are not billed, so
+             they are never shown another company's billing problems. --}}
+        @auth
+            @if (! auth()->user()->hasRole(\App\Enums\Role::Client->value))
+                @php $billingAccount = \App\Models\Account::current(); @endphp
+                @if (in_array($billingAccount->status, ['past_due', 'grace', 'suspended'], true))
+                    <div class="{{ $billingAccount->status === 'suspended' ? 'bg-red-600' : 'bg-amber-500' }} text-white relative z-50">
+                        <div class="px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 text-sm font-semibold">
+                            <span>
+                                @if ($billingAccount->status === 'suspended')
+                                    ⚠ Subscription suspended — payment could not be collected.
+                                @else
+                                    ⚠ Payment failed — your subscription is past due.
+                                @endif
+                            </span>
+                            @can('manage-billing')
+                                <a href="{{ route('billing.subscription') }}"
+                                   class="shrink-0 rounded-md bg-white/20 hover:bg-white/30 px-3 py-1 transition-colors">
+                                    Update payment method →
+                                </a>
+                            @else
+                                <span class="shrink-0 font-normal">Ask an administrator to update the payment method.</span>
+                            @endcan
+                        </div>
+                    </div>
+                @endif
+            @endif
+        @endauth
+
         @if (session()->has(\App\Http\Controllers\ImpersonationController::SESSION_KEY))
             <div class="bg-amber-400 text-amber-950 relative z-50">
                 <div class="px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 text-sm font-semibold">
