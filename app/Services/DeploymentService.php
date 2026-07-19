@@ -177,6 +177,39 @@ class DeploymentService
             ->first(fn (string $before) => $current === null || version_compare($before, $current, '<'));
     }
 
+    /**
+     * Fan a single package/action out across many machines, each through the
+     * guarded queueIfNeeded path — so satisfied machines are skipped, in-flight
+     * duplicates collapse, and unsupported combinations are refused, exactly
+     * as for a single deploy. Returns a tally, never a pile of noise.
+     *
+     * @param  iterable<int, Computer>  $computers
+     */
+    public function queueBulk(
+        iterable $computers,
+        Package $package,
+        JobAction $action,
+        int $priority = 5,
+        ?int $createdBy = null,
+        ?string $targetVersion = null,
+        bool $force = false,
+    ): BulkQueueResult {
+        $queued = $skipped = $refused = $total = 0;
+
+        foreach ($computers as $computer) {
+            $total++;
+            $result = $this->queueIfNeeded($computer, $package, $action, $priority, $createdBy, $targetVersion, $force);
+
+            match ($result->outcome) {
+                QueueOutcome::Queued  => $queued++,
+                QueueOutcome::Invalid => $refused++,
+                default               => $skipped++, // AlreadyQueued / AlreadySatisfied
+            };
+        }
+
+        return new BulkQueueResult($queued, $skipped, $refused, $total);
+    }
+
     public function pendingCountFor(Computer $computer): int
     {
         return DeploymentJob::where('computer_id', $computer->id)

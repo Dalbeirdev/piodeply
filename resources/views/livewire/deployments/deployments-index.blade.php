@@ -1,6 +1,14 @@
 <div wire:poll.10s>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Deployments') }}</h2>
+        <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Deployments') }}</h2>
+            @can('create', \App\Models\DeploymentJob::class)
+                <a href="{{ route('deployments.bulk') }}"
+                   class="inline-flex items-center gap-1.5 text-sm font-semibold rounded-md px-3 py-1.5 bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                    <span aria-hidden="true">+</span> Bulk deploy
+                </a>
+            @endcan
+        </div>
     </x-slot>
 
     <div class="py-12">

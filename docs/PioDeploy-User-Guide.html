@@ -281,6 +281,8 @@
   <h3>One-off deploy to a single machine</h3>
   <p>Open <b>Computers → a machine</b>, use <b>Quick deploy</b> to queue an install/update/remove immediately without a policy. The action list adapts to the package you pick — Rollback appears only for winget/Chocolatey, and Remove is hidden for types that can't be uninstalled — and the button states the outcome (e.g. "Upgrade 138.0 → 141.0", "Up to date") before you click.</p>
   <p>When PioDeploy has version history for a winget/Chocolatey package on that machine, a one-click <b>&#8617; Roll back to <i>X</i></b> button appears next to the status. It queues a rollback to the exact version the machine ran before its most recent change — no version to look up by hand.</p>
+  <h3>Bulk deploy to a whole project</h3>
+  <p>From <b>Deployments → Bulk deploy</b>, push one package to every machine in a project at once. Pick the project, an optional <b>ring</b> (e.g. Pilot first, Production later), the package, and the action (Install / Auto update / Remove). Each machine is queued through the same checks as a single deploy: those already up to date are skipped, anything already queued is not duplicated, and you get a one-line summary such as <i>"Queued on 42 machines · 8 already up to date"</i>. Rollback stays a per-machine action, since each machine's previous version differs.</p>
 </section>
 
 <!-- 7 BROWSER POLICIES -->

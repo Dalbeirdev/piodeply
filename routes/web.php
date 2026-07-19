@@ -151,6 +151,7 @@ Route::middleware([
 
     Route::middleware('permission:deployments.view')->group(function () {
         Route::get('/deployments', \App\Livewire\Deployments\DeploymentsIndex::class)->name('deployments.index');
+        Route::get('/deployments/bulk', \App\Livewire\Deployments\BulkDeploy::class)->name('deployments.bulk');
     });
 
     Route::middleware('permission:reports.view')->group(function () {
