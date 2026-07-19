@@ -103,6 +103,9 @@ class Dashboard extends Component
             'outdated'  => $updates->count(),
             // One update across sixty machines is one decision, not sixty.
             'outdated_machines' => $updates->pluck('computer_id')->unique()->count(),
+            // Machines whose PioDeploy agent itself is behind the latest build.
+            'outdated_agents' => Computer::agentOutdated()->count(),
+            'latest_agent'    => Computer::latestAgentVersion(),
             'software'  => ComputerSoftware::count(),
             'not_ready' => app(\App\Services\ReadinessService::class)->notReadyCount(),
             'licenses'  => $this->licenseUsage(),

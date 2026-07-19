@@ -99,6 +99,38 @@ class Computer extends Model
             ->orWhere('last_seen_at', '<=', now()->subSeconds(self::onlineThreshold())));
     }
 
+    /* ---- Agent version ---- */
+
+    /** The newest agent build the server publishes and self-updates toward. */
+    public static function latestAgentVersion(): string
+    {
+        return \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION;
+    }
+
+    /**
+     * A machine is on an outdated agent when it has reported a version and
+     * that version is behind the latest published build. A machine that has
+     * never reported one is "unknown", not "outdated" — it is not counted, so
+     * a never-enrolled stub can't inflate the update backlog.
+     */
+    public function isAgentOutdated(): bool
+    {
+        return $this->agent_version !== null
+            && version_compare($this->agent_version, self::latestAgentVersion(), '<');
+    }
+
+    /**
+     * Machines whose reported agent version is not the latest. Uses a string
+     * inequality (SQL-friendly); the fleet only ever runs versions the server
+     * has published, so "not equal to latest" and "older than latest" are the
+     * same set in practice. isAgentOutdated() does the exact semver compare.
+     */
+    public function scopeAgentOutdated(Builder $query): Builder
+    {
+        return $query->whereNotNull('agent_version')
+            ->where('agent_version', '!=', self::latestAgentVersion());
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(fn (Builder $q) => $q

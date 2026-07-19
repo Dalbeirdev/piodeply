@@ -105,7 +105,11 @@
                             'Client' => $computer->project->client->company_name,
                             'Project' => $computer->project->name,
                             'Enrolled' => $computer->created_at->format('Y-m-d') . ' (' . $computer->created_at->diffForHumans() . ')',
-                            'Agent version' => $computer->agent_version,
+                            'Agent version' => $computer->agent_version
+                                ? $computer->agent_version . ($computer->isAgentOutdated()
+                                    ? ' — update available (latest ' . \App\Models\Computer::latestAgentVersion() . ')'
+                                    : ' (up to date)')
+                                : 'unknown',
                             'Agent UUID' => $computer->agent_uuid,
                             'Last seen' => $computer->last_seen_at ? $computer->last_seen_at->format('Y-m-d H:i:s') . ' (' . $computer->last_seen_at->diffForHumans() . ')' : 'never',
                             'Inventory updated' => $computer->updated_at->diffForHumans(),

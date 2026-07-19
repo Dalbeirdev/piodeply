@@ -75,6 +75,15 @@
                         <p class="text-[11px] text-slate-400 mt-0.5">winget or a runtime is missing</p>
                     @endif
                 </a>
+                <a href="{{ route('computers.index', ['agentStatus' => 'outdated']) }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
+                    <p class="text-xl font-bold {{ $stats['outdated_agents'] > 0 ? 'text-amber-600' : 'text-slate-300' }}">{{ $stats['outdated_agents'] }}</p>
+                    <p class="text-xs font-semibold text-slate-600">Agents outdated</p>
+                    @if ($stats['outdated_agents'] > 0)
+                        <p class="text-[11px] text-slate-400 mt-0.5">behind {{ $stats['latest_agent'] }} — self-update pending</p>
+                    @else
+                        <p class="text-[11px] text-slate-400 mt-0.5">all on {{ $stats['latest_agent'] }}</p>
+                    @endif
+                </a>
                 <div class="pd-card p-4">
                     <p class="text-xl font-bold text-slate-700">{{ number_format($stats['software']) }}</p>
                     <p class="text-xs font-semibold text-slate-600">Software detected</p>

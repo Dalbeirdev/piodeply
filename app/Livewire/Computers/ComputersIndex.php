@@ -5,6 +5,7 @@ namespace App\Livewire\Computers;
 use App\Models\Computer;
 use App\Repositories\Contracts\ComputerRepositoryInterface;
 use App\Services\ComputerService;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use App\Livewire\Concerns\WithCompactPagination;
 
@@ -20,11 +21,16 @@ class ComputersIndex extends Component
 
     public string $connectivity = ''; // '', 'online', 'offline'
 
+    // Bound to the URL so the dashboard's "Agents outdated" card can deep-link
+    // straight to the filtered list (?agentStatus=outdated).
+    #[Url]
+    public string $agentStatus = ''; // '', 'outdated', 'current'
+
     public bool $showTrashed = false;
 
     public function updating($name, $value): void
     {
-        if (in_array($name, ['search', 'clientId', 'projectId', 'connectivity', 'showTrashed'], true)) {
+        if (in_array($name, ['search', 'clientId', 'projectId', 'connectivity', 'agentStatus', 'showTrashed'], true)) {
             $this->resetPage();
         }
     }
@@ -59,6 +65,7 @@ class ComputersIndex extends Component
                 clientId: $tenantId ?? $this->clientId,
                 online: $this->connectivity === '' ? null : $this->connectivity === 'online',
                 withTrashed: $tenantId === null && $this->showTrashed,
+                agentStatus: $this->agentStatus,
             ),
             'clients'  => $tenantId === null
                 ? \App\Models\Client::orderBy('company_name')->get(['id', 'company_name'])

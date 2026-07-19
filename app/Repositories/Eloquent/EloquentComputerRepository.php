@@ -20,6 +20,7 @@ class EloquentComputerRepository extends BaseRepository implements ComputerRepos
         ?bool $online = null,
         bool $withTrashed = false,
         int $perPage = 15,
+        string $agentStatus = '',
     ): LengthAwarePaginator {
         return $this->query()
             ->with('project.client')
@@ -32,6 +33,8 @@ class EloquentComputerRepository extends BaseRepository implements ComputerRepos
             ))
             ->when($online === true, fn ($q) => $q->online())
             ->when($online === false, fn ($q) => $q->offline())
+            ->when($agentStatus === 'outdated', fn ($q) => $q->agentOutdated())
+            ->when($agentStatus === 'current', fn ($q) => $q->where('agent_version', Computer::latestAgentVersion()))
             ->orderBy('hostname')
             ->paginate($perPage);
     }

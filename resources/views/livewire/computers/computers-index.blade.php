@@ -37,6 +37,12 @@
                     <option value="online">Online</option>
                     <option value="offline">Offline</option>
                 </select>
+                <select wire:model.live="agentStatus" aria-label="Filter by agent version"
+                        class="border-slate-300 rounded-md shadow-sm text-sm">
+                    <option value="">Any agent version</option>
+                    <option value="outdated">Agent outdated</option>
+                    <option value="current">Agent up to date</option>
+                </select>
                 @unless ($isTenant ?? false)
 <label class="flex items-center gap-2 text-sm text-slate-600">
                     <input type="checkbox" wire:model.live="showTrashed" class="rounded border-slate-300">
@@ -78,7 +84,15 @@
                                     <p class="text-xs text-slate-500">build {{ $computer->windows_build ?? '—' }}</p>
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600 font-mono text-xs">{{ $computer->private_ip ?? '—' }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600 text-sm">{{ $computer->agent_version ?? '—' }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-slate-600 text-sm">
+                                    {{ $computer->agent_version ?? '—' }}
+                                    @if ($computer->isAgentOutdated())
+                                        <span class="ml-1 inline-flex items-center text-xs font-semibold rounded-full px-2 py-0.5 border bg-amber-50 text-amber-700 border-amber-200"
+                                              title="Latest is {{ \App\Models\Computer::latestAgentVersion() }} — the agent self-updates on its next check-in">
+                                            Update available
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     @if ($computer->isOnline())
                                         <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-0.5 border bg-green-50 text-green-700 border-green-200">
