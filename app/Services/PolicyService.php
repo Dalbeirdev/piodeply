@@ -52,12 +52,19 @@ class PolicyService
 
         $excluded = $policy->excludedComputers()->pluck('computers.id')->all();
 
+        $computers = $policy->project->computers()->whereNotIn('id', $excluded)->get();
+
+        // Three set-based queries answer what the per-computer path would ask
+        // the database 15-20 times per machine — the difference between a
+        // pass that scales with policies and one that scales with the fleet.
+        $context = PolicyBatchContext::for($policy, $computers);
+
         $queued = 0;
-        foreach ($policy->project->computers()->whereNotIn('id', $excluded)->get() as $computer) {
+        foreach ($computers as $computer) {
             if (! $this->ringEligible($policy, $computer)) {
                 continue;
             }
-            if ($this->enforceOn($policy, $computer)) {
+            if ($this->enforceOn($policy, $computer, $context)) {
                 $queued++;
             }
         }
@@ -127,11 +134,11 @@ class PolicyService
         return $eligibleAt === null || $eligibleAt->lte(now());
     }
 
-    private function enforceOn(SoftwarePolicy $policy, Computer $computer): bool
+    private function enforceOn(SoftwarePolicy $policy, Computer $computer, ?PolicyBatchContext $context = null): bool
     {
-        $remediation = $this->remediationFor($policy, $computer);
+        $remediation = $this->remediationFor($policy, $computer, $context);
 
-        if ($remediation === null || $this->hasRelevantJob($policy, $computer)) {
+        if ($remediation === null || $this->hasRelevantJob($policy, $computer, $context)) {
             return false;
         }
 
@@ -155,9 +162,11 @@ class PolicyService
      *
      * @return array{action: JobAction, version: ?string}|null
      */
-    public function remediationFor(SoftwarePolicy $policy, Computer $computer): ?array
+    public function remediationFor(SoftwarePolicy $policy, Computer $computer, ?PolicyBatchContext $context = null): ?array
     {
-        $state = $this->installedStateOn($policy->package, $computer);
+        $state = $context !== null
+            ? $context->stateOf($computer)
+            : $this->installedStateOn($policy->package, $computer);
 
         return match ($policy->action) {
             PolicyAction::Install => $state['present']
@@ -491,16 +500,24 @@ class PolicyService
     /* ─────────────────────────── Job guards ──────────────────────────── */
 
     /** Anything that makes queueing another job pointless right now. */
-    private function hasRelevantJob(SoftwarePolicy $policy, Computer $computer): bool
+    private function hasRelevantJob(SoftwarePolicy $policy, Computer $computer, ?PolicyBatchContext $context = null): bool
     {
-        if ($this->hasJobInFlight($policy, $computer)) {
+        $inFlight = $context !== null
+            ? $context->hasJobInFlight($computer)
+            : $this->hasJobInFlight($policy, $computer);
+
+        if ($inFlight) {
             return true;
         }
+
+        $recentSuccess = fn (JobAction $action): bool => $context !== null
+            ? $context->hasRecentSuccess($computer, $action, $policy->frequency->cooldownHours())
+            : $this->hasRecentSuccess($policy, $computer, $action);
 
         // Routine latest-updates: at most one per frequency window.
         if ($policy->action === PolicyAction::Update
             && $policy->version_mode === PolicyVersionMode::Latest
-            && $this->hasRecentSuccess($policy, $computer, JobAction::Update)) {
+            && $recentSuccess(JobAction::Update)) {
             return true;
         }
 
@@ -508,19 +525,22 @@ class PolicyService
         // here within the window and the policy still reads it as missing,
         // reality won't change by installing again — the inventory is what
         // needs to catch up. One attempt per window, not seventeen.
-        if ($this->hasRecentSuccess($policy, $computer, JobAction::Install)) {
+        if ($recentSuccess(JobAction::Install)) {
             return true;
         }
 
         // Force update: at most one reinstall per frequency window.
-        if ($policy->action === PolicyAction::ForceUpdate
-            && $this->hasRecentSuccess($policy, $computer, JobAction::Rollback)) {
+        if ($policy->action === PolicyAction::ForceUpdate && $recentSuccess(JobAction::Rollback)) {
             return true;
         }
 
         // Failed attempts are not hammered, and an operator's cancel is
         // respected for the same window — desired state re-asserts after
         // the backoff (exclude the machine to opt out permanently).
+        if ($context !== null) {
+            return $context->failedRecently($computer, $this->failureBackoffHours());
+        }
+
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
             ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
