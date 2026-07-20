@@ -68,9 +68,32 @@
                 @if ($client->subscription_machines && $machineCount > $client->subscription_machines)
                     <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
                         You have {{ number_format($machineCount) }} machines enrolled against a
-                        {{ number_format($client->subscription_machines) }}-machine subscription.
-                        Contact us to resize your plan.
+                        {{ number_format($client->subscription_machines) }}-machine subscription —
+                        resize your plan below to stay covered.
                     </p>
+                @endif
+
+                @if ($isOwner && $client->stripe_subscription_id !== null && ! in_array($client->subscription_status, ['canceled', null], true))
+                    <div class="border-t border-slate-100 pt-4 space-y-2">
+                        <h4 class="text-sm font-semibold text-slate-800">Change plan size</h4>
+                        <p class="text-xs text-slate-500">
+                            Pick a new machine count — the price difference is prorated automatically on your
+                            next invoice (credit when shrinking, charge when growing). Effective immediately.
+                        </p>
+                        <div class="flex items-center gap-3">
+                            <input type="number" min="1" max="100000" wire:model.live.debounce.400ms="resizeMachines"
+                                   class="block w-32 text-sm border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                            <span class="text-sm text-slate-600">
+                                machines → <b>${{ number_format($resizeQuote / 100, 2) }}/mo</b>
+                            </span>
+                            <button type="button" wire:click="resize"
+                                wire:confirm="Change your subscription to {{ number_format(max(1, $resizeMachines)) }} machines at ${{ number_format($resizeQuote / 100, 2) }}/month? The difference is prorated on your next invoice."
+                                class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
+                                Change plan
+                            </button>
+                        </div>
+                        @error('resizeMachines')<p class="text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
                 @endif
 
                 <div class="pt-1">

@@ -151,6 +151,55 @@ class BillingService
     }
 
     /**
+     * Resize an existing subscription to a new machine count at the
+     * graduated price. Stripe prorates the difference on the next invoice
+     * (credit when shrinking, charge when growing), so nobody pays twice
+     * and nobody rings anyone to change a number.
+     */
+    public function resizeSubscription(string $subscriptionId, int $machines): bool
+    {
+        if (empty(config('services.stripe.secret'))) {
+            return false;
+        }
+
+        $machines = max(1, min(100000, $machines));
+
+        $current = Http::withToken(config('services.stripe.secret'))
+            ->get(self::API . "/subscriptions/{$subscriptionId}");
+
+        $itemId = $current->json('items.data.0.id');
+        if ($current->failed() || $itemId === null) {
+            \Illuminate\Support\Facades\Log::warning("Stripe resize: could not read subscription {$subscriptionId}: " . $current->body());
+
+            return false;
+        }
+
+        $response = Http::withToken(config('services.stripe.secret'))
+            ->asForm()
+            ->post(self::API . "/subscriptions/{$subscriptionId}", [
+                'items' => [[
+                    'id'         => $itemId,
+                    'price_data' => [
+                        'currency'     => $this->currency(),
+                        'unit_amount'  => $this->quoteCents($machines),
+                        'recurring'    => ['interval' => 'month'],
+                        'product_data' => ['name' => "PioDeploy — {$machines} machines / month"],
+                    ],
+                ]],
+                'proration_behavior' => 'create_prorations',
+                'metadata'           => ['machines' => $machines],
+            ]);
+
+        if ($response->failed()) {
+            \Illuminate\Support\Facades\Log::warning("Stripe resize failed for {$subscriptionId}: " . $response->body());
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * A Stripe Billing Portal session: the hosted page where a customer
      * updates their card, sees invoices, or cancels — all on Stripe's side,
      * so no card data or cancellation logic ever lives here.

@@ -202,4 +202,67 @@ class RecurringBillingTest extends TestCase
 
         $this->actingAs($admin)->get('/my-billing')->assertNotFound();
     }
+
+    public function test_an_owner_can_resize_their_own_subscription(): void
+    {
+        config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
+        \Illuminate\Support\Facades\Http::fake([
+            'api.stripe.com/v1/subscriptions/sub_123' => \Illuminate\Support\Facades\Http::response([
+                'id' => 'sub_123', 'items' => ['data' => [['id' => 'si_1']]],
+            ]),
+        ]);
+
+        $client = $this->subscribedClient();
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Clients\TenantBilling::class)
+            ->set('resizeMachines', 300)
+            ->call('resize');
+
+        $client->refresh();
+        $this->assertSame(300, $client->subscription_machines);
+        $this->assertSame(app(\App\Services\BillingService::class)->quoteCents(300), $client->subscription_cents);
+
+        // The update Stripe received carries proration and the new metadata.
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request) => $request->method() === 'POST'
+            && str_contains($request->url(), '/subscriptions/sub_123')
+            && ($request->data()['proration_behavior'] ?? '') === 'create_prorations'
+            && ($request->data()['metadata']['machines'] ?? null) == 300);
+    }
+
+    public function test_a_technician_cannot_touch_billing(): void
+    {
+        $client = $this->subscribedClient();
+        $tech = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
+
+        Livewire::actingAs($tech)
+            ->test(\App\Livewire\Clients\TenantBilling::class)
+            ->set('resizeMachines', 999)
+            ->call('resize')
+            ->assertForbidden();
+
+        Livewire::actingAs($tech)
+            ->test(\App\Livewire\Clients\TenantBilling::class)
+            ->call('openPortal')
+            ->assertForbidden();
+
+        $this->assertSame(150, $client->fresh()->subscription_machines);
+    }
+
+    public function test_resize_refuses_without_an_online_subscription(): void
+    {
+        $client = Client::factory()->create(); // invoiced/manual — no Stripe ids
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Clients\TenantBilling::class)
+            ->set('resizeMachines', 50)
+            ->call('resize');
+
+        $this->assertNull($client->fresh()->subscription_machines, 'nothing changes without a Stripe subscription');
+    }
 }
