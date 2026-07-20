@@ -37,15 +37,10 @@
     <div class="in" style="flex:1;min-width:260px;">
         <label for="calcMachines">Machines under management: <strong id="calcCount">100</strong></label>
         <input id="calcRange" type="range" min="10" max="5000" step="10" value="100" style="margin:.4rem 0;">
-        @if ($configured)
-            <form method="POST" action="{{ route('billing.checkout') }}" style="display:flex;align-items:center;gap:12px;margin-top:6px;">
-                @csrf
-                <input id="calcMachines" name="machines" type="number" min="1" max="100000" value="100" style="width:8rem;">
-                <button class="btn btn-primary" type="submit">Subscribe →</button>
-            </form>
-        @else
-            <input id="calcMachines" type="number" min="1" max="100000" value="100" style="width:8rem;margin-top:6px;">
-        @endif
+        <div style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+            <input id="calcMachines" type="number" min="1" max="100000" value="100" style="width:8rem;">
+            <a id="calcSignup" href="{{ route('signup', ['machines' => 100]) }}" class="btn btn-primary">Get started →</a>
+        </div>
     </div>
     @php $defaultCents = isset($billing) ? $billing->quoteCents(100) : 4800; @endphp
     <div class="out">
@@ -54,12 +49,11 @@
     </div>
 </div>
 
-@unless ($configured)
-    <p class="center muted" style="margin:20px 0 0;">
-        <a href="{{ route('get-started') }}" style="color:var(--teal-700);font-weight:600;">Request access →</a>
-        to start — online checkout can be enabled by your provider.
-    </p>
-@endunless
+<p class="center muted" style="margin:20px 0 0;font-size:.88rem;">
+    Get started creates your account in four quick steps
+    {{ $configured ? '— pay online and you are live as soon as we verify the payment.' : '— we invoice your first month and activate on payment.' }}
+    Prefer to talk first? <a href="{{ route('get-started') }}" class="tlink">Request a call</a>.
+</p>
 
 <div class="pd-card" style="margin-top:40px;background:#fff;border:1px solid var(--slate-200);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
     <div style="overflow-x:auto;">
@@ -106,11 +100,13 @@
         count = document.getElementById('calcCount'),
         price = document.getElementById('calcPrice'),
         per = document.getElementById('calcPer');
+    var signup = document.getElementById('calcSignup');
     function paint(n) {
         var cents = quote(n);
         if (count) count.textContent = n.toLocaleString();
         price.textContent = '$' + (cents / 100).toFixed(2);
         per.textContent = '$' + (cents / 100 / n).toFixed(2);
+        if (signup) signup.href = '{{ route('signup') }}?machines=' + n;
     }
     if (inp) {
         inp.addEventListener('input', function () {

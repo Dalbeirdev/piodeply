@@ -414,6 +414,15 @@
   <div class="callout warn"><b>The most common failure:</b> the <b>From address</b> must be the mailbox you authenticated as, or another address verified with your provider. Authenticating as <code>info@yourdomain.com</code> and sending as <code>hello@yourdomain.com</code> is rejected — <code>553 5.7.1 Sender address rejected</code>. Your SMTP password is encrypted before it is stored and is never shown again; leave the field blank to keep the stored one.</div>
   <p>Until this is set, nothing can send: deployment-failure alerts, offline warnings and website enquiries all go nowhere silently. <code>php artisan security:check</code> flags it.</p>
 
+  <h3>Signups — self-service accounts from the pricing page</h3>
+  <p>The pricing page's <b>Get started</b> runs a four-step public wizard: fleet size (live price) → account (email + password) → company → review &amp; pay. With Stripe connected the visitor pays right there; without it, the application arrives marked for manual invoicing. Either way <b>nothing is created yet</b> — the application lands in <b>Administration → Signups</b> as exactly that: an application.</p>
+  <ol>
+    <li><b>Verify the payment.</b> The row says it plainly: <span class="pd-badge">Paid via Stripe</span> (the webhook confirmed the money), <i>Awaiting Stripe payment</i>, or <i>Verify manually</i> (invoice/transfer — check your bank first).</li>
+    <li><b>Approve.</b> One click creates the client, the owner login (Manager role, bound to their own client only), and emails them that they can sign in. The password is the one they chose at signup — you never see or send it.</li>
+    <li>Or <b>Reject</b> with an optional reason; nothing is created.</li>
+  </ol>
+  <div class="callout"><b>What the new customer can do:</b> exactly what a client-bound Manager can — create projects, enrol machines, deploy software, see reports — inside their own tenant and nowhere else. They also get a <b>Team</b> page to add their own <b>Technician</b> and <b>Viewer</b> accounts (they cannot mint other owners or admins; that stays with you). To be alerted as applications arrive, subscribe a notification channel to "signup.received".</div>
+
   <h3>Enquiries</h3>
   <p><b>Administration → Enquiries</b> lists every contact message and access request submitted on your website — who, their company, fleet size, and what they wrote. <b>Mark handled</b> moves one out of the open list; untick <b>Open only</b> to see the history.</p>
   <div class="callout"><b>Why it matters:</b> these are recorded whether or not an email went out, so a misconfigured mailer costs you a notification, never the lead itself. To be alerted as they arrive, add a channel under <b>Notifications</b> subscribed to “Contact / access-request submitted on the website”.</div>

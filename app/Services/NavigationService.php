@@ -40,6 +40,10 @@ class NavigationService
                 'icon' => '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'],
             ['label' => 'Computers', 'route' => 'computers.index', 'active' => 'computers.*', 'permission' => Permission::ComputersView, 'group' => self::FLEET,
                 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],
+            // A client owner's own staff — invisible to platform staff, who
+            // use Administration -> Users instead.
+            ['label' => 'Team', 'route' => 'team.index', 'active' => 'team.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true,
+                'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/>'],
             ['label' => 'Device Groups', 'route' => 'computers.groups', 'active' => 'computers.groups', 'permission' => Permission::ComputersView, 'group' => self::FLEET, 'staffOnly' => true,
                 'icon' => '<path d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87"/><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/>'],
 
@@ -64,6 +68,8 @@ class NavigationService
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'],
             ['label' => 'Roles', 'route' => 'admin.roles', 'active' => 'admin.roles*', 'permission' => Permission::RolesManage, 'group' => self::ADMIN,
                 'icon' => '<circle cx="12" cy="8" r="3.5"/><path d="M6 21v-1.5a6 6 0 0 1 9-5.2"/><path d="m16.5 20 1.6 1 2.9-4"/>'],
+            ['label' => 'Signups', 'route' => 'admin.signups', 'active' => 'admin.signups*', 'permission' => Permission::UsersCreate, 'group' => self::ADMIN,
+                'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>'],
             ['label' => 'Enquiries', 'route' => 'admin.leads', 'active' => 'admin.leads*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<path d="M4 4h16v16H4z"/><path d="m4 7 8 6 8-6"/>'],
             ['label' => 'Notifications', 'route' => 'admin.notifications', 'active' => 'admin.notifications*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
@@ -96,6 +102,7 @@ class NavigationService
             ->filter(fn (array $item) => $item['permission'] === null || $user->can($item['permission']->value))
             // Cross-client surfaces (device groups) never appear for tenants.
             ->filter(fn (array $item) => ! ($item['staffOnly'] ?? false) || $user->tenantClientId() === null)
+            ->filter(fn (array $item) => ! ($item['tenantOnly'] ?? false) || $user->tenantClientId() !== null)
             ->map(fn (array $item) => [
                 'label'  => $item['label'],
                 'route'  => $item['route'],

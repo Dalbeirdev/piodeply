@@ -69,6 +69,21 @@ class BillingController extends Controller
                     'meta'           => ['mode' => $session['mode'] ?? null],
                 ]
             );
+
+            // A checkout born from the signup wizard carries its signup id;
+            // the payment landing moves the application to "paid" so the
+            // admin's queue shows exactly what is safe to approve.
+            if (($session['payment_status'] ?? '') === 'paid' && isset($session['metadata']['signup_id'])) {
+                \App\Models\Signup::query()
+                    ->whereKey((int) $session['metadata']['signup_id'])
+                    ->where('status', \App\Models\Signup::STATUS_PENDING_PAYMENT)
+                    ->update([
+                        'status'            => \App\Models\Signup::STATUS_PAID,
+                        'stripe_session_id' => $session['id'] ?? null,
+                        'payment_reference' => $session['id'] ?? null,
+                        'paid_at'           => now(),
+                    ]);
+            }
         }
 
         return response()->json(['received' => true]);

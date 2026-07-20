@@ -80,7 +80,7 @@ class BillingService
      * as a single monthly line (quantity 1) so no Stripe tiered Price is
      * required.
      */
-    public function createCheckout(int $machines, string $successUrl, string $cancelUrl): ?string
+    public function createCheckout(int $machines, string $successUrl, string $cancelUrl, ?string $customerEmail = null, array $metadata = []): ?string
     {
         if (! $this->isConfigured()) {
             return null;
@@ -91,10 +91,13 @@ class BillingService
 
         $response = Http::withToken(config('services.stripe.secret'))
             ->asForm()
-            ->post(self::API . '/checkout/sessions', [
+            ->post(self::API . '/checkout/sessions', array_filter([
                 'mode'        => 'subscription',
                 'success_url' => $successUrl . '?session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url'  => $cancelUrl,
+                // Pre-filling the email ties the Stripe customer to the
+                // signup and stops typos diverging the two records.
+                'customer_email' => $customerEmail,
                 'line_items'  => [[
                     'quantity'   => 1,
                     'price_data' => [
@@ -104,8 +107,8 @@ class BillingService
                         'product_data' => ['name' => "PioDeploy — {$machines} machines / month"],
                     ],
                 ]],
-                'metadata' => ['machines' => $machines],
-            ]);
+                'metadata' => ['machines' => $machines] + $metadata,
+            ]));
 
         if ($response->failed()) {
             \Illuminate\Support\Facades\Log::warning('Stripe checkout failed: ' . $response->body());

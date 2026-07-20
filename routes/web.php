@@ -16,6 +16,10 @@ Route::get('/get-started', [\App\Http\Controllers\MarketingController::class, 'g
 Route::get('/brand', [\App\Http\Controllers\MarketingController::class, 'brand'])->name('brand');
 Route::post('/leads', [\App\Http\Controllers\MarketingController::class, 'storeLead'])
     ->middleware('throttle:6,1')->name('leads.store');
+
+// Self-service signup: multi-step wizard -> payment -> admin approval.
+Route::get('/signup', \App\Livewire\Marketing\SignupWizard::class)->name('signup');
+Route::get('/signup/thanks', fn () => view('marketing.signup-thanks'))->name('signup.thanks');
 Route::post('/quote', [\App\Http\Controllers\MarketingController::class, 'storeQuote'])
     ->middleware('throttle:6,1')->name('quotes.store');
 
@@ -131,6 +135,12 @@ Route::middleware([
 
     // Everything the website sent us. Gated inside the component too.
     Route::get('/admin/enquiries', \App\Livewire\Admin\LeadsIndex::class)->name('admin.leads');
+
+    // Self-service signups awaiting payment verification + approval.
+    Route::get('/admin/signups', \App\Livewire\Admin\SignupsIndex::class)->name('admin.signups');
+
+    // A client owner's own staff. Tenancy enforced inside the component.
+    Route::get('/team', \App\Livewire\Team\TeamIndex::class)->name('team.index');
 
     // SMTP without an SSH session. Gated inside the component too.
     Route::get('/admin/email', \App\Livewire\Admin\MailSettings::class)

@@ -91,7 +91,7 @@ public sealed class SelfUpdater
             var script = Path.Combine(root, "uninstall-agent.ps1");
             File.WriteAllText(script, BuildUninstallScript(installDir));
 
-            LaunchDetached(script, "PioDeployAgentUninstall");
+            LaunchDetached(script);
             _logger.LogInformation("Uninstall requested from the server; the service will now stop and be removed.");
             return true;
         }
@@ -202,50 +202,38 @@ catch {
 """;
     }
 
-    private static void LaunchDetached(string scriptPath, string taskName = "PioDeployAgentSelfUpdate")
+    /// <summary>Starts the helper as a plain detached child process and
+    /// PROVES it is alive before reporting success.
+    ///
+    /// History, because this launch has now failed in the field twice:
+    /// UseShellExecute=true silently does nothing in a service's session 0
+    /// (no shell to execute through), and a schtasks one-shot task proved
+    /// just as silent — /TR quoting is fragile and its errors were
+    /// swallowed. UseShellExecute=false is a raw CreateProcess: no shell,
+    /// no Task Scheduler, works in session 0, and Windows does not kill
+    /// child processes when the parent service exits. The helper sleeps 8s
+    /// first, so it comfortably outlives our shutdown.</summary>
+    private void LaunchDetached(string scriptPath)
     {
-        // A Windows service runs in session 0. Starting the helper directly
-        // from here was unreliable: with UseShellExecute=true the process
-        // often never ran in session 0 (no shell), so the swap silently
-        // never happened and the agent looped, re-downloading forever.
-        //
-        // A one-shot Scheduled Task is the robust pattern: the Task Scheduler
-        // owns the helper, runs it as SYSTEM a few seconds out, and it is in
-        // no way tied to this dying service. We delete any prior task of the
-        // same name first so repeated updates don't stack.
-        Run("schtasks.exe", $"/Delete /TN {taskName} /F");
-
-        var command = $"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \\\"{scriptPath}\\\"";
-        var runAt = DateTime.Now.AddSeconds(10).ToString("HH:mm");
-
-        // /RU SYSTEM: same account the service uses, so it can write Program
-        // Files and control the service. /SC ONCE with a near time fires now.
-        Run("schtasks.exe",
-            $"/Create /TN {taskName} /TR \"{command}\" /SC ONCE /ST {runAt} /RU SYSTEM /RL HIGHEST /F");
-
-        // Kick it immediately rather than waiting for the clock minute.
-        Run("schtasks.exe", $"/Run /TN {taskName}");
-    }
-
-    private static void Run(string file, string args)
-    {
-        try
+        var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
-            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = file,
-                Arguments = args,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            });
-            p?.WaitForExit(15_000);
-        }
-        catch
+            FileName = "powershell.exe",
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = Path.GetDirectoryName(scriptPath) ?? "",
+        }) ?? throw new InvalidOperationException("Process.Start returned null for the update helper.");
+
+        // A helper that dies instantly (bad powershell path, corrupt script)
+        // must fail the staging attempt NOW — stopping the service on the
+        // strength of a dead helper is exactly the offline loop this code
+        // exists to prevent.
+        if (p.WaitForExit(2_000))
         {
-            // Best effort: a failure to register the task leaves the agent on
-            // its current version, which is the safe outcome.
+            throw new InvalidOperationException(
+                $"Update helper exited immediately (code {p.ExitCode}) instead of waiting for the service to stop.");
         }
+
+        _logger.LogInformation("Update helper running as PID {Pid}.", p.Id);
     }
 }
