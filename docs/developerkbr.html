@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PioDeploy — Developer Knowledge Base (developerkbr)</title>
+<style>
+  body { font-family: 'Segoe UI', system-ui, Arial, sans-serif; color: #1e293b; margin: 0; font-size: 13px; line-height: 1.55; }
+  .cover { background: #0f172a; color: #fff; padding: 48px 56px; }
+  .cover h1 { margin: 0; font-size: 28px; }
+  .cover .accent { color: #5eead4; }
+  .cover p { color: #94a3b8; margin: 8px 0 0; }
+  .wrap { padding: 28px 56px; }
+  h2 { font-size: 19px; color: #0f172a; border-bottom: 3px solid #14b8a6; padding-bottom: 6px; margin: 34px 0 12px; page-break-after: avoid; }
+  h3 { font-size: 15px; color: #0f766e; margin: 22px 0 6px; page-break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; page-break-inside: avoid; }
+  th { text-align: left; background: #f1f5f9; color: #475569; font-size: 11px; text-transform: uppercase; padding: 6px 10px; border: 1px solid #e2e8f0; }
+  td { padding: 6px 10px; border: 1px solid #e2e8f0; vertical-align: top; }
+  td.f { font-weight: 600; white-space: nowrap; width: 26%; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .why { color: #64748b; }
+  .callout { background: #f0fdfa; border-left: 4px solid #14b8a6; padding: 10px 14px; margin: 10px 0; }
+  .toc { columns: 2; font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>PioDeploy <span class="accent">Developer Knowledge Base</span></h1>
+  <p>developerkbr — every page, what we added, and why. Companion to the User Guide (which explains <i>how to use</i>; this explains <i>what exists and the reasoning behind it</i>).</p>
+  <p>Generated 2026-07-20 · covers the platform through commit 64ac326</p>
+</div>
+
+<div class="wrap">
+
+<h2>Contents</h2>
+<div class="toc">
+1. Marketing site<br>
+2. Authentication &amp; security<br>
+3. Dashboard<br>
+4. Clients<br>
+5. Projects &amp; enrolment<br>
+6. Computers — list<br>
+7. Computer — detail page<br>
+8. Device Groups<br>
+9. Packages<br>
+10. Deployments &amp; Bulk deploy<br>
+11. Software Policies<br>
+12. Browser Policies<br>
+13. Reports<br>
+14. Billing (customer side)<br>
+15. Billing (admin side)<br>
+16. Administration<br>
+17. The agent<br>
+18. Under the hood
+</div>
+
+<h2>1. Marketing site (public)</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Home page</td><td class="why">Animated hero, live-feel dashboard mock, testimonials, comparison table, FAQ with internal/outbound links. The conversion funnel starts here; every section pushes toward Pricing → Request access.</td></tr>
+<tr><td class="f">/features page</td><td class="why">Was only a home-page anchor; a dedicated page is SEO-indexable, gives every capability its own copy, and ends in the same CTA. Six capability areas + the full 28-item grid.</td></tr>
+<tr><td class="f">/pricing</td><td class="why">Four headline plan cards (20/50/100/250) instead of seven — one clean row; larger fleets use the calculator + Enterprise quote form so nothing is lost. "Payments secured by Stripe" line answers the card-safety objection at the decision point.</td></tr>
+<tr><td class="f">/about</td><td class="why">The origin story builds trust; a fragile animated grid was replaced by a plain three-number stat strip after it rendered broken.</td></tr>
+<tr><td class="f">/get-started</td><td class="why">Accounts are provisioned by staff (no self-service signup) so tenants start correctly; the "What happens next" 3-step section sets expectations after submitting.</td></tr>
+<tr><td class="f">SEO layer</td><td class="why">sitemap.xml + robots.txt (served by routes so URLs follow APP_URL), canonical/Open Graph/Twitter tags, JSON-LD (Organization, SoftwareApplication, FAQPage), branded 1200×630 og-image. Without these, shared links were bare URLs and Google indexed the app pages.</td></tr>
+<tr><td class="f">Logo lockups</td><td class="why">Wordmark reads <b>PioDeploy</b> (capitalised in the SVGs), sized 50px header / 44px footer; image URLs carry <code>?v=</code> because browsers cache SVGs by exact URL.</td></tr>
+</table>
+
+<h2>2. Authentication &amp; security</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Jetstream login + profile</td><td class="why">Standard hardened auth; public registration is intentionally disabled — staff create accounts, so tenancy is always set up correctly.</td></tr>
+<tr><td class="f">Two-factor (profile)</td><td class="why">Authenticator-app 2FA with recovery codes shipped with Jetstream; we surfaced it because nobody found it.</td></tr>
+<tr><td class="f">Require-2FA setting</td><td class="why">Settings → Security: off / staff / everyone. Middleware routes unenrolled users to their profile with a banner; profile + 2FA + logout routes stay reachable so enrolment can never dead-lock. Default off so deploying changes nothing.</td></tr>
+<tr><td class="f">2FA column on Users</td><td class="why">An admin needs fleet-wide visibility of who is enrolled before flipping enforcement on.</td></tr>
+</table>
+
+<h2>3. Dashboard</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Online / offline tiles</td><td class="why">Heartbeat-derived (threshold configurable in Settings). The first thing an MSP checks.</td></tr>
+<tr><td class="f">Agents outdated card</td><td class="why">Old agents caused real failures (broken winget scan → install loops). Counts machines behind <code>CURRENT_AGENT_VERSION</code>, deep-links to the filtered Computers list. Replaced a hardcoded version check that had silently gone stale.</td></tr>
+<tr><td class="f">Updates waiting (by package)</td><td class="why">One update across sixty machines is one decision, not sixty rows — folded per package.</td></tr>
+<tr><td class="f">Browser-policy widget, fleet-by-client, deployments chart</td><td class="why">Compliance posture and job health at a glance; each links into its detail page.</td></tr>
+<tr><td class="f">Unpaid-subscription banner</td><td class="why">Site-wide amber (past due) or red (suspended) bar for staff until the card is fixed — part of the dunning loop. Client-portal users never see it.</td></tr>
+</table>
+
+<h2>4. Clients</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Client list + CRUD, CSV import/export</td><td class="why">The MSP's customer registry; every project, machine and policy hangs off a client.</td></tr>
+<tr><td class="f"><b>PDF link (per row)</b></td><td class="why">Downloads a branded compliance report for that client — fleet overview, software/browser policy compliance, 30-day deployment activity, machine list. Built for attaching to the monthly invoice; rendered with dompdf; every query is scoped through the client's projects so cross-tenant leakage is structurally impossible.</td></tr>
+<tr><td class="f"><b>Monthly checkbox (per row)</b></td><td class="why">Opt-in per client: when ticked, <code>reports:client-compliance</code> emails that client's portal users the PDF on the 1st of each month at 07:00. Default off for every client so enabling the feature changes nothing until you choose. This is the row highlighted in your screenshot.</td></tr>
+<tr><td class="f">Client-portal scoping</td><td class="why">Client-role users see only their own projects/machines, read-only, with their own dashboard and a self-service compliance-PDF button.</td></tr>
+</table>
+
+<h2>5. Projects &amp; enrolment</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Projects</td><td class="why">The unit of targeting: policies, browser policies and bulk deploys aim at a project; computers belong to one.</td></tr>
+<tr><td class="f">Enrolment page (per project)</td><td class="why">One PowerShell script per project (GPO / Intune / RMM / manual tabs) with the API key baked in; the script self-heals prerequisites (execution policy, VC++ runtime, winget-as-SYSTEM) because real fleets are messy.</td></tr>
+</table>
+
+<h2>6. Computers — list</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Search + client/project/connectivity filters</td><td class="why">Finding one machine in a fleet fast (hostname, serial, IP, MAC).</td></tr>
+<tr><td class="f">Agent column + "Update available" badge</td><td class="why">Stale agents were invisible before; the badge explains itself (self-update on next check-in).</td></tr>
+<tr><td class="f">Agent-version filter (outdated / up to date)</td><td class="why">URL-bound (<code>?agentStatus=outdated</code>) so the dashboard card deep-links straight to the machines that need attention.</td></tr>
+<tr><td class="f">Soft-delete + restore</td><td class="why">A deleted machine that reports again is revived automatically — agents outlive portal bookkeeping.</td></tr>
+</table>
+
+<h2>7. Computer — detail page</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Health checks</td><td class="why">Derived warnings (never reported, offline &gt; a day, low disk, secure boot off) — MSP triage without digging.</td></tr>
+<tr><td class="f">Assignment panel</td><td class="why">Shows agent version as "1.0.20 — update available (latest 1.4.0)" against the real latest, not a hardcoded number.</td></tr>
+<tr><td class="f">Quick deploy panel</td><td class="why">One-off jobs without a policy. The action list adapts to the package type (no Rollback on MSI, no Remove on portable), the button states the outcome before the click ("Upgrade 138 → 141", "Up to date"), and Force is the explicit escape hatch.</td></tr>
+<tr><td class="f">One-click "Roll back to X"</td><td class="why">Every job snapshots <code>installed_version_before</code>; when history knows the last good version, rolling back is one click instead of a version hunt. winget/Chocolatey only — binary installers can't fetch old versions, and we refuse to pretend otherwise.</td></tr>
+<tr><td class="f">Installed software (patch table)</td><td class="why">Application / Installed / Latest / Update required (Yes-No badge) / Status — the patch-management layout operators know. Opens on <b>Deployed by PioDeploy</b> because the first question is "what did WE put here?". <b>Update now →</b> on outdated catalogue apps queues the update through the guarded path.</td></tr>
+<tr><td class="f">Software status (per policy, in words)</td><td class="why">Answers "so why isn't it installed?" when there is no job to point at ("waiting for maintenance window", "ring eligible in 2 hours"…).</td></tr>
+<tr><td class="f">Deployment log — collapsed</td><td class="why">Every attempt with the agent's own output; collapsed by default with an attempt count because it grows long and is a drill-down, not a summary.</td></tr>
+</table>
+
+<h2>8. Device Groups</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Groups (Fleet → Device Groups)</td><td class="why">A hand-picked set of machines that cuts across clients and projects (finance machines, kiosks, pilot rings). A "device tag" is simply membership of a group. Staff-only — grouping is cross-tenant by nature.</td></tr>
+<tr><td class="f">Why not Sites/Departments?</td><td class="why">They don't exist anywhere in the platform's data model; inventing them only for policies would create orphan concepts. Groups deliver the same targeting power without a platform-wide re-model.</td></tr>
+</table>
+
+<h2>9. Packages</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Catalogue (~120 seeded + custom)</td><td class="why">The approved-software list: winget/Chocolatey ids resolve from their repos; MSI/EXE/MSIX/ZIP carry an installer URL + SHA-256 the agent verifies before executing anything.</td></tr>
+<tr><td class="f">Capability matrix</td><td class="why"><code>InstallerType::supports(action)</code> is the single source of truth for what each type can do (rollback: winget/choco only; uninstall: +MSI). The UI, the queue guard and the policy engine all consult it, so a doomed job can't be created from any door.</td></tr>
+</table>
+
+<h2>10. Deployments &amp; Bulk deploy</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Deployments list</td><td class="why">Live queue + history; repeats of the same task fold into one row with a ×N badge; failed jobs carry a translated failure hint (exit-code → plain English).</td></tr>
+<tr><td class="f">Bulk deploy</td><td class="why">One package across a whole project (optional ring filter for staged rollouts) with a live target count. Fans out over the same guarded queue, so satisfied machines are skipped and in-flight duplicates collapse — a summary line, not a pile of noise. Rollback is excluded because each machine's previous version differs.</td></tr>
+</table>
+
+<h2>11. Software Policies</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Desired state (Install / Auto update / Force update / Remove / Block)</td><td class="why">Say what the fleet should look like; the agent makes it so and keeps it that way. Modes: Enforce or Audit (report only).</td></tr>
+<tr><td class="f">Version modes (Latest / Exact / Minimum / Freeze)</td><td class="why">Exact/Freeze can mean a downgrade — the agent runs it as a version-pinned reinstall on package managers; on binary types the policy engine honestly reinstalls current instead of queueing an impossible rollback.</td></tr>
+<tr><td class="f">Windows, frequency, rings</td><td class="why">Maintenance windows and Pilot→Test→Production rings, because 2 a.m. Saturday and staged rollouts are how real fleets change.</td></tr>
+<tr><td class="f">Install-loop guards</td><td class="why">Field bug: blind-scan agents (can't run winget as SYSTEM) reported no inventory, so policies reinstalled forever ("Install ×17"). Two fixes: a machine reporting <i>nothing</i> from a manager counts a succeeded PioDeploy install as present; and installs are paced to one successful attempt per frequency window regardless.</td></tr>
+<tr><td class="f">Batch enforcement</td><td class="why">The 5-minute pass asked the DB 15–20 questions per machine per policy (21,305 queries / 10.5 s at 1,000 devices). <code>PolicyBatchContext</code> answers them from three set-based queries per policy → 603 queries / 1.7 s. Same tests cover both paths so they can't drift.</td></tr>
+</table>
+
+<h2>12. Browser Policies</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Catalogue (36 policies, 19 categories)</td><td class="why">GPO-grade browser lockdown without a domain: passwords, private browsing, autofill, sync, downloads, cookies, permissions, printing, lockdown, AI assistants (Gemini/Copilot/Leo), Edge extras, WebUSB/BT/Serial. Each policy is one enum case with a per-browser registry/policies.json map — adding one is a single case, nothing else changes. Items the platform can't honestly enforce (kiosk mode, right-click, per-user HKCU) were rejected rather than faked.</td></tr>
+<tr><td class="f">Value-typed policies</td><td class="why">Forced homepage / new-tab URL, block-all-extensions, force-install extensions by ID (strictly validated 32-char Web Store ids). Needed agent 1.4.0's <code>registry_sz</code>/<code>registry_list</code> operation kinds; list entries are tracked individually so a shrinking list rolls back exactly the stale numbers.</td></tr>
+<tr><td class="f">Assignment scopes + inheritance</td><td class="why">All machines / Client / Project / Device group / Single computer. Same-type overlaps resolve by specificity — <b>Computer › Group › Project › Client › All</b> — so "block incognito company-wide, allow for the Developers group" just works. Exclusions still override everything. Existing project policies migrated byte-for-byte.</td></tr>
+<tr><td class="f">Templates (7 built-in + custom)</td><td class="why">High Security, Standard Office, Developer, Kiosk, Finance, Healthcare, Education — code-defined so they need no seeding and can only reference real catalogue types. Apply skips types the target already has; capture any project as a custom template.</td></tr>
+<tr><td class="f">Compliance dashboard</td><td class="why">"Are we protected, and where not?" — fleet %, per-policy bars, an only-problems filter, and a failing-machines list carrying the agent's own error detail. Tenant-lensed: shared policies count a client's own machines only.</td></tr>
+<tr><td class="f">Import / export</td><td class="why">Versioned JSON that round-trips values and browser scopes; import becomes a custom template, unknown types are skipped and counted, never silently lost.</td></tr>
+</table>
+
+<h2>13. Reports</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Compliance / Deployments / Computers (CSV)</td><td class="why">The exportable views for evidence and spreadsheets.</td></tr>
+<tr><td class="f">Client compliance PDF</td><td class="why">See Clients (§4) — the on-demand and monthly branded report.</td></tr>
+</table>
+
+<h2>14. Billing — customer side</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Plans + calculator + enterprise quotes</td><td class="why">Per-endpoint pricing; <code>PricingService</code> is the single authoritative engine (the JS calculator only mirrors it).</td></tr>
+<tr><td class="f">Trial with card verification</td><td class="why">14 days via Stripe SetupIntent — the card never touches our server; prepaid cards are rejected to keep trial abuse down.</td></tr>
+<tr><td class="f">Subscription page</td><td class="why">Swap/cancel/resume/pause; status is always <i>derived</i> from Stripe's local mirror, never guessed.</td></tr>
+<tr><td class="f">Invoices</td><td class="why">Downloads redirect to Stripe's hosted PDF — no dompdf here, Stripe's document is the authoritative one.</td></tr>
+<tr><td class="f">Dunning</td><td class="why">Stripe retries fire a failure email each attempt; after Stripe gives up, <code>billing:dunning-reminders</code> nudges every 3 days; the site-wide banner keeps it visible; a successful payment resets everything.</td></tr>
+</table>
+
+<h2>15. Billing — admin side</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Billing overview</td><td class="why">MRR/ARR/churn/LTV + payment log + CSV export.</td></tr>
+<tr><td class="f">Webhooks monitor</td><td class="why">Every Stripe event with verify/idempotency status and a Retry button — webhook debugging without SSH.</td></tr>
+<tr><td class="f">Coupons + Affiliates</td><td class="why">Growth levers: Stripe-backed coupons with local validation; referral links, commission accrual on paid invoices, payout requests (race-safe via row locks).</td></tr>
+<tr><td class="f">Billing settings</td><td class="why">Stripe keys entered in the portal (encrypted, write-only fields), webhook secret, tax toggle — no .env editing over SSH.</td></tr>
+</table>
+
+<h2>16. Administration</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Users / Roles matrix</td><td class="why">Spatie permissions behind a tick-box matrix; Client-role accounts are hard-bound to a client.</td></tr>
+<tr><td class="f">Settings</td><td class="why">Operational knobs (heartbeat threshold, retries, backoff, retention, 2FA requirement) — editable live, no redeploy.</td></tr>
+<tr><td class="f">Email (SMTP)</td><td class="why">Provider presets + "Send test email", because saving proves nothing and sending does.</td></tr>
+<tr><td class="f">Content editor</td><td class="why">Marketing copy (hero, CTA, taglines) editable in-portal with reset-to-default.</td></tr>
+<tr><td class="f">Activity log</td><td class="why">Spatie activity log across sensitive actions; retention pruned nightly.</td></tr>
+<tr><td class="f">Impersonation</td><td class="why">Support tool with a loud banner and a one-click leave.</td></tr>
+</table>
+
+<h2>17. The agent (.NET 8, v1.4.0)</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Silent SYSTEM service</td><td class="why">Registers, heartbeats, reports inventory, claims jobs, applies browser policies — no user ever sees a window.</td></tr>
+<tr><td class="f">Checksum gate</td><td class="why">A downloaded binary that doesn't match its catalogue SHA-256 is never executed.</td></tr>
+<tr><td class="f">Browser-policy manifest</td><td class="why">Everything the agent wrote is recorded locally; anything the server no longer wants is rolled back on the next run — deleting a policy undoes it automatically.</td></tr>
+<tr><td class="f">Self-update</td><td class="why">The heartbeat advertises the latest version; agents upgrade themselves. The server must have the new bundle <i>published</i> or the fleet stays put — the dashboard card shows the spread.</td></tr>
+</table>
+
+<h2>18. Under the hood</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Guarded job queue</td><td class="why"><code>queueIfNeeded</code> refuses unsupported action/type combos, collapses in-flight duplicates, and skips satisfied machines — every door (quick deploy, bulk, policies, API) goes through it.</td></tr>
+<tr><td class="f">Scheduler</td><td class="why"><code>policies:enforce</code> 5-min, offline check 15-min, drift digest + log prune nightly, trial reminders 09:00, dunning 09:30, client reports monthly. One crontab line runs it all.</td></tr>
+<tr><td class="f">perf:bench</td><td class="why">Seeds a synthetic fleet (bench-named DB only) and times the hot paths with query counts — so performance claims are measured, not guessed. See docs/PERFORMANCE.md.</td></tr>
+<tr><td class="f">Test discipline</td><td class="why">~720 PHP + 73 agent tests; every feature phase shipped with tests and the guide/PDF updated in the same commit.</td></tr>
+</table>
+
+<div class="callout"><b>Reading this next to the code:</b> most rows map 1-to-1 to a service class (<code>app/Services</code>), a Livewire component (<code>app/Livewire</code>) and a feature test (<code>tests/Feature</code>) named after the same concept. The commit history tells the same story in order — <code>git log --oneline</code>.</div>
+
+</div>
+</body>
+</html>
