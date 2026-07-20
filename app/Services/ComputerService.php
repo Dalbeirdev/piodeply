@@ -58,6 +58,7 @@ class ComputerService
         // and only when a plan actually sets a limit (unbilled installs are
         // unlimited).
         $this->assertHasCapacityForNewDevice();
+        $this->assertClientHasSeats($project);
 
         /** @var Computer $computer */
         $computer = $this->computers->create($attributes + ['agent_uuid' => $agentUuid]);
@@ -240,6 +241,49 @@ class ComputerService
 
             throw new \App\Exceptions\DeviceLimitReachedException($limit, $current);
         }
+    }
+
+    /**
+     * The seat contract a self-service client actually bought: a
+     * 20-machine subscription enrols at most 20 machines, enforced here —
+     * at registration, the only door a new machine comes through — not by
+     * anyone watching a dashboard. Clients without a subscription figure
+     * (invoiced arrangements, staff-created clients) are uncapped: their
+     * limit is a business conversation, not a column.
+     *
+     * Existing machines always re-register (the caller handles that path
+     * before this check), so a full fleet never locks out its own members
+     * — only genuinely new machines are refused.
+     */
+    private function assertClientHasSeats(Project $project): void
+    {
+        $client = $project->client;
+        $limit = $client?->subscription_machines;
+
+        if ($client === null || $limit === null || $limit <= 0) {
+            return;
+        }
+
+        $current = Computer::query()
+            ->whereHas('project', fn ($q) => $q->where('client_id', $client->id))
+            ->count();
+
+        if ($current < $limit) {
+            return;
+        }
+
+        // The agent retries registration forever; one alert per client per
+        // day, not one per attempt.
+        $cacheKey = "seat-limit-notified:{$client->id}";
+        if (\Illuminate\Support\Facades\Cache::add($cacheKey, true, now()->addDay())) {
+            app(NotificationService::class)->notify(
+                'billing.client_seat_limit',
+                "{$client->company_name} is at its seat limit ({$current}/{$limit}) — an enrolment was refused",
+                ['client' => $client->company_name, 'limit' => $limit, 'current' => $current]
+            );
+        }
+
+        throw new \App\Exceptions\DeviceLimitReachedException($limit, $current);
     }
 
     private function onlyInventory(array $inventory): array

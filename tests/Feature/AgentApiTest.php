@@ -159,6 +159,42 @@ class AgentApiTest extends TestCase
             ->assertJsonPath('reinstall', false);
     }
 
+    public function test_a_clients_seat_limit_refuses_the_machine_past_its_subscription(): void
+    {
+        // A 2-machine subscription enrols exactly 2 machines — the third is
+        // refused with 402 at the only door a new machine comes through.
+        $this->project->client->forceFill(['subscription_machines' => 2])->save();
+
+        $first = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($first), $this->agentHeaders())->assertCreated();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload(), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/register', $this->samplePayload(), $this->agentHeaders())
+            ->assertStatus(402)
+            ->assertJsonPath('error', 'device_limit_reached');
+        $this->assertSame(2, Computer::count());
+
+        // A full fleet never locks out its own members: re-registration of
+        // an existing machine is always allowed.
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($first), $this->agentHeaders())->assertCreated();
+
+        // Growing the subscription opens the door again.
+        $this->project->client->forceFill(['subscription_machines' => 3])->save();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload(), $this->agentHeaders())->assertCreated();
+        $this->assertSame(3, Computer::count());
+    }
+
+    public function test_clients_without_a_subscription_figure_are_uncapped(): void
+    {
+        // Invoiced arrangements and staff-created clients have no
+        // subscription_machines — their limit is a business conversation.
+        foreach (range(1, 4) as $i) {
+            $this->postJson('/api/v1/agent/register', $this->samplePayload(), $this->agentHeaders())->assertCreated();
+        }
+
+        $this->assertSame(4, Computer::count());
+    }
+
     public function test_heartbeat_delivers_a_queued_uninstall(): void
     {
         $uuid = (string) Str::uuid();
