@@ -13,10 +13,10 @@ class BillingController extends Controller
     ) {
     }
 
-    /** Start a subscription checkout from the pricing page. */
+    /** Start a subscription checkout from the pricing page (legacy route). */
     public function checkout(Request $request)
     {
-        abort_unless($this->billing->isConfigured(), 404, 'Online payment is not enabled.');
+        abort_unless($this->billing->legacyCheckoutEnabled(), 404, 'Online payment is not enabled.');
 
         $validated = $request->validate([
             'machines' => ['required', 'integer', 'between:1,100000'],

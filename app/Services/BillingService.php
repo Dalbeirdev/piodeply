@@ -56,12 +56,28 @@ class BillingService
         return $total;
     }
 
-    /** Is Stripe usable — enabled by the operator AND keyed in .env? */
+    /**
+     * Is Stripe usable? Keys present is the whole answer: saving keys IS
+     * the act of turning card payment on. This must not depend on the
+     * "legacy checkout" toggle — its label tells operators subscription
+     * plans don't need it, and gating the signup wizard on it silently
+     * downgraded every paid signup to verify-manually.
+     */
     public function isConfigured(): bool
     {
-        return (bool) $this->settings->get('billing.enabled', '0')
-            && ! empty(config('services.stripe.secret'))
+        return ! empty(config('services.stripe.secret'))
             && ! empty(config('services.stripe.key'));
+    }
+
+    /**
+     * The old direct per-machine "Subscribe" route on the marketing site —
+     * exactly what the admin toggle's label describes, and the only thing
+     * it controls.
+     */
+    public function legacyCheckoutEnabled(): bool
+    {
+        return (bool) $this->settings->get('billing.enabled', '0')
+            && $this->isConfigured();
     }
 
     public function currency(): string

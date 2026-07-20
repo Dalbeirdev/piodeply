@@ -100,6 +100,23 @@ class ContentAndBillingTest extends TestCase
             ->assertDontSee('Subscribe →');
     }
 
+    public function test_saved_keys_alone_enable_signup_payment_but_not_the_legacy_route(): void
+    {
+        // The admin toggle's label says subscription plans don't need it —
+        // so with keys saved and the toggle OFF, the wizard must take cards
+        // (isConfigured) while the legacy direct checkout stays 404. Gating
+        // the wizard on the toggle silently downgraded every paid signup
+        // to verify-manually.
+        config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
+        app(SettingsService::class)->set('billing.enabled', '0');
+
+        $billing = app(\App\Services\BillingService::class);
+        $this->assertTrue($billing->isConfigured(), 'keys alone must enable signup payment');
+        $this->assertFalse($billing->legacyCheckoutEnabled(), 'the toggle only controls the legacy route');
+
+        $this->post('/billing/checkout', ['machines' => 100])->assertNotFound();
+    }
+
     public function test_configured_checkout_creates_a_stripe_session_and_redirects(): void
     {
         config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
