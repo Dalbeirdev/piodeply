@@ -127,6 +127,13 @@ MIGRATED=1
 $PHP artisan migrate --force
 MIGRATED=0
 
+# Reference data the app cannot run without. PlanSeeder is idempotent
+# (updateOrCreate by slug), so this refreshes prices/features and can never
+# duplicate. Skipping it once left the live pricing page with an empty
+# plans table — a toggle, a hole where the cards belong, and no way to buy.
+log "Seeding reference data (plans)"
+$PHP artisan db:seed --class=PlanSeeder --force
+
 # route:cache is the one that gets forgotten: config: and view: caches do not
 # touch it, so a newly added route keeps 404ing until this runs. Clear before
 # cache, or a stale file can survive the rebuild.

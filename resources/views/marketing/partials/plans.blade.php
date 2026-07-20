@@ -51,8 +51,11 @@
                     <li>{{ $feature }}</li>
                 @endforeach
             </ul>
+            {{-- Straight into the signup wizard, pre-sized to this plan's
+                 fleet — the request-access form is the "talk to us" path,
+                 not the buy path. --}}
             <a class="btn {{ $plan->is_recommended ? 'btn-primary' : 'btn-ghost' }} plan-cta"
-               href="{{ route('get-started') }}?plan={{ $plan->slug }}">Start 14-day trial</a>
+               href="{{ route('signup', ['machines' => $plan->device_limit]) }}">Get started &rarr;</a>
         </div>
     @endforeach
 </div>
@@ -83,7 +86,7 @@
                 <div><span class="co-label">Per machine</span><span class="co-val" id="coPer">$0.48</span></div>
                 <div><span class="co-label">Yearly saving</span><span class="co-val co-save" id="coSave">$96</span></div>
             </div>
-            <a class="btn btn-primary" id="coCta" href="{{ route('get-started') }}?plan=100-machines">Start 14-day trial</a>
+            <a class="btn btn-primary" id="coCta" href="{{ route('signup', ['machines' => 100]) }}">Get started &rarr;</a>
         </div>
     </div>
 </div>
@@ -177,7 +180,9 @@
             coPer.textContent = '$' + (plan.yearly / 100 / plan.device_limit).toFixed(2) + ' / mo';
         }
         coSave.textContent = fmt(plan.savings) + ' / yr';
-        coCta.setAttribute('href', '{{ route('get-started') }}?plan=' + plan.slug);
+        // Carry the actual slider count, not the plan ceiling — the wizard
+        // quotes and bills on machines, so what they chose is what they see.
+        coCta.setAttribute('href', '{{ route('signup') }}?machines=' + n);
     }
 
     if (range) range.addEventListener('input', function () { if (count) count.value = range.value; paint(range.value); });
