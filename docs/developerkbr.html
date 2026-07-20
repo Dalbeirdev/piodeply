@@ -193,6 +193,10 @@
 <h2>12. Browser Policies</h2>
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Windows Security types (win_*)</td><td class="why">The OS is just another registry surface: Browser::Windows pseudo-target, gated BEFORE the per-browser matches so both families stay exhaustive and can never leak into each other (a Windows type answers only for the OS; browser "all" excludes it). Reuses everything: scoping, manifest rollback, compliance reporting. Agent change was ONE line ("windows" is always installed) — the enforcer was already surface-agnostic. Each type documents its permissive value so enable/delete restores Windows defaults.</td></tr>
+</table>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
 <tr><td class="f">Catalogue (36 policies, 19 categories)</td><td class="why">GPO-grade browser lockdown without a domain: passwords, private browsing, autofill, sync, downloads, cookies, permissions, printing, lockdown, AI assistants (Gemini/Copilot/Leo), Edge extras, WebUSB/BT/Serial. Each policy is one enum case with a per-browser registry/policies.json map — adding one is a single case, nothing else changes. Items the platform can't honestly enforce (kiosk mode, right-click, per-user HKCU) were rejected rather than faked.</td></tr>
 <tr><td class="f">Value-typed policies</td><td class="why">Forced homepage / new-tab URL, block-all-extensions, force-install extensions by ID (strictly validated 32-char Web Store ids). Needed agent 1.4.0's <code>registry_sz</code>/<code>registry_list</code> operation kinds; list entries are tracked individually so a shrinking list rolls back exactly the stale numbers.</td></tr>
 <tr><td class="f">Assignment scopes + inheritance</td><td class="why">All machines / Client / Project / Device group / Single computer. Same-type overlaps resolve by specificity — <b>Computer › Group › Project › Client › All</b> — so "block incognito company-wide, allow for the Developers group" just works. Exclusions still override everything. Existing project policies migrated byte-for-byte.</td></tr>

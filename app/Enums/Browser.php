@@ -10,6 +10,11 @@ enum Browser: string
     case Brave = 'brave';
     case Opera = 'opera';
 
+    /** Not a browser: the OS itself as a policy surface. Windows-security
+     * policy types answer only for this target, browser types never do —
+     * one registry pipeline, two families. */
+    case Windows = 'windows';
+
     /** @return list<string> */
     public static function values(): array
     {
@@ -24,6 +29,7 @@ enum Browser: string
             self::Firefox => 'Mozilla Firefox',
             self::Brave => 'Brave',
             self::Opera => 'Opera',
+            self::Windows => 'Windows OS',
         };
     }
 }

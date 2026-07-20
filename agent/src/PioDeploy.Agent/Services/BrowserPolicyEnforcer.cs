@@ -381,6 +381,9 @@ public sealed class BrowserPolicyEnforcer : IBrowserPolicyEnforcer
 
     private static bool IsBrowserInstalled(string browser) => browser switch
     {
+        // The OS surface: Windows-security policies target the machine
+        // itself, which is by definition present.
+        "windows" => true,
         "chrome" => AppPathExists("chrome.exe"),
         "edge" => AppPathExists("msedge.exe"),
         "firefox" => FirefoxInstallDir() is not null,

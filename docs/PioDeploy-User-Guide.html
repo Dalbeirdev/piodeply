@@ -322,6 +322,7 @@
 <!-- 7 BROWSER POLICIES -->
 <section>
   <h2>7. Browser policies</h2>
+  <div class="callout"><b>Now with Windows Security policies:</b> the same policy engine also locks down the OS itself. New categories in the type picker — <b>Windows Security</b> (block USB storage, deny Remote Desktop, enforce UAC prompts, disable autorun, enforce SmartScreen, cap telemetry, 15-minute idle lock) and <b>Windows Updates</b> (force automatic updates). They ride the identical pipeline: scoped like any policy (machine / group / project / client / all), applied via registry with the agent's manifest, <b>rolled back automatically when the policy is deleted</b>, and reported on the compliance screens under the "Windows OS" surface. Requires agent 1.4.6+.</div>
   <p>Lock down browsers like enterprise Group Policy — without a domain. Supported: Chrome, Edge, Firefox, Brave (Opera reports "unsupported").</p>
   <p><span class="num">1</span> Sidebar → <b>Browser Policies</b> → <b>New policy</b>.</p>
   <p><span class="num">2</span> Name it, pick the project, and choose the restriction. The catalogue offers <b>30+ policies grouped by category</b> — selecting one shows its description, which browsers support it, and whether a restart is needed:</p>

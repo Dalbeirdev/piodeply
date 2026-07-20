@@ -99,6 +99,17 @@ enum BrowserPolicyType: string
     case DisableWebBluetooth = 'disable_web_bluetooth';
     case DisableWebSerial = 'disable_web_serial';
 
+    // ── Windows Security (OS-level; the agent applies HKLM policy values
+    //    exactly like browser policies — same manifest, same rollback) ────
+    case DisableUsbStorage = 'win_disable_usb_storage';
+    case DisableRemoteDesktop = 'win_disable_remote_desktop';
+    case RequireUacPrompts = 'win_require_uac';
+    case DisableAutorun = 'win_disable_autorun';
+    case RequireSmartScreen = 'win_require_smartscreen';
+    case LimitTelemetry = 'win_limit_telemetry';
+    case RequireLockTimeout = 'win_require_lock_timeout';
+    case ForceAutomaticUpdates = 'win_force_auto_updates';
+
     /** Category display order for grouped UIs. */
     public const CATEGORY_ORDER = [
         'Password Management', 'Private Browsing', 'Autofill', 'Browser Sync & Sign-in',
@@ -106,6 +117,7 @@ enum BrowserPolicyType: string
         'Notifications & Popups', 'Location', 'Camera & Microphone', 'Clipboard',
         'Printing', 'Homepage & Startup', 'Extensions', 'Browser Lockdown',
         'AI Features', 'Sidebar & Feeds', 'Advanced Enterprise',
+        'Windows Security', 'Windows Updates',
     ];
 
     /** @return list<string> */
@@ -151,6 +163,10 @@ enum BrowserPolicyType: string
             self::DisableShoppingAssistant, self::DisableNewTabFeed,
             self::DisableMicrosoftRewards, self::DisableBrowserGames => 'Sidebar & Feeds',
             self::DisableTranslate, self::DisableWebUsb, self::DisableWebBluetooth, self::DisableWebSerial => 'Advanced Enterprise',
+            self::DisableUsbStorage, self::DisableRemoteDesktop, self::RequireUacPrompts,
+            self::DisableAutorun, self::RequireSmartScreen, self::LimitTelemetry,
+            self::RequireLockTimeout => 'Windows Security',
+            self::ForceAutomaticUpdates => 'Windows Updates',
         };
     }
 
@@ -193,6 +209,14 @@ enum BrowserPolicyType: string
             self::DisableWebUsb => 'WebUSB',
             self::DisableWebBluetooth => 'WebBluetooth',
             self::DisableWebSerial => 'WebSerial',
+            self::DisableUsbStorage => 'USB storage devices',
+            self::DisableRemoteDesktop => 'Remote Desktop (RDP)',
+            self::RequireUacPrompts => 'UAC elevation prompts',
+            self::DisableAutorun => 'Autorun / autoplay',
+            self::RequireSmartScreen => 'Windows SmartScreen',
+            self::LimitTelemetry => 'Windows telemetry',
+            self::RequireLockTimeout => 'Idle lock (15 min)',
+            self::ForceAutomaticUpdates => 'Automatic Windows updates',
         };
     }
 
@@ -235,6 +259,14 @@ enum BrowserPolicyType: string
             self::DisableWebUsb => 'Blocks websites from connecting to USB devices (WebUSB).',
             self::DisableWebBluetooth => 'Blocks websites from connecting to Bluetooth devices (WebBluetooth).',
             self::DisableWebSerial => 'Blocks websites from connecting to serial devices (WebSerial).',
+            self::DisableUsbStorage => 'Blocks USB storage devices (flash drives, external disks) from mounting. Keyboards and mice are unaffected.',
+            self::DisableRemoteDesktop => 'Denies incoming Remote Desktop connections to the machine.',
+            self::RequireUacPrompts => 'Enforces User Account Control elevation prompts (EnableLUA) — programs cannot silently gain admin rights.',
+            self::DisableAutorun => 'Disables autorun/autoplay for all drive types — inserted media never auto-executes.',
+            self::RequireSmartScreen => 'Enforces Windows SmartScreen reputation checks for downloaded apps and files.',
+            self::LimitTelemetry => 'Caps Windows diagnostic data at the Security (minimum) level.',
+            self::RequireLockTimeout => 'Locks the machine after 15 minutes of inactivity (secure desktop timeout).',
+            self::ForceAutomaticUpdates => 'Forces Windows Update to download and install updates automatically on schedule.',
         };
     }
 
@@ -279,6 +311,37 @@ enum BrowserPolicyType: string
         ));
     }
 
+    /** OS-level types answer only for the Windows pseudo-browser. */
+    public function isWindowsPolicy(): bool
+    {
+        return str_starts_with($this->value, 'win_');
+    }
+
+    /**
+     * The HKLM policy value behind each Windows type. All are documented
+     * Windows policy locations, DWORD-typed, and reversible: the "enable"
+     * action writes the permissive value, and deleting the policy rolls the
+     * value back via the agent's manifest exactly like browser policies.
+     */
+    private function windowsOperation(bool $disable): array
+    {
+        return match ($this) {
+            // Start=4 disables the USBSTOR driver; 3 restores default load.
+            self::DisableUsbStorage => self::registry('SYSTEM\CurrentControlSet\Services\USBSTOR', 'Start', $disable ? 4 : 3),
+            self::DisableRemoteDesktop => self::registry('SYSTEM\CurrentControlSet\Control\Terminal Server', 'fDenyTSConnections', $disable ? 1 : 0),
+            self::RequireUacPrompts => self::registry('SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', 'EnableLUA', $disable ? 1 : 0),
+            // 255 = every drive type; 145 (0x91) is the Windows default.
+            self::DisableAutorun => self::registry('SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer', 'NoDriveTypeAutoRun', $disable ? 255 : 145),
+            self::RequireSmartScreen => self::registry('SOFTWARE\Policies\Microsoft\Windows\System', 'EnableSmartScreen', $disable ? 1 : 0),
+            // 0 = Security (minimum) diagnostic data; 3 = Full.
+            self::LimitTelemetry => self::registry('SOFTWARE\Policies\Microsoft\Windows\DataCollection', 'AllowTelemetry', $disable ? 0 : 3),
+            self::RequireLockTimeout => self::registry('SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System', 'InactivityTimeoutSecs', $disable ? 900 : 0),
+            // AUOptions 4 = auto download and schedule install.
+            self::ForceAutomaticUpdates => self::registry('SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU', 'AUOptions', $disable ? 4 : 3),
+            default => self::unsupported(),
+        };
+    }
+
     /**
      * The concrete operation for one browser under enable/disable.
      * "disable" applies the restriction; "enable" explicitly allows.
@@ -291,6 +354,16 @@ enum BrowserPolicyType: string
     public function operationFor(Browser $browser, string $action, ?array $settings = null): array
     {
         $disable = $action === 'disable';
+
+        // The OS surface is gated here, BEFORE the per-browser matches, so
+        // every existing match stays exhaustive over real browsers and a
+        // Windows type never leaks into a browser (or vice versa).
+        if ($this->isWindowsPolicy() !== ($browser === Browser::Windows)) {
+            return self::unsupported();
+        }
+        if ($browser === Browser::Windows) {
+            return $this->windowsOperation($disable);
+        }
 
         return match ($this) {
             self::DisableIncognito => match ($browser) {

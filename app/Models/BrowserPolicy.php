@@ -187,16 +187,23 @@ class BrowserPolicy extends Model
     /** @return list<Browser> */
     public function targetBrowsers(): array
     {
+        // A Windows-security type has exactly one surface — the OS — no
+        // matter what the browsers field says; and browser types never
+        // target the OS pseudo-browser, even under "all".
+        if ($this->type->isWindowsPolicy()) {
+            return [Browser::Windows];
+        }
+
         $selected = $this->browsers ?? [];
 
         if ($selected === [] || in_array('all', $selected, true)) {
-            return Browser::cases();
+            return array_values(array_filter(Browser::cases(), fn (Browser $b) => $b !== Browser::Windows));
         }
 
         return array_values(array_filter(array_map(
             fn (string $value) => Browser::tryFrom($value),
             $selected
-        )));
+        ), fn (?Browser $b) => $b !== null && $b !== Browser::Windows));
     }
 
     /**
