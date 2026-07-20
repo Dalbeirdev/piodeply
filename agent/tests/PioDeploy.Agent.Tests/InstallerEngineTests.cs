@@ -80,12 +80,28 @@ public class InstallerEngineTests
         Assert.Contains("--silent", args);
         Assert.Contains("--accept-package-agreements", args);
         Assert.Contains("--no-upgrade", args); // install = ensure present, never implicit upgrade
+        Assert.Contains("--scope", args);      // SYSTEM + per-user default scope = app lands in the
+        Assert.Contains("machine", args);      // SYSTEM profile, invisible to every real user (Brave)
+    }
+
+    [Fact]
+    public void Winget_Rollback_Also_Forces_Machine_Scope()
+    {
+        var args = WingetInstaller.BuildArguments("rollback", "X.Y", "1.0")!;
+
+        Assert.Contains("--scope", args);
+        Assert.Contains("machine", args);
     }
 
     [Fact]
     public void Winget_Update_Does_Not_Use_No_Upgrade()
     {
-        Assert.DoesNotContain("--no-upgrade", WingetInstaller.BuildArguments("update", "X.Y", null)!);
+        var args = WingetInstaller.BuildArguments("update", "X.Y", null)!;
+
+        Assert.DoesNotContain("--no-upgrade", args);
+        // upgrade matches the scope of whatever is installed; forcing machine
+        // here could refuse legitimate upgrades.
+        Assert.DoesNotContain("--scope", args);
     }
 
     [Fact]

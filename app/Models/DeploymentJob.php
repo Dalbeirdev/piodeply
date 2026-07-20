@@ -124,6 +124,10 @@ class DeploymentJob extends Model
                          . 'the target folder or registry key being locked by another process or policy.',
 
             // winget package-source problems.
+            -1978335146 => 'winget found no machine-wide installer for this package (0x8A150056). The agent installs '
+                . 'for all users (--scope machine); this package only publishes a per-user installer, which under '
+                . 'the SYSTEM account would vanish into the SYSTEM profile. Package it as an EXE/MSI with '
+                . 'machine-wide silent switches instead.',
             -1978335216 => 'winget has no installer for this machine’s architecture (0x8A150010) — e.g. an x64-only '
                          . 'package on an Arm device.',
             -1978334975 => 'The downloaded installer’s hash did not match (0x8A150041) — a corrupt or tampered '

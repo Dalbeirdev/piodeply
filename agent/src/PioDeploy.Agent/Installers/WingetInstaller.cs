@@ -76,14 +76,20 @@ public sealed class WingetInstaller : IInstaller
             "--disable-interactivity",
         };
 
+        // The agent runs as SYSTEM. A package whose default installer scope
+        // is per-user (Brave is the classic case) would "succeed" into the
+        // SYSTEM account's profile — exit 0, job green, and no browser for
+        // any real user. --scope machine forces a machine-wide install; a
+        // package that publishes no machine installer now fails loudly
+        // instead of pretending, which is what an RMM must do.
         List<string>? arguments = action switch
         {
             // install means "ensure present": --no-upgrade stops winget from
             // attempting an in-place upgrade of an existing install (that is
             // what the separate 'update' action is for).
-            "install" or "repair" => ["install", .. common, "--no-upgrade"],
+            "install" or "repair" => ["install", .. common, "--scope", "machine", "--no-upgrade"],
             "update" => ["upgrade", .. common],
-            "rollback" => version is null ? null : ["install", .. common, "--version", version, "--force"],
+            "rollback" => version is null ? null : ["install", .. common, "--scope", "machine", "--version", version, "--force"],
             "uninstall" => ["uninstall", "--id", wingetId, "--exact", "--silent", "--disable-interactivity"],
             _ => null,
         };
