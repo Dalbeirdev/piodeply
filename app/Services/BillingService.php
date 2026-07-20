@@ -17,6 +17,14 @@ class BillingService
     private const API = 'https://api.stripe.com/v1';
 
     /**
+     * The marketing site promises a 14-day free trial, card required. The
+     * checkout must deliver exactly that: card verified today, $0 charged,
+     * first invoice when the trial ends. Stripe cancels the subscription
+     * itself if no card can be charged by then.
+     */
+    public const TRIAL_DAYS = 14;
+
+    /**
      * Graduated per-machine pricing (monthly), deliberately below the
      * common $1.00 / $0.50 / $0.25 market schedule. Each tier: the machine
      * count it runs up to (null = unlimited) and the per-machine price in
@@ -127,7 +135,10 @@ class BillingService
                 // Mirror onto the subscription itself: renewal webhooks carry
                 // the subscription, not the checkout session, and need to
                 // find their way back without a session lookup.
-                'subscription_data' => ['metadata' => ['machines' => $machines] + $metadata],
+                'subscription_data' => [
+                    'metadata'          => ['machines' => $machines] + $metadata,
+                    'trial_period_days' => self::TRIAL_DAYS,
+                ],
             ]));
 
         if ($response->failed()) {

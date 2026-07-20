@@ -53,7 +53,7 @@
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     @switch($signup->status)
                                         @case(\App\Models\Signup::STATUS_PAID)
-                                            <span class="pd-badge pd-badge-green" title="Stripe reported this checkout paid ({{ $signup->paid_at?->format('Y-m-d H:i') }})"><span class="pd-dot"></span>Paid via Stripe</span>
+                                            <span class="pd-badge pd-badge-green" title="Stripe secured this checkout ({{ $signup->paid_at?->format('Y-m-d H:i') }}) — card verified; on a trial the first charge lands when it ends"><span class="pd-dot"></span>Payment secured (Stripe)</span>
                                             @break
                                         @case(\App\Models\Signup::STATUS_PENDING_PAYMENT)
                                             <span class="pd-badge pd-badge-amber"><span class="pd-dot"></span>Awaiting Stripe payment</span>

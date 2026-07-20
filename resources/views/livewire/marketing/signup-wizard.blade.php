@@ -96,8 +96,11 @@
                 </table>
                 <p class="muted" style="font-size:.85rem;margin:1rem 0;">
                     @if ($paymentLive)
-                        You'll be taken to our secure Stripe checkout. After payment, our team verifies it and
-                        activates your account — you'll get an email the moment you can sign in.
+                        You'll be taken to our secure Stripe checkout to add a card — <b>nothing is charged
+                        today</b>. Your <b>14-day free trial</b> starts now and the first
+                        {{ $currency }} {{ number_format($monthlyCents / 100, 2) }} charge comes when it ends;
+                        cancel any time before then. Our team activates your account right after — you'll get
+                        an email the moment you can sign in.
                     @else
                         We'll send an invoice for your first month. Your account is activated as soon as
                         payment is confirmed — you'll get an email the moment you can sign in.
@@ -107,7 +110,7 @@
                 <div style="display:flex;gap:.75rem;">
                     <button type="button" wire:click="back" class="btn btn-lg" style="flex:1;justify-content:center;">Back</button>
                     <button type="button" wire:click="submit" wire:loading.attr="disabled" class="btn btn-primary btn-lg" style="flex:2;justify-content:center;">
-                        <span wire:loading.remove wire:target="submit">{{ $paymentLive ? 'Continue to payment' : 'Submit application' }}</span>
+                        <span wire:loading.remove wire:target="submit">{{ $paymentLive ? 'Start 14-day free trial' : 'Submit application' }}</span>
                         <span wire:loading wire:target="submit">One moment…</span>
                     </button>
                 </div>

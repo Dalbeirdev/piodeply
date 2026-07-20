@@ -71,9 +71,13 @@ class BillingController extends Controller
             );
 
             // A checkout born from the signup wizard carries its signup id;
-            // the payment landing moves the application to "paid" so the
-            // admin's queue shows exactly what is safe to approve.
-            if (($session['payment_status'] ?? '') === 'paid' && isset($session['metadata']['signup_id'])) {
+            // completion moves the application forward so the admin's queue
+            // shows exactly what is safe to approve. Two ways a session
+            // completes: 'paid' (money moved now) or 'no_payment_required'
+            // (14-day trial — card verified, Stripe charges when it ends).
+            // Both mean the payment side is secured.
+            if (in_array($session['payment_status'] ?? '', ['paid', 'no_payment_required'], true)
+                && isset($session['metadata']['signup_id'])) {
                 \App\Models\Signup::query()
                     ->whereKey((int) $session['metadata']['signup_id'])
                     ->where('status', \App\Models\Signup::STATUS_PENDING_PAYMENT)

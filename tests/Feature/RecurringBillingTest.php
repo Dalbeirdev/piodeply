@@ -74,6 +74,46 @@ class RecurringBillingTest extends TestCase
         $this->assertSame(Signup::STATUS_PAID, $signup->status);
     }
 
+    public function test_a_trial_checkout_counts_as_payment_secured(): void
+    {
+        // With the 14-day trial, checkout completes WITHOUT charging:
+        // payment_status is no_payment_required (card verified, Stripe
+        // charges at trial end). That must advance the signup exactly like
+        // a paid session — otherwise every trial sits "awaiting payment".
+        $signup = Signup::factory()->create(['status' => Signup::STATUS_PENDING_PAYMENT]);
+
+        $this->stripeEvent('checkout.session.completed', [
+            'id'             => 'cs_trial',
+            'customer'       => 'cus_t',
+            'subscription'   => 'sub_t',
+            'payment_status' => 'no_payment_required',
+            'metadata'       => ['signup_id' => $signup->id, 'machines' => $signup->machines],
+        ])->assertOk();
+
+        $signup->refresh();
+        $this->assertSame(Signup::STATUS_PAID, $signup->status);
+        $this->assertSame('sub_t', $signup->stripe_subscription_id);
+    }
+
+    public function test_the_wizard_checkout_requests_the_promised_trial(): void
+    {
+        config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
+        \Illuminate\Support\Facades\Http::fake([
+            'api.stripe.com/*' => \Illuminate\Support\Facades\Http::response(['id' => 'cs_1', 'url' => 'https://checkout.stripe.com/c/pay/cs_1']),
+        ]);
+
+        app(\App\Services\BillingService::class)->createCheckout(
+            machines: 100, successUrl: 'https://x/s', cancelUrl: 'https://x/c',
+        );
+
+        // The marketing site promises 14 days free, card required — the
+        // session Stripe receives must actually say so.
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/checkout/sessions')
+                && ($request->data()['subscription_data']['trial_period_days'] ?? null) == \App\Services\BillingService::TRIAL_DAYS;
+        });
+    }
+
     public function test_approval_copies_the_subscription_to_the_new_client(): void
     {
         Mail::fake();
