@@ -108,10 +108,41 @@ class BillingService
                     ],
                 ]],
                 'metadata' => ['machines' => $machines] + $metadata,
+                // Mirror onto the subscription itself: renewal webhooks carry
+                // the subscription, not the checkout session, and need to
+                // find their way back without a session lookup.
+                'subscription_data' => ['metadata' => ['machines' => $machines] + $metadata],
             ]));
 
         if ($response->failed()) {
             \Illuminate\Support\Facades\Log::warning('Stripe checkout failed: ' . $response->body());
+
+            return null;
+        }
+
+        return $response->json('url');
+    }
+
+    /**
+     * A Stripe Billing Portal session: the hosted page where a customer
+     * updates their card, sees invoices, or cancels — all on Stripe's side,
+     * so no card data or cancellation logic ever lives here.
+     */
+    public function createPortalSession(string $customerId, string $returnUrl): ?string
+    {
+        if (empty(config('services.stripe.secret'))) {
+            return null;
+        }
+
+        $response = Http::withToken(config('services.stripe.secret'))
+            ->asForm()
+            ->post(self::API . '/billing_portal/sessions', [
+                'customer'   => $customerId,
+                'return_url' => $returnUrl,
+            ]);
+
+        if ($response->failed()) {
+            \Illuminate\Support\Facades\Log::warning('Stripe portal session failed: ' . $response->body());
 
             return null;
         }

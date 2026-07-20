@@ -84,7 +84,22 @@ class BillingController extends Controller
                         'paid_at'           => now(),
                     ]);
             }
+
+            app(\App\Services\ClientSubscriptionService::class)->recordCheckout($session);
         }
+
+        // The recurring life of a wizard-born subscription: Stripe charges
+        // monthly on its own; these keep the client's mirror of it honest.
+        $subscriptions = app(\App\Services\ClientSubscriptionService::class);
+        $object = $event['data']['object'] ?? [];
+
+        match ($type) {
+            'invoice.paid'                  => $subscriptions->invoicePaid($object),
+            'invoice.payment_failed'        => $subscriptions->invoiceFailed($object),
+            'customer.subscription.updated' => $subscriptions->subscriptionUpdated($object),
+            'customer.subscription.deleted' => $subscriptions->subscriptionDeleted($object),
+            default                         => null,
+        };
 
         return response()->json(['received' => true]);
     }

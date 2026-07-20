@@ -142,6 +142,10 @@ Route::middleware([
     // A client owner's own staff. Tenancy enforced inside the component.
     Route::get('/team', \App\Livewire\Team\TeamIndex::class)->name('team.index');
 
+    // A client owner's own subscription (tenant-only, resolved from their
+    // binding; card actions happen on Stripe's hosted portal).
+    Route::get('/my-billing', \App\Livewire\Clients\TenantBilling::class)->name('tenant.billing');
+
     // SMTP without an SSH session. Gated inside the component too.
     Route::get('/admin/email', \App\Livewire\Admin\MailSettings::class)
         ->middleware('permission:settings.manage')->name('admin.mail');

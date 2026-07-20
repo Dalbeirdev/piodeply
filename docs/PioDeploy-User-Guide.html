@@ -423,6 +423,16 @@
   </ol>
   <div class="callout"><b>What the new customer can do:</b> exactly what a client-bound Manager can — create projects, enrol machines, deploy software, see reports — inside their own tenant and nowhere else. They also get a <b>Team</b> page to add their own <b>Technician</b> and <b>Viewer</b> accounts (they cannot mint other owners or admins; that stays with you). To be alerted as applications arrive, subscribe a notification channel to "signup.received".</div>
 
+  <h3>Recurring billing — what happens every month</h3>
+  <p>A wizard signup that paid by card created a real <b>monthly Stripe subscription</b> — Stripe charges the card automatically each month; nobody invoices anyone by hand. PioDeploy mirrors that subscription per client:</p>
+  <table>
+    <tr><th>Where</th><th>What you see</th></tr>
+    <tr><td><b>Clients list</b> (staff)</td><td>A subscription badge next to each client's status — <i>active</i>, <i>past due</i>, <i>canceled</i> — with amount and renewal date on hover.</td></tr>
+    <tr><td><b>Billing</b> page (the client)</td><td>Their plan, monthly amount, machines enrolled vs. licensed, renewal date, and a <b>Manage billing</b> button that opens <b>Stripe's own portal</b> — update card, download invoices, cancel — so card details never touch PioDeploy.</td></tr>
+  </table>
+  <p>When a renewal charge <b>fails</b>, the client is marked <i>past due</i>, you get a "billing.payment_failed" notification, and Stripe retries on its own schedule — <b>the fleet keeps working</b> while the payment is chased; nothing breaks automatically. A cancellation marks the client <i>canceled</i> and notifies you; deciding what happens to their fleet stays a human decision.</p>
+  <div class="callout"><b>Setup checklist (once):</b> Stripe keys in the server .env (<code>STRIPE_KEY</code>, <code>STRIPE_SECRET</code>), billing enabled in Admin → Settings, and a webhook endpoint in the Stripe dashboard pointing at <code>https://your-domain/billing/webhook</code> (events: <code>checkout.session.completed</code>, <code>invoice.paid</code>, <code>invoice.payment_failed</code>, <code>customer.subscription.updated</code>, <code>customer.subscription.deleted</code>) with its signing secret as <code>STRIPE_WEBHOOK_SECRET</code>. The webhook is what marks signups Paid and keeps renewal status honest.</div>
+
   <h3>Enquiries</h3>
   <p><b>Administration → Enquiries</b> lists every contact message and access request submitted on your website — who, their company, fleet size, and what they wrote. <b>Mark handled</b> moves one out of the open list; untick <b>Open only</b> to see the history.</p>
   <div class="callout"><b>Why it matters:</b> these are recorded whether or not an email went out, so a misconfigured mailer costs you a notification, never the lead itself. To be alerted as they arrive, add a channel under <b>Notifications</b> subscribed to “Contact / access-request submitted on the website”.</div>

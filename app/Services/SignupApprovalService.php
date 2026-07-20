@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\Role;
 use App\Mail\AccountApprovedMail;
+use App\Services\ClientSubscriptionService;
 use App\Models\Client;
 use App\Models\Signup;
 use App\Models\User;
@@ -59,6 +60,10 @@ class SignupApprovalService
                 'approved_at' => now(),
                 'client_id'   => $client->id,
             ])->save();
+
+            // The Stripe subscription created at checkout now belongs to a
+            // real client — link them so renewal webhooks land somewhere.
+            app(ClientSubscriptionService::class)->syncClientFromSignup($signup->fresh());
 
             activity('signups')
                 ->causedBy($approver)

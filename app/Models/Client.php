@@ -32,6 +32,9 @@ class Client extends Model
         return [
             'status' => ClientStatus::class,
             'monthly_report' => 'boolean',
+            'subscription_machines' => 'integer',
+            'subscription_cents' => 'integer',
+            'subscription_period_end' => 'datetime',
         ];
     }
 

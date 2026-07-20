@@ -95,6 +95,21 @@
                                         'bg-slate-100 text-slate-600 border-slate-200' => $client->status === \App\Enums\ClientStatus::Inactive,
                                         'bg-yellow-50 text-yellow-700 border-yellow-200' => $client->status === \App\Enums\ClientStatus::Suspended,
                                     ])>{{ $client->status->label() }}</span>
+                                    @if ($client->subscription_status !== null)
+                                        @php
+                                            $subTitle = 'Subscription: '.$client->subscription_status
+                                                .($client->subscription_cents ? ' · $'.number_format($client->subscription_cents / 100, 2).'/mo' : '')
+                                                .($client->subscription_period_end ? ' · renews '.$client->subscription_period_end->format('j M') : '');
+                                        @endphp
+                                        <span @class([
+                                            'ml-1 text-xs font-semibold rounded-full px-2 py-0.5 border',
+                                            'bg-green-50 text-green-700 border-green-200' => in_array($client->subscription_status, ['active', 'trialing'], true),
+                                            'bg-yellow-50 text-yellow-700 border-yellow-200' => in_array($client->subscription_status, ['past_due', 'unpaid'], true),
+                                            'bg-slate-100 text-slate-600 border-slate-200' => ! in_array($client->subscription_status, ['active', 'trialing', 'past_due', 'unpaid'], true),
+                                        ]) title="{{ $subTitle }}">
+                                            {{ str($client->subscription_status)->replace('_', ' ') }}
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @if ($client->trashed())
