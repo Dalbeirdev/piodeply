@@ -221,7 +221,11 @@ catch {
             Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(scriptPath) ?? "",
+            // NOT the script's own directory: the uninstall script deletes
+            // that tree, and Windows cannot remove a live process's working
+            // directory — it would leave an empty ProgramData\PioDeploy
+            // skeleton on every "uninstalled" machine.
+            WorkingDirectory = Path.GetTempPath(),
         }) ?? throw new InvalidOperationException("Process.Start returned null for the update helper.");
 
         // A helper that dies instantly (bad powershell path, corrupt script)
