@@ -132,9 +132,10 @@ MIGRATED=0
 # never duplicate. Skipping PlanSeeder once left the live pricing page
 # with an empty plans table; RolesAndPermissionsSeeder keeps new roles and
 # permissions (e.g. Client Owner) in step with the code that assigns them.
-log "Seeding reference data (plans, roles)"
+log "Seeding reference data (plans, roles, policy templates)"
 $PHP artisan db:seed --class=PlanSeeder --force
 $PHP artisan db:seed --class=RolesAndPermissionsSeeder --force
+$PHP artisan db:seed --class=PolicyTemplateSeeder --force
 
 # route:cache is the one that gets forgotten: config: and view: caches do not
 # touch it, so a newly added route keeps 404ing until this runs. Clear before

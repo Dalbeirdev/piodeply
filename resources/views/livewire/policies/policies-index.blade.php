@@ -2,12 +2,15 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Policies') }}</h2>
-            @can('create', \App\Models\SoftwarePolicy::class)
-                <a href="{{ route('policies.create') }}"
-                   class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
-                    New policy
-                </a>
-            @endcan
+            <div class="flex items-center gap-3">
+                <a href="{{ route('policies.templates') }}" class="text-sm pd-action">Templates</a>
+                @can('create', \App\Models\SoftwarePolicy::class)
+                    <a href="{{ route('policies.create') }}"
+                       class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
+                        New policy
+                    </a>
+                @endcan
+            </div>
         </div>
     </x-slot>
 

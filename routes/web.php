@@ -184,6 +184,7 @@ Route::middleware([
 
     Route::middleware('permission:policies.view')->group(function () {
         Route::get('/policies', \App\Livewire\Policies\PoliciesIndex::class)->name('policies.index');
+        Route::get('/policies/templates', \App\Livewire\Policies\PolicyTemplates::class)->name('policies.templates');
         Route::get('/policies/create', \App\Livewire\Policies\PolicyForm::class)->name('policies.create');
         Route::get('/policies/{policy}', \App\Livewire\Policies\PolicyShow::class)->name('policies.show');
         Route::get('/policies/{policy}/edit', \App\Livewire\Policies\PolicyForm::class)->name('policies.edit');

@@ -163,6 +163,13 @@
 <tr><td class="f">Batch enforcement</td><td class="why">The 5-minute pass asked the DB 15–20 questions per machine per policy (21,305 queries / 10.5 s at 1,000 devices). <code>PolicyBatchContext</code> answers them from three set-based queries per policy → 603 queries / 1.7 s. Same tests cover both paths so they can't drift.</td></tr>
 </table>
 
+<h2>11b. Policy templates</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">One-click starter kits</td><td class="why">Onboarding a customer meant creating ~15 policies by hand. A template applies a whole kit at once; items are keyed by <b>winget id</b> (the portable identity), so a kit works on a fresh install and even creates missing catalogue packages on apply. Applying is idempotent — existing project+package+action policies are skipped, never duplicated.</td></tr>
+<tr><td class="f">Staff-only authoring</td><td class="why">Templates are global. A tenant-made template would leak that tenant's software choices to every other customer — so tenants can apply, only staff can create/delete. Built-ins are product-defined and refreshed by the seeder on every deploy; deleting a template never touches policies it created (they belong to their projects).</td></tr>
+</table>
+
 <h2>12. Browser Policies</h2>
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>
