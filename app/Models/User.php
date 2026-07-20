@@ -79,6 +79,39 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole(\App\Enums\Role::Client->value) ? 0 : null;
     }
 
+    /** Projects this user is explicitly confined to (none = unrestricted). */
+    public function assignedProjects(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Project::class)->withTimestamps();
+    }
+
+    /**
+     * The project ids this user may touch, or null for "all within their
+     * tenant" (staff, owners, and any team member never explicitly
+     * confined). Cached per request: tenancy checks run on every row of
+     * every list.
+     */
+    public function visibleProjectIds(): ?array
+    {
+        if ($this->tenantClientId() === null) {
+            return null; // staff — tenancy does not confine them
+        }
+
+        return once(function () {
+            $ids = $this->assignedProjects()->pluck('projects.id')->all();
+
+            return $ids === [] ? null : $ids;
+        });
+    }
+
+    /** The per-project confinement check policies lean on. */
+    public function canAccessProject(?int $projectId): bool
+    {
+        $allowed = $this->visibleProjectIds();
+
+        return $allowed === null || in_array($projectId, $allowed, true);
+    }
+
     /**
      * Local initials avatar (inline SVG) — the Jetstream default uses an
      * external avatar service, which breaks on offline/locked-down networks.

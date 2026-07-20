@@ -21,12 +21,15 @@ class EloquentComputerRepository extends BaseRepository implements ComputerRepos
         bool $withTrashed = false,
         int $perPage = 15,
         string $agentStatus = '',
+        ?array $allowedProjectIds = null,
     ): LengthAwarePaginator {
         return $this->query()
             ->with('project.client')
             ->when($withTrashed, fn ($q) => $q->withTrashed())
             ->when($search !== '', fn ($q) => $q->search($search))
             ->when($projectId !== null, fn ($q) => $q->where('project_id', $projectId))
+            // Per-project confinement for assigned technicians.
+            ->when($allowedProjectIds !== null, fn ($q) => $q->whereIn('project_id', $allowedProjectIds))
             ->when($clientId !== null, fn ($q) => $q->whereHas(
                 'project',
                 fn ($p) => $p->withTrashed()->where('client_id', $clientId)

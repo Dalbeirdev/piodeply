@@ -112,14 +112,62 @@ class TeamIndex extends Component
         session()->flash('status', "{$target->name} removed.");
     }
 
+    /** member id => project id chosen in that row's assign dropdown. */
+    public array $assignProject = [];
+
+    /**
+     * Confine a technician to a project (first assignment starts the
+     * confinement; none = they roam the whole tenant). Owners are never
+     * confinable — restricting the person who does the restricting is a
+     * lockout waiting to happen.
+     */
+    public function assignToProject(int $userId): void
+    {
+        $this->assertTenantManager();
+
+        $target = User::where('client_id', auth()->user()->tenantClientId())->findOrFail($userId);
+
+        if ($target->hasRole(RoleEnum::Manager->value) || $target->hasRole(RoleEnum::ClientOwner->value)) {
+            session()->flash('error', 'Owners always have access to every project.');
+
+            return;
+        }
+
+        $project = \App\Models\Project::where('client_id', auth()->user()->tenantClientId())
+            ->findOrFail((int) ($this->assignProject[$userId] ?? 0));
+
+        $target->assignedProjects()->syncWithoutDetaching([$project->id]);
+
+        activity('team')->causedBy(auth()->user())
+            ->withProperties(['email' => $target->email, 'project' => $project->name])
+            ->log('team_member_assigned_project');
+
+        session()->flash('status', "{$target->name} is now limited to their assigned projects.");
+    }
+
+    public function unassignFromProject(int $userId, int $projectId): void
+    {
+        $this->assertTenantManager();
+
+        $target = User::where('client_id', auth()->user()->tenantClientId())->findOrFail($userId);
+        $target->assignedProjects()->detach($projectId);
+
+        session()->flash('status', $target->assignedProjects()->count() === 0
+            ? "{$target->name} now has access to all projects again."
+            : "Assignment removed.");
+    }
+
     public function render()
     {
         $this->assertTenantManager();
 
         return view('livewire.team.team-index', [
-            'members' => User::where('client_id', auth()->user()->tenantClientId())
+            'members' => User::with('assignedProjects')
+                ->where('client_id', auth()->user()->tenantClientId())
                 ->orderBy('name')->get(),
             'grantable' => self::GRANTABLE,
+            'projects'  => \App\Models\Project::where('client_id', auth()->user()->tenantClientId())
+                ->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app');
     }
 }

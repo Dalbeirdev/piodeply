@@ -119,7 +119,10 @@ class BulkDeploy extends Component
     {
         $tenantId = auth()->user()->tenantClientId();
 
-        return Project::query()->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId));
+        return Project::query()
+            ->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
+            ->when(auth()->user()->visibleProjectIds() !== null,
+                fn ($q) => $q->whereIn('id', auth()->user()->visibleProjectIds()));
     }
 
     private function offersAction(Package $package, JobAction $action): bool

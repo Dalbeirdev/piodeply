@@ -69,6 +69,7 @@
                             <th class="px-6 py-3">Name</th>
                             <th class="px-6 py-3">Email</th>
                             <th class="px-6 py-3">Role</th>
+                            <th class="px-6 py-3">Projects</th>
                             <th class="px-6 py-3 text-right"></th>
                         </tr>
                     </thead>
@@ -82,6 +83,35 @@
                                 <td class="px-6 py-3">{{ $member->email }}</td>
                                 <td class="px-6 py-3">
                                     <span class="pd-badge pd-badge-slate">{{ $member->getRoleNames()->first() ?? '—' }}</span>
+                                </td>
+                                <td class="px-6 py-3">
+                                    @php $isOwner = $member->hasRole(\App\Enums\Role::Manager->value) || $member->hasRole(\App\Enums\Role::ClientOwner->value); @endphp
+                                    @if ($isOwner)
+                                        <span class="text-xs text-slate-400">All projects (owner)</span>
+                                    @else
+                                        <div class="flex flex-wrap items-center gap-1">
+                                            @forelse ($member->assignedProjects as $project)
+                                                <span class="text-xs bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+                                                    {{ $project->name }}
+                                                    <button type="button" wire:click="unassignFromProject({{ $member->id }}, {{ $project->id }})"
+                                                            class="ml-0.5 text-slate-400 hover:text-rose-600" title="Remove assignment">×</button>
+                                                </span>
+                                            @empty
+                                                <span class="text-xs text-slate-400" title="Assign a project to limit this person to it">All projects</span>
+                                            @endforelse
+                                            @if ($projects->count() > $member->assignedProjects->count())
+                                                <select wire:model="assignProject.{{ $member->id }}" class="text-xs border-slate-300 rounded-md py-0.5">
+                                                    <option value="">Limit to…</option>
+                                                    @foreach ($projects as $project)
+                                                        @if (! $member->assignedProjects->contains($project->id))
+                                                            <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                                <button type="button" wire:click="assignToProject({{ $member->id }})" class="text-xs pd-action">Assign</button>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 text-right">
                                     @if ($member->id !== auth()->id() && ! $member->hasRole(\App\Enums\Role::Manager->value))

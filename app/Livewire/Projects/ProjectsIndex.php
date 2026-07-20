@@ -88,6 +88,7 @@ class ProjectsIndex extends Component
                 clientId: $tenantId ?? $this->clientId,
                 status: $this->status ?: null,
                 withTrashed: $tenantId === null && $this->showTrashed,
+                allowedProjectIds: auth()->user()->visibleProjectIds(),
             ),
             'isTenant' => $tenantId !== null,
             'clients'  => \App\Models\Client::orderBy('company_name')->get(['id', 'company_name']),

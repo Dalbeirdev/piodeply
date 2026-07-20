@@ -71,6 +71,8 @@ class PoliciesIndex extends Component
             ->when($tenantId !== null, fn ($q) => $q->whereHas(
                 'project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
+                    ->when(auth()->user()->visibleProjectIds() !== null,
+                        fn ($qq) => $qq->whereIn('projects.id', auth()->user()->visibleProjectIds()))
             ))
             // Grouped, or the project branch escapes the tenancy filter above
             // (AND binds tighter than OR) and leaks another client's policies.
@@ -92,7 +94,9 @@ class PoliciesIndex extends Component
             'policies'  => $policies,
             'summaries' => $summaries,
             'projects'  => \App\Models\Project::orderBy('name')
-                ->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
+                ->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId)
+                    ->when(auth()->user()->visibleProjectIds() !== null,
+                        fn ($qq) => $qq->whereIn('id', auth()->user()->visibleProjectIds())))
                 ->get(['id', 'name']),
         ])->layout('layouts.app');
     }

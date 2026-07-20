@@ -24,8 +24,11 @@ class ProjectPolicy
      */
     private function withinTenant(User $user, Project $project): bool
     {
-        return $user->tenantClientId() === null
-            || $user->tenantClientId() === $project->client_id;
+        return ($user->tenantClientId() === null
+            || $user->tenantClientId() === $project->client_id)
+            // Per-project confinement: a technician assigned to specific
+            // projects touches only those, everywhere this policy gates.
+            && $user->canAccessProject($project->id);
     }
 
     public function view(User $user, Project $project): bool

@@ -84,6 +84,7 @@ class ComputersIndex extends Component
                 online: $this->connectivity === '' ? null : $this->connectivity === 'online',
                 withTrashed: $tenantId === null && $this->showTrashed,
                 agentStatus: $this->agentStatus,
+                allowedProjectIds: auth()->user()->visibleProjectIds(),
             ),
             'clients'  => $tenantId === null
                 ? \App\Models\Client::orderBy('company_name')->get(['id', 'company_name'])

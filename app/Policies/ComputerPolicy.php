@@ -17,7 +17,8 @@ class ComputerPolicy
     {
         return $user->can(Permission::ComputersView->value)
             && ($user->tenantClientId() === null
-                || $user->tenantClientId() === $computer->project->client_id);
+                || $user->tenantClientId() === $computer->project->client_id)
+            && $user->canAccessProject($computer->project_id);
     }
 
     public function update(User $user, Computer $computer): bool

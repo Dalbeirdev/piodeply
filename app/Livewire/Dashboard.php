@@ -135,6 +135,10 @@ class Dashboard extends Component
         }
 
         $projects = Project::where('client_id', $clientId)
+            // Per-project confinement: an assigned technician's dashboard
+            // covers exactly their projects.
+            ->when(auth()->user()->visibleProjectIds() !== null,
+                fn ($q) => $q->whereIn('id', auth()->user()->visibleProjectIds()))
             ->withCount('computers')
             ->orderBy('name')
             ->get();

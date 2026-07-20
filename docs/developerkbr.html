@@ -170,6 +170,12 @@
 <tr><td class="f">Tenant packages born private</td><td class="why">A tenant's new package is stamped with their client id server-side — not offered as a choice — so a tenant can never publish into the shared catalogue. Pickers everywhere (policy form, deploy forms, update-now) filter to catalogue + own; a smuggled foreign package id fails validation or the funnel guard.</td></tr>
 </table>
 
+<h2>9d. Per-project technician confinement</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">project_user pivot; none = roam</td><td class="why">Assigning is how an owner RESTRICTS, not grants: zero rows keeps today's whole-tenant access (small teams need no ceremony); rows confine the user to those projects everywhere — policies (Project/Computer view) block direct URLs, repo/list filters hide rows, deploy targets and template pickers shrink. Owners are never confinable (Team page refuses): restricting the person who does the restricting is a lockout waiting to happen.</td></tr>
+</table>
+
 <h2>9c. Software licenses</h2>
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>

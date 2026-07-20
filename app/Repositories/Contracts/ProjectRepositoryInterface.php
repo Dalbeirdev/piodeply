@@ -13,6 +13,7 @@ interface ProjectRepositoryInterface extends RepositoryInterface
         ?string $status = null,
         bool $withTrashed = false,
         int $perPage = 15,
+        ?array $allowedProjectIds = null,
     ): LengthAwarePaginator;
 
     public function restore(Project $project): bool;

@@ -68,6 +68,8 @@ class DeploymentsIndex extends Component
             ->when($tenantId !== null, fn ($q) => $q->whereHas(
                 'computer.project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
+                    ->when(auth()->user()->visibleProjectIds() !== null,
+                        fn ($qq) => $qq->whereIn('projects.id', auth()->user()->visibleProjectIds()))
             ))
             // The two search branches must be grouped: ungrouped, AND binds
             // tighter than OR and the package branch escapes the tenancy

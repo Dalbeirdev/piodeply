@@ -90,6 +90,8 @@ class PolicyTemplates extends Component
 
         return Project::query()
             ->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
+            ->when(auth()->user()->visibleProjectIds() !== null,
+                fn ($q) => $q->whereIn('id', auth()->user()->visibleProjectIds()))
             ->orderBy('name');
     }
 
