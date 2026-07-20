@@ -126,8 +126,15 @@ class ManageUsers extends Component
         $this->dispatch('role-updated');
     }
 
+    /** Staff only: tenants manage their people on the Team page. */
+    private function assertStaff(): void
+    {
+        abort_if(auth()->user()->tenantClientId() !== null, 403, 'Use your Team page to manage your own users.');
+    }
+
     public function render()
     {
+        $this->assertStaff();
         $this->authorize('viewAny', User::class);
 
         return view('livewire.admin.manage-users', [

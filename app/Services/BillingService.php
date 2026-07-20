@@ -200,6 +200,55 @@ class BillingService
     }
 
     /**
+     * Paid/open invoices for a customer, newest first — date, amount,
+     * status and Stripe's hosted PDF link. Empty on any failure: billing
+     * history is nice-to-have, never a page-breaker.
+     */
+    public function listInvoices(string $customerId, int $limit = 12): array
+    {
+        if (empty(config('services.stripe.secret'))) {
+            return [];
+        }
+
+        $response = Http::withToken(config('services.stripe.secret'))
+            ->get(self::API . '/invoices', ['customer' => $customerId, 'limit' => $limit]);
+
+        if ($response->failed()) {
+            return [];
+        }
+
+        return collect($response->json('data') ?? [])->map(fn ($inv) => [
+            'number' => $inv['number'] ?? ($inv['id'] ?? ''),
+            'date'   => isset($inv['created']) ? date('j M Y', (int) $inv['created']) : '',
+            'amount' => number_format(($inv['amount_paid'] ?: $inv['amount_due'] ?? 0) / 100, 2),
+            'status' => $inv['status'] ?? '',
+            'url'    => $inv['hosted_invoice_url'] ?? null,
+        ])->all();
+    }
+
+    /** The next charge: amount and date, or null when Stripe has none planned. */
+    public function upcomingInvoice(string $customerId): ?array
+    {
+        if (empty(config('services.stripe.secret'))) {
+            return null;
+        }
+
+        $response = Http::withToken(config('services.stripe.secret'))
+            ->get(self::API . '/invoices/upcoming', ['customer' => $customerId]);
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        return [
+            'amount' => number_format(($response->json('amount_due') ?? 0) / 100, 2),
+            'date'   => $response->json('next_payment_attempt') ?? $response->json('period_end')
+                ? date('j M Y', (int) ($response->json('next_payment_attempt') ?? $response->json('period_end')))
+                : null,
+        ];
+    }
+
+    /**
      * A Stripe Billing Portal session: the hosted page where a customer
      * updates their card, sees invoices, or cancels — all on Stripe's side,
      * so no card data or cancellation logic ever lives here.

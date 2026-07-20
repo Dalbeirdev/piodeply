@@ -104,6 +104,14 @@ class ClientsIndex extends Component
     {
         $this->authorize('viewAny', Client::class);
 
+        // A tenant's "Clients" page is their own organisation, nobody else's.
+        if (auth()->user()->tenantClientId() !== null) {
+            return view('livewire.clients.clients-index', [
+                'clients'  => Client::whereKey(auth()->user()->tenantClientId())->paginate(15),
+                'statuses' => \App\Enums\ClientStatus::cases(),
+            ])->layout('layouts.app');
+        }
+
         return view('livewire.clients.clients-index', [
             'clients' => $clients->searchPaginated(
                 search: $this->search,

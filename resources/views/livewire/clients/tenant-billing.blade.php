@@ -96,6 +96,13 @@
                     </div>
                 @endif
 
+                @if ($upcoming && $upcoming['date'])
+                    <p class="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-md p-3">
+                        <b>Next payment:</b> ${{ $upcoming['amount'] }} on {{ $upcoming['date'] }}.
+                        Resize your plan any time before then — the difference is prorated into that invoice.
+                    </p>
+                @endif
+
                 <div class="pt-1">
                     <button type="button" wire:click="openPortal"
                             class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
@@ -107,6 +114,37 @@
                     </p>
                 </div>
             </div>
+
+            @if (count($invoices) > 0)
+                <div class="pd-card p-6 space-y-3">
+                    <h3 class="text-sm font-semibold text-slate-800">Invoice history</h3>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs text-slate-400 uppercase">
+                                <th class="py-1 pr-3">Invoice</th><th class="py-1 pr-3">Date</th>
+                                <th class="py-1 pr-3">Amount</th><th class="py-1 pr-3">Status</th><th class="py-1"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($invoices as $invoice)
+                                <tr class="border-t border-slate-100">
+                                    <td class="py-1.5 pr-3 font-mono text-xs">{{ $invoice['number'] }}</td>
+                                    <td class="py-1.5 pr-3">{{ $invoice['date'] }}</td>
+                                    <td class="py-1.5 pr-3">${{ $invoice['amount'] }}</td>
+                                    <td class="py-1.5 pr-3">
+                                        <span class="pd-badge {{ $invoice['status'] === 'paid' ? 'pd-badge-green' : 'pd-badge-amber' }}">{{ ucfirst($invoice['status']) }}</span>
+                                    </td>
+                                    <td class="py-1.5 text-right">
+                                        @if ($invoice['url'])
+                                            <a href="{{ $invoice['url'] }}" target="_blank" rel="noopener" class="text-xs pd-action">View / PDF</a>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
     </div>
 </div>

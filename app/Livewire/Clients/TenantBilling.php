@@ -121,6 +121,12 @@ class TenantBilling extends Component
             'client'       => $client,
             'machineCount' => \App\Models\Computer::whereHas('project', fn ($q) => $q->where('client_id', $client->id))->count(),
             'resizeQuote'  => app(BillingService::class)->quoteCents(max(1, $this->resizeMachines)),
+            'invoices'     => $client->stripe_customer_id
+                ? app(BillingService::class)->listInvoices($client->stripe_customer_id)
+                : [],
+            'upcoming'     => $client->stripe_customer_id
+                ? app(BillingService::class)->upcomingInvoice($client->stripe_customer_id)
+                : null,
             'isOwner'      => auth()->user()->can(\App\Enums\Permission::UsersView->value),
         ])->layout('layouts.app');
     }

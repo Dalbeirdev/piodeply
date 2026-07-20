@@ -70,7 +70,7 @@ class NavigationService
                 'icon' => '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'],
 
             // Configuring PioDeploy itself.
-            ['label' => 'Users', 'route' => 'admin.users', 'active' => 'admin.users*', 'permission' => Permission::UsersView, 'group' => self::ADMIN,
+            ['label' => 'Users', 'route' => 'admin.users', 'active' => 'admin.users*', 'permission' => Permission::UsersView, 'group' => self::ADMIN, 'staffOnly' => true,
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'],
             ['label' => 'Roles', 'route' => 'admin.roles', 'active' => 'admin.roles*', 'permission' => Permission::RolesManage, 'group' => self::ADMIN,
                 'icon' => '<circle cx="12" cy="8" r="3.5"/><path d="M6 21v-1.5a6 6 0 0 1 9-5.2"/><path d="m16.5 20 1.6 1 2.9-4"/>'],

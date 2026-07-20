@@ -32,6 +32,11 @@ class ActivityIndex extends Component
 
         $activities = Activity::query()
             ->with('causer')
+            // Tenant view: only actions taken BY their own team — never
+            // platform staff activity, impersonation, or other tenants.
+            ->when(auth()->user()->tenantClientId() !== null, fn ($q) => $q->whereHasMorph(
+                'causer', [\App\Models\User::class],
+                fn ($c) => $c->where('client_id', auth()->user()->tenantClientId())))
             ->when($this->logFilter !== '', fn ($q) => $q->where('log_name', $this->logFilter))
             ->when($this->search !== '', fn ($q) => $q->where(fn ($sub) => $sub
                 ->where('description', 'like', "%{$this->search}%")
