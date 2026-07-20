@@ -94,13 +94,27 @@
                     <tr><td class="muted" style="padding:.35rem 0;">Fleet</td><td style="text-align:right;font-weight:600;">{{ $machines }} machines</td></tr>
                     <tr><td class="muted" style="padding:.35rem 0;">Monthly</td><td style="text-align:right;font-weight:700;font-size:1.15rem;">{{ $currency }} {{ number_format($monthlyCents / 100, 2) }}</td></tr>
                 </table>
+                @if ($paymentLive)
+                    <div style="display:grid;gap:.5rem;margin:1rem 0;">
+                        <label style="display:flex;gap:.6rem;align-items:flex-start;border:1px solid {{ '#e2e8f0' }};border-radius:10px;padding:.7rem .9rem;cursor:pointer;">
+                            <input type="radio" wire:model.live="payVia" value="card" style="margin-top:.2rem;">
+                            <span style="font-size:.88rem;"><b>Pay by card</b> — 14-day free trial, nothing charged today.
+                            First {{ $currency }} {{ number_format($monthlyCents / 100, 2) }} charge when the trial ends; cancel any time before then.</span>
+                        </label>
+                        <label style="display:flex;gap:.6rem;align-items:flex-start;border:1px solid {{ '#e2e8f0' }};border-radius:10px;padding:.7rem .9rem;cursor:pointer;">
+                            <input type="radio" wire:model.live="payVia" value="invoice" style="margin-top:.2rem;">
+                            <span style="font-size:.88rem;"><b>Request an invoice</b> — for organisations that don't pay by card.
+                            We'll invoice your first month and activate your account when payment arrives.</span>
+                        </label>
+                    </div>
+                @endif
                 <p class="muted" style="font-size:.85rem;margin:1rem 0;">
-                    @if ($paymentLive)
-                        You'll be taken to our secure Stripe checkout to add a card — <b>nothing is charged
-                        today</b>. Your <b>14-day free trial</b> starts now and the first
-                        {{ $currency }} {{ number_format($monthlyCents / 100, 2) }} charge comes when it ends;
-                        cancel any time before then. Our team activates your account right after — you'll get
-                        an email the moment you can sign in.
+                    @if ($paymentLive && $payVia === 'card')
+                        You'll be taken to our secure Stripe checkout to add a card. Our team activates your
+                        account right after — you'll get an email the moment you can sign in.
+                    @elseif ($paymentLive)
+                        Your application goes straight to our team with an invoice request — you'll get an
+                        email the moment your account is activated.
                     @else
                         We'll send an invoice for your first month. Your account is activated as soon as
                         payment is confirmed — you'll get an email the moment you can sign in.
@@ -110,7 +124,7 @@
                 <div style="display:flex;gap:.75rem;">
                     <button type="button" wire:click="back" class="btn btn-lg" style="flex:1;justify-content:center;">Back</button>
                     <button type="button" wire:click="submit" wire:loading.attr="disabled" class="btn btn-primary btn-lg" style="flex:2;justify-content:center;">
-                        <span wire:loading.remove wire:target="submit">{{ $paymentLive ? 'Start 14-day free trial' : 'Submit application' }}</span>
+                        <span wire:loading.remove wire:target="submit">{{ $paymentLive && $payVia === 'card' ? 'Start 14-day free trial' : 'Submit application' }}</span>
                         <span wire:loading wire:target="submit">One moment…</span>
                     </button>
                 </div>

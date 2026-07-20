@@ -27,7 +27,7 @@ class Signup extends Model
     protected $fillable = [
         'company_name', 'contact_name', 'email', 'password_hash',
         'phone', 'country', 'machines', 'monthly_cents', 'currency',
-        'status', 'stripe_session_id', 'payment_reference', 'paid_at',
+        'payment_method', 'status', 'stripe_session_id', 'payment_reference', 'paid_at',
         'approved_by', 'approved_at', 'rejection_reason', 'client_id',
     ];
 

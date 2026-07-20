@@ -38,6 +38,15 @@ class SignupWizard extends Component
 
     public string $country = '';
 
+    /**
+     * card    — Stripe checkout with the 14-day trial (the default).
+     * invoice — for organisations whose accounts department will not do
+     *           cards; lands with the admin as an invoice request.
+     * Only meaningful while Stripe is configured; without it every signup
+     * is effectively the invoice path already.
+     */
+    public string $payVia = 'card';
+
     public function mount(): void
     {
         $machines = (int) request()->query('machines', '25');
@@ -102,6 +111,8 @@ class SignupWizard extends Component
             return null;
         }
 
+        $payByCard = $billing->isConfigured() && $this->payVia !== 'invoice';
+
         $signup = Signup::create([
             'company_name'  => $this->company_name,
             'contact_name'  => $this->contact_name,
@@ -112,7 +123,8 @@ class SignupWizard extends Component
             'machines'      => $this->machines,
             'monthly_cents' => $billing->quoteCents($this->machines),
             'currency'      => $billing->currency(),
-            'status'        => $billing->isConfigured()
+            'payment_method' => $payByCard ? 'card' : 'invoice',
+            'status'        => $payByCard
                 ? Signup::STATUS_PENDING_PAYMENT
                 : Signup::STATUS_AWAITING_VERIFICATION,
         ]);
@@ -129,7 +141,7 @@ class SignupWizard extends Component
             'monthly'  => $signup->monthlyLabel(),
         ]);
 
-        if ($billing->isConfigured()) {
+        if ($payByCard) {
             $url = $billing->createCheckout(
                 machines: $this->machines,
                 successUrl: route('signup.thanks'),

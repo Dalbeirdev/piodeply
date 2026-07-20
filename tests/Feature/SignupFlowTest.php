@@ -67,6 +67,38 @@ class SignupFlowTest extends TestCase
         $this->assertDatabaseMissing('clients', ['company_name' => 'Acme MSP Ltd']);
     }
 
+    public function test_choosing_invoice_skips_stripe_even_when_configured(): void
+    {
+        // The accounts-department path: Stripe is live, but the applicant
+        // asked for an invoice — no checkout redirect, and the admin queue
+        // must know this was a choice, not a missing configuration.
+        config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
+
+        $this->completedWizard()
+            ->set('payVia', 'invoice')
+            ->call('submit')
+            ->assertRedirect(route('signup.thanks'));
+
+        $signup = Signup::sole();
+        $this->assertSame(Signup::STATUS_AWAITING_VERIFICATION, $signup->status);
+        $this->assertSame('invoice', $signup->payment_method);
+    }
+
+    public function test_card_stays_the_default_when_stripe_is_configured(): void
+    {
+        config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
+        \Illuminate\Support\Facades\Http::fake([
+            'api.stripe.com/*' => \Illuminate\Support\Facades\Http::response(['id' => 'cs_1', 'url' => 'https://checkout.stripe.com/c/pay/cs_1']),
+        ]);
+
+        $this->completedWizard()->call('submit')
+            ->assertRedirect('https://checkout.stripe.com/c/pay/cs_1');
+
+        $signup = Signup::sole();
+        $this->assertSame(Signup::STATUS_PENDING_PAYMENT, $signup->status);
+        $this->assertSame('card', $signup->payment_method);
+    }
+
     public function test_each_step_validates_before_advancing(): void
     {
         Livewire::test(SignupWizard::class)

@@ -59,7 +59,11 @@
                                             <span class="pd-badge pd-badge-amber"><span class="pd-dot"></span>Awaiting Stripe payment</span>
                                             @break
                                         @case(\App\Models\Signup::STATUS_AWAITING_VERIFICATION)
-                                            <span class="pd-badge pd-badge-sky" title="No online payment — verify the invoice/transfer before approving"><span class="pd-dot"></span>Verify manually</span>
+                                            @if ($signup->payment_method === 'invoice')
+                                                <span class="pd-badge pd-badge-sky" title="The applicant chose to pay by invoice — send one, verify the money arrived, then approve"><span class="pd-dot"></span>Invoice requested</span>
+                                            @else
+                                                <span class="pd-badge pd-badge-sky" title="No online payment — verify the invoice/transfer before approving"><span class="pd-dot"></span>Verify manually</span>
+                                            @endif
                                             @break
                                         @case(\App\Models\Signup::STATUS_APPROVED)
                                             <span class="pd-badge pd-badge-green"><span class="pd-dot"></span>Approved {{ $signup->approved_at?->format('Y-m-d') }}</span>
