@@ -89,6 +89,14 @@ $backup  = '{{backup}}'
 $log     = '{{log}}'
 function Log($m) { "{0}  {1}" -f (Get-Date -Format 's'), $m | Out-File $log -Append -Encoding utf8 }
 
+# Written before anything else so the log always proves the helper ran,
+# even if a later step throws — the previous launch mechanism produced no
+# log at all, which is what made the loop invisible.
+Log "Helper started (waiting for the agent process to exit)"
+# The agent stops itself right after scheduling us; give the SCM a moment
+# so Stop-Service below is a no-op and the executable is unlocked.
+Start-Sleep -Seconds 8
+
 try {
     Log "Stopping $svc"
     Stop-Service $svc -Force -ErrorAction SilentlyContinue
@@ -126,18 +134,50 @@ catch {
 
     private static void LaunchDetached(string scriptPath)
     {
-        // Runs as the same SYSTEM account this service runs under, and outlives
-        // it: UseShellExecute + a new process group so stopping the service
-        // does not take the helper with it.
-        var psi = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName = "powershell.exe",
-            Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
-            UseShellExecute = true,
-            CreateNoWindow = true,
-            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden,
-        };
+        // A Windows service runs in session 0. Starting the helper directly
+        // from here was unreliable: with UseShellExecute=true the process
+        // often never ran in session 0 (no shell), so the swap silently
+        // never happened and the agent looped, re-downloading forever.
+        //
+        // A one-shot Scheduled Task is the robust pattern: the Task Scheduler
+        // owns the helper, runs it as SYSTEM a few seconds out, and it is in
+        // no way tied to this dying service. We delete any prior task of the
+        // same name first so repeated updates don't stack.
+        const string taskName = "PioDeployAgentSelfUpdate";
 
-        System.Diagnostics.Process.Start(psi);
+        Run("schtasks.exe", $"/Delete /TN {taskName} /F");
+
+        var command = $"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \\\"{scriptPath}\\\"";
+        var runAt = DateTime.Now.AddSeconds(10).ToString("HH:mm");
+
+        // /RU SYSTEM: same account the service uses, so it can write Program
+        // Files and control the service. /SC ONCE with a near time fires now.
+        Run("schtasks.exe",
+            $"/Create /TN {taskName} /TR \"{command}\" /SC ONCE /ST {runAt} /RU SYSTEM /RL HIGHEST /F");
+
+        // Kick it immediately rather than waiting for the clock minute.
+        Run("schtasks.exe", $"/Run /TN {taskName}");
+    }
+
+    private static void Run(string file, string args)
+    {
+        try
+        {
+            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = file,
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            });
+            p?.WaitForExit(15_000);
+        }
+        catch
+        {
+            // Best effort: a failure to register the task leaves the agent on
+            // its current version, which is the safe outcome.
+        }
     }
 }
