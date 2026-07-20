@@ -72,8 +72,9 @@ public sealed class SelfUpdater
     }
 
     /// <summary>The helper. Backs up, swaps, verifies, and rolls back on
-    /// failure — all after this process has exited.</summary>
-    private static string BuildSwapScript(string staging, string installDir, string root)
+    /// failure — all after this process has exited. Internal so tests can
+    /// pin what the script must (and must not) do.</summary>
+    internal static string BuildSwapScript(string staging, string installDir, string root)
     {
         var backup = Path.Combine(root, "backup");
         var log = Path.Combine(root, "self-update.log");
@@ -106,8 +107,12 @@ try {
     Log "Backing up current install"
     Copy-Item $install $backup -Recurse -Force
 
-    Log "Copying new files"
-    Copy-Item (Join-Path $staging '*') $install -Recurse -Force
+    Log "Copying new files (keeping this machine's appsettings.json)"
+    # The bundle's appsettings.json is a placeholder template for fresh
+    # enrollments; the installed one holds this machine's ServerUrl and API
+    # key. Overwriting it disconnects the agent from the server.
+    Get-ChildItem $staging -Exclude 'appsettings*.json' |
+        Copy-Item -Destination $install -Recurse -Force
 
     Log "Starting $svc"
     Start-Service $svc
