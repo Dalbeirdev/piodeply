@@ -49,10 +49,11 @@ class SignupApprovalService
                 'email_verified_at' => now(), // payment + admin review vouch for the address
             ])->save();
 
-            // Manager, client-bound: full management of their own tenant
-            // (projects, computers, policies) and nothing outside it — the
-            // exact scope the tenancy layer already enforces and tests.
-            $owner->assignRole(Role::Manager->value);
+            // Client Owner, client-bound: full management of their own
+            // tenant (projects, computers, policies, their Team) and
+            // nothing outside it — the exact scope the tenancy layer
+            // already enforces and tests.
+            $owner->assignRole(Role::ClientOwner->value);
 
             $signup->forceFill([
                 'status'      => Signup::STATUS_APPROVED,

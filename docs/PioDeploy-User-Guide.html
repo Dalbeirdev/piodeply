@@ -418,10 +418,10 @@
   <p>The pricing page's <b>Get started</b> runs a four-step public wizard: fleet size (live price) → account (email + password) → company → review &amp; pay. With Stripe connected the visitor pays right there; without it, the application arrives marked for manual invoicing. Either way <b>nothing is created yet</b> — the application lands in <b>Administration → Signups</b> as exactly that: an application.</p>
   <ol>
     <li><b>Verify the payment.</b> The row says it plainly: <span class="pd-badge">Paid via Stripe</span> (the webhook confirmed the money), <i>Awaiting Stripe payment</i>, or <i>Verify manually</i> (invoice/transfer — check your bank first).</li>
-    <li><b>Approve.</b> One click creates the client, the owner login (Manager role, bound to their own client only), and emails them that they can sign in. The password is the one they chose at signup — you never see or send it.</li>
+    <li><b>Approve.</b> One click creates the client, the owner login (<b>Client Owner</b> role — full control of their own company, nothing outside it), and emails them that they can sign in. The password is the one they chose at signup — you never see or send it.</li>
     <li>Or <b>Reject</b> with an optional reason; nothing is created.</li>
   </ol>
-  <div class="callout"><b>What the new customer can do:</b> exactly what a client-bound Manager can — create projects, enrol machines, deploy software, see reports — inside their own tenant and nowhere else. They also get a <b>Team</b> page to add their own <b>Technician</b> and <b>Viewer</b> accounts (they cannot mint other owners or admins; that stays with you). To be alerted as applications arrive, subscribe a notification channel to "signup.received".</div>
+  <div class="callout"><b>What the new customer can do:</b> the <b>Client Owner</b> role manages everything inside their own company — create projects, enrol machines, deploy software, see reports — inside their own tenant and nowhere else. They also get a <b>Team</b> page to add their own <b>Technician</b> and <b>Viewer</b> accounts (they cannot mint other owners or admins; that stays with you). To be alerted as applications arrive, subscribe a notification channel to "signup.received".</div>
 
   <h3>Recurring billing — what happens every month</h3>
   <p>A wizard signup that paid by card created a real <b>monthly Stripe subscription</b> — Stripe charges the card automatically each month; nobody invoices anyone by hand. PioDeploy mirrors that subscription per client:</p>

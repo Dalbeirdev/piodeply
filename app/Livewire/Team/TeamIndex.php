@@ -95,8 +95,9 @@ class TeamIndex extends Component
             return;
         }
 
-        // A fellow Manager is the platform admin's to manage, not a peer's.
-        if ($target->hasRole(RoleEnum::Manager->value)) {
+        // A fellow owner (Client Owner, or a staff-granted Manager) is the
+        // platform admin's to manage, not a peer's.
+        if ($target->hasRole(RoleEnum::Manager->value) || $target->hasRole(RoleEnum::ClientOwner->value)) {
             session()->flash('error', 'Owner accounts are managed by PioDeploy support.');
 
             return;

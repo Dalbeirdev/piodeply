@@ -31,7 +31,7 @@ class TeamManagementTest extends TestCase
         $this->client = Client::factory()->create();
         $this->owner = User::factory()->create();
         $this->owner->forceFill(['client_id' => $this->client->id])->save();
-        $this->owner->assignRole(RoleEnum::Manager->value);
+        $this->owner->assignRole(RoleEnum::ClientOwner->value);
     }
 
     public function test_an_owner_can_add_a_technician_bound_to_their_own_client(): void

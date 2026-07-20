@@ -29,7 +29,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             RoleEnum::Admin->value => PermissionEnum::values(),
 
-            RoleEnum::Manager->value => [
+            RoleEnum::Manager->value => $managerPermissions = [
                 PermissionEnum::UsersView,
                 PermissionEnum::ClientsView, PermissionEnum::ClientsCreate, PermissionEnum::ClientsUpdate,
                 PermissionEnum::ProjectsView, PermissionEnum::ProjectsCreate, PermissionEnum::ProjectsUpdate, PermissionEnum::ProjectsDelete,
@@ -41,6 +41,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionEnum::ReportsView, PermissionEnum::ReportsExport,
                 PermissionEnum::ActivityView,
             ],
+
+            // A customer's owner account. Identical capabilities to Manager
+            // ON PURPOSE — the tenancy binding (client_id on the user) is
+            // what limits everything to their own company, and that layer is
+            // already enforced and tested. A separate role exists so the
+            // Users list reads honestly: staff are Managers, customers are
+            // Client Owners.
+            RoleEnum::ClientOwner->value => $managerPermissions,
 
             RoleEnum::Technician->value => [
                 PermissionEnum::ClientsView,

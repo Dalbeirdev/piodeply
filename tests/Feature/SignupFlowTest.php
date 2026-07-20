@@ -113,7 +113,7 @@ class SignupFlowTest extends TestCase
 
         $owner = User::where('email', 'owner@newclient.example')->sole();
         $this->assertSame($signup->client_id, $owner->client_id, 'the owner is bound to the new tenant');
-        $this->assertTrue($owner->hasRole(RoleEnum::Manager->value));
+        $this->assertTrue($owner->hasRole(RoleEnum::ClientOwner->value), 'signup owners are Client Owners, not staff Managers');
         $this->assertTrue(Hash::check('Owner-pass-123', $owner->password), 'they log in with the password they chose at signup');
 
         Mail::assertSent(AccountApprovedMail::class, fn ($mail) => $mail->hasTo('owner@newclient.example'));
