@@ -52,10 +52,10 @@
                                             · {{ $project->status->label() }}
                                         </p>
                                     </div>
-                                    <a href="{{ route('agent.download', $project->download_token) }}"
+                                    <a href="{{ route('projects.enrollment', $project) }}"
                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 rounded-lg font-semibold text-xs text-white hover:bg-teal-800 transition">
                                         <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                                        Download agent
+                                        Enrol machines
                                     </a>
                                 </li>
                             @endforeach
