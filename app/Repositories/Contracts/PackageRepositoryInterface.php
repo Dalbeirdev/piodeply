@@ -13,6 +13,7 @@ interface PackageRepositoryInterface extends RepositoryInterface
         ?string $installerType = null,
         ?bool $activeOnly = null,
         bool $withTrashed = false,
+        ?int $visibleToClientId = null,
         int $perPage = 15,
     ): LengthAwarePaginator;
 

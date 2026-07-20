@@ -74,6 +74,12 @@ class PackageForm extends Component
             return $this->redirectRoute('packages.show', $this->package);
         }
 
+        // A tenant's package is born private to their client — always, not
+        // optionally: a tenant cannot publish into the shared catalogue.
+        if (auth()->user()->tenantClientId() !== null) {
+            $validated['client_id'] = auth()->user()->tenantClientId();
+        }
+
         $package = $service->create($validated);
         session()->flash('status', 'Package created. Add a version below if it ships as a binary installer.');
 

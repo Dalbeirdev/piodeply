@@ -64,6 +64,7 @@ class PackagesIndex extends Component
                 installerType: $this->installerType ?: null,
                 activeOnly: $this->activeOnly ?: null,
                 withTrashed: $this->showTrashed,
+                visibleToClientId: auth()->user()->tenantClientId(),
             ),
             'categories' => \App\Models\PackageCategory::orderBy('sort_order')->get(['id', 'name']),
             'types'      => \App\Enums\InstallerType::cases(),

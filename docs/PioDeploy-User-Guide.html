@@ -208,6 +208,7 @@
 
   <h3>4.3 The software catalogue</h3>
   <p><b>Packages</b> lists the software you can deploy — pre-seeded with ~120 popular titles (Chrome, 7-Zip, Firefox, VLC, Notepad++, …), each with its winget/Chocolatey id. To add your own, click <b>New Package</b> and provide the name, type (winget / choco / MSI / EXE / MSIX / ZIP) and identifier or installer URL.</p>
+  <div class="callout"><b>Private packages (per client):</b> when a <b>customer</b> creates a package (their in-house tools, custom installers), it is born <b>private to their organisation</b> — marked with a Private badge, invisible to every other tenant, and <b>undeployable to any other client's machines</b>. That last rule is absolute: it binds Super Admins too, because it reads the package's ownership, not the caller's role — staff can <i>view</i> a private package for support, but no one can reuse one client's software for another. Customers manage only their own packages; the shared catalogue stays staff-curated.</div>
 </section>
 
 <!-- 5 AGENT -->

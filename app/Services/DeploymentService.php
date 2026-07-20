@@ -36,6 +36,17 @@ class DeploymentService
         ?int $createdBy = null,
         ?string $targetVersion = null,
     ): DeploymentJob {
+        // The tenant-isolation line, drawn where every deployment funnels
+        // through: a client's private package never lands on another
+        // client's machine. Role does not matter — Super Admin included —
+        // because the guard reads ownership, not the caller.
+        if (! $package->isUsableFor($computer->project)) {
+            throw new \DomainException(
+                "\"{$package->name}\" is private to {$package->client?->company_name} and cannot be "
+                .'deployed to another client\'s machines.'
+            );
+        }
+
         $status = $dependsOn !== null && ! $dependsOn->status->isTerminal()
             ? JobStatus::Blocked
             : JobStatus::Pending;

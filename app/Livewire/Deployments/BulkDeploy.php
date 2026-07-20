@@ -70,6 +70,13 @@ class BulkDeploy extends Component
         $project = $this->scopedProjects()->findOrFail($validated['projectId']);
         $package = Package::findOrFail($validated['packageId']);
 
+        // A private package only deploys to its own client's machines.
+        if (! $package->isUsableFor($project)) {
+            $this->addError('packageId', "\"{$package->name}\" is private to another client and cannot be deployed to this project.");
+
+            return;
+        }
+
         $computers = Computer::where('project_id', $project->id)
             ->when($this->ring !== '', fn ($q) => $q->where('ring', $this->ring))
             ->get();
@@ -94,7 +101,7 @@ class BulkDeploy extends Component
 
         return view('livewire.deployments.bulk-deploy', [
             'projects'    => $this->scopedProjects()->orderBy('name')->get(['id', 'name', 'client_id']),
-            'packages'    => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
+            'packages'    => Package::active()->visibleTo(auth()->user())->orderBy('name')->get(['id', 'name', 'installer_type']),
             'rings'       => DeploymentRing::cases(),
             // Bulk covers install/update/repair/remove — rollback stays a
             // per-machine action (each machine's previous version differs).

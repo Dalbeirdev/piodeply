@@ -42,6 +42,7 @@ class ComputerShow extends Component
         $item = $this->computer->software()->findOrFail($softwareId);
 
         $package = \App\Models\Package::active()
+            ->usableFor($this->computer->project)
             ->where('winget_id', $item->name)
             ->first();
 

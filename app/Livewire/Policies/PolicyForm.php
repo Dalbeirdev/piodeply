@@ -113,6 +113,16 @@ class PolicyForm extends Component
         $action = PolicyAction::from($validated['action']);
         $package = Package::findOrFail($validated['package_id']);
 
+        // A private package only ever governs its own client's projects —
+        // the deploy funnel enforces this too, but failing here is a form
+        // error instead of a queued job that can never run.
+        $targetProject = \App\Models\Project::findOrFail($validated['project_id']);
+        if (! $package->isUsableFor($targetProject)) {
+            $this->addError('package_id', "\"{$package->name}\" is private to another client and cannot be used for this project.");
+
+            return null;
+        }
+
         // Pinning needs a version; Latest ignores one.
         if (($versionMode->requiresVersion() || $action === PolicyAction::ForceUpdate)
             && blank($validated['desired_version'])) {
@@ -175,7 +185,7 @@ class PolicyForm extends Component
     {
         return view('livewire.policies.policy-form', [
             'projects'     => Project::orderBy('name')->get(['id', 'name']),
-            'packages'     => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
+            'packages'     => Package::active()->visibleTo(auth()->user())->orderBy('name')->get(['id', 'name', 'installer_type']),
             'actions'      => PolicyAction::cases(),
             'modes'        => PolicyMode::cases(),
             'versionModes' => PolicyVersionMode::cases(),

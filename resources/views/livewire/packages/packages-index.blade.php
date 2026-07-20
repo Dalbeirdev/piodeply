@@ -76,6 +76,12 @@
                                         <div class="min-w-0">
                                             <div class="flex items-center gap-2">
                                                 <a href="{{ route('packages.show', $package) }}" class="pd-link text-[15px]">{{ $package->name }}</a>
+                                                @if ($package->isPrivate())
+                                                    <span class="ml-1 pd-badge pd-badge-amber"
+                                                          title="Private package — only {{ auth()->user()->tenantClientId() === null ? $package->client?->company_name : 'your organisation' }} can deploy it">
+                                                        {{ auth()->user()->tenantClientId() === null ? 'Private · '.$package->client?->company_name : 'Private' }}
+                                                    </span>
+                                                @endif
                                                 @if ($package->trashed())
                                                     <span class="pd-badge pd-badge-red">deleted</span>
                                                 @endif

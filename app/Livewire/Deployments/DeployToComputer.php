@@ -45,7 +45,7 @@ class DeployToComputer extends Component
     {
         $this->target_version = null;
 
-        $package = $this->package_id !== null ? Package::active()->find($this->package_id) : null;
+        $package = $this->package_id !== null ? Package::active()->usableFor($this->computer->project)->find($this->package_id) : null;
         $action = JobAction::tryFrom($this->action);
 
         if ($package !== null && $action !== null && ! $package->installer_type->supports($action)) {
@@ -108,7 +108,7 @@ class DeployToComputer extends Component
     {
         $this->authorize('create', DeploymentJob::class);
 
-        $package = Package::active()->findOrFail($this->package_id);
+        $package = Package::active()->usableFor($this->computer->project)->findOrFail($this->package_id);
         $version = $service->previousGoodVersion($package, $this->computer);
 
         if ($version === null) {
@@ -133,7 +133,7 @@ class DeployToComputer extends Component
     public function render(InstalledStateService $installedState, WingetVersionService $wingetVersions, DeploymentService $deployments)
     {
         $package = $this->package_id !== null
-            ? Package::active()->find($this->package_id)
+            ? Package::active()->usableFor($this->computer->project)->find($this->package_id)
             : null;
 
         // The last known-good version to offer as a one-click rollback target.
@@ -150,7 +150,7 @@ class DeployToComputer extends Component
         $needsVersion = $action === JobAction::Rollback && $this->targetVersion() === null;
 
         return view('livewire.deployments.deploy-to-computer', [
-            'packages'  => Package::active()->orderBy('name')->get(['id', 'name', 'installer_type']),
+            'packages'  => Package::active()->usableFor($this->computer->project)->orderBy('name')->get(['id', 'name', 'installer_type']),
             // Only offer actions the selected package's type can actually
             // carry out — no Rollback on an MSI, no Uninstall on a portable EXE.
             'actions'   => $package !== null

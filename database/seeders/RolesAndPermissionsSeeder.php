@@ -34,7 +34,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 PermissionEnum::ClientsView, PermissionEnum::ClientsCreate, PermissionEnum::ClientsUpdate,
                 PermissionEnum::ProjectsView, PermissionEnum::ProjectsCreate, PermissionEnum::ProjectsUpdate, PermissionEnum::ProjectsDelete,
                 PermissionEnum::ComputersView, PermissionEnum::ComputersManage,
-                PermissionEnum::PackagesView,
+                // Manage covers creating packages; PackagePolicy limits
+                // tenants to their OWN packages, never the shared catalogue.
+                PermissionEnum::PackagesView, PermissionEnum::PackagesManage,
                 PermissionEnum::DeploymentsView, PermissionEnum::DeploymentsManage,
                 PermissionEnum::PoliciesView, PermissionEnum::PoliciesManage,
                 PermissionEnum::SchedulesView, PermissionEnum::SchedulesManage,

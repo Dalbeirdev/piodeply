@@ -163,6 +163,13 @@
 <tr><td class="f">Batch enforcement</td><td class="why">The 5-minute pass asked the DB 15–20 questions per machine per policy (21,305 queries / 10.5 s at 1,000 devices). <code>PolicyBatchContext</code> answers them from three set-based queries per policy → 603 queries / 1.7 s. Same tests cover both paths so they can't drift.</td></tr>
 </table>
 
+<h2>9b. Per-tenant packages</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">client_id on packages (null = catalogue)</td><td class="why">Customers upload in-house installers and licensed software; those must never be visible to — or deployable for — another tenant. The isolation line is <code>Package::isUsableFor($project)</code>, enforced at the ONE funnel every deployment passes through (DeploymentService::queue), so it binds Super Admins too: the guard reads ownership, not the caller's role. Staff may view for support; reuse is impossible by construction.</td></tr>
+<tr><td class="f">Tenant packages born private</td><td class="why">A tenant's new package is stamped with their client id server-side — not offered as a choice — so a tenant can never publish into the shared catalogue. Pickers everywhere (policy form, deploy forms, update-now) filter to catalogue + own; a smuggled foreign package id fails validation or the funnel guard.</td></tr>
+</table>
+
 <h2>11b. Policy templates</h2>
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>
