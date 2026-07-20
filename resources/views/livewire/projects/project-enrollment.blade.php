@@ -29,13 +29,77 @@
          }">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
 
+            @if (session('status'))
+                <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700" role="status">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @can('rotateApiKey', $project)
+                <div class="pd-card p-6 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-800">API keys</h3>
+                        <span class="text-xs text-slate-400">{{ $apiKeys->whereNull('revoked_at')->count() }} active</span>
+                    </div>
+                    <p class="text-xs text-slate-500">
+                        A project can hold several keys — one per site, RMM, or rollout wave. Creating a key never
+                        affects machines enrolled with another; revoking one stops <em>only</em> the machines using it.
+                        Each key's value is shown once, at creation.
+                    </p>
+
+                    @if ($revealedKey !== null)
+                        <div class="rounded-md bg-teal-50 border border-teal-200 p-3 space-y-1" role="status">
+                            <p class="text-xs font-semibold text-teal-800">New key — copy it now, it will not be shown again:</p>
+                            <code class="block font-mono text-sm text-teal-900 break-all select-all">{{ $revealedKey }}</code>
+                            <button type="button" wire:click="dismissKey" class="text-xs pd-action">I've copied it — hide</button>
+                        </div>
+                    @endif
+
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs text-slate-400 uppercase">
+                                <th class="py-1 pr-3">Label</th><th class="py-1 pr-3">Key</th>
+                                <th class="py-1 pr-3">Created</th><th class="py-1 pr-3">Last used</th><th class="py-1"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($apiKeys as $apiKey)
+                                <tr class="border-t border-slate-100 {{ $apiKey->revoked_at ? 'opacity-50' : '' }}">
+                                    <td class="py-1.5 pr-3">{{ $apiKey->label }}</td>
+                                    <td class="py-1.5 pr-3 font-mono text-xs">{{ $apiKey->key_prefix }}…</td>
+                                    <td class="py-1.5 pr-3 text-xs text-slate-500">{{ $apiKey->created_at->format('Y-m-d') }}</td>
+                                    <td class="py-1.5 pr-3 text-xs text-slate-500">{{ $apiKey->last_used_at?->diffForHumans() ?? 'never' }}</td>
+                                    <td class="py-1.5 text-right">
+                                        @if ($apiKey->revoked_at)
+                                            <span class="text-xs text-slate-400">revoked {{ $apiKey->revoked_at->format('Y-m-d') }}</span>
+                                        @else
+                                            <button type="button" wire:click="revokeKey({{ $apiKey->id }})"
+                                                wire:confirm="Revoke key {{ $apiKey->key_prefix }}…? Every machine enrolled with THIS key stops authenticating until re-enrolled with another. Machines on other keys are unaffected."
+                                                class="text-xs text-rose-600 hover:text-rose-700 font-medium">Revoke</button>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <div class="flex gap-2">
+                        <input type="text" wire:model="newKeyLabel" placeholder="Label (e.g. London office, NinjaOne)"
+                               class="block w-64 text-sm border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                        <button type="button" wire:click="createKey"
+                                class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
+                            New key
+                        </button>
+                    </div>
+                </div>
+            @endcan
+
             <div class="pd-card p-6">
                 <label for="apiKey" class="block text-sm font-medium text-slate-700">Project API key</label>
                 <p class="text-xs text-slate-500 mt-1">
-                    Paste the key for <strong>{{ $project->name }}</strong> and it drops into the scripts below.
-                    It was shown once when the project was created — PioDeploy stores only a hash and cannot show it
-                    again. Lost it? <a href="{{ route('projects.edit', $project) }}" class="pd-link">Rotate the key</a>,
-                    which invalidates the old one.
+                    Paste a key for <strong>{{ $project->name }}</strong> and it drops into the scripts below.
+                    Keys are shown once at creation — PioDeploy stores only a hash and cannot show them
+                    again. Lost it? Create a new key above; machines enrolled with existing keys are unaffected.
                 </p>
                 <input id="apiKey" type="text" x-model="key" autocomplete="off" spellcheck="false"
                        placeholder="{{ $placeholder }}"

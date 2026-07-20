@@ -60,7 +60,11 @@ class ProjectsIndex extends Component
         $project = Project::findOrFail($projectId);
         $this->authorize('delete', $project);
 
-        $service->delete($project);
+        try {
+            $service->delete($project);
+        } catch (\App\Exceptions\ProjectHasMachinesException $e) {
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function restore(int $projectId, ProjectService $service): void

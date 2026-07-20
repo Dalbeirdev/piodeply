@@ -34,4 +34,14 @@ class ComputerPolicy
     {
         return $user->can(Permission::ComputersManage->value);
     }
+
+    /**
+     * Permission only says WHO may permanently delete; whether this machine
+     * MAY be (agent gone) is business state, enforced in
+     * ComputerService::forceDelete so no caller can skip it.
+     */
+    public function forceDelete(User $user, Computer $computer): bool
+    {
+        return $user->can(Permission::ComputersManage->value);
+    }
 }

@@ -219,7 +219,7 @@
 
   <h3>5.2 The Enrolment page — get your script</h3>
   <p>You do not write the rollout script yourself. Go to <b>Projects</b> and click the <b>⤓ Enrol machines</b> icon on the project you want machines to join. Paste the project's <b>API key</b> into the box at the top and the scripts below fill themselves in, ready to copy.</p>
-  <div class="callout"><b>About that key:</b> PioDeploy stores only a hash of it, so it is shown <b>once</b> — when the project is created or the key is rotated. It cannot be looked up later. If you no longer have it, rotate the key (⚿ on the Projects list) and copy the new one immediately. Rotating stops every agent still using the old key, so rotate before a rollout, not during one.</div>
+  <div class="callout"><b>About keys:</b> PioDeploy stores only a hash, so each key's value is shown <b>once</b> — at creation. A project can hold <b>several keys at once</b> (the API keys panel at the top of the Enrolment page): one per site, per RMM, per rollout wave. Creating a key never affects machines enrolled with another, and <b>revoking a key stops only the machines that were enrolled with it</b> — the rest of the fleet never notices. Lost a key's value? Just create a new one; nothing breaks. The ⚿ rotate action on the Projects list now <i>adds</i> a key rather than replacing the old one — retiring the old key is a separate, deliberate Revoke.</div>
   <p>Pick the tab that matches how you already manage the estate:</p>
   <table>
     <tr><th>Tab</th><th>Use it when</th></tr>
@@ -259,6 +259,15 @@
   </table>
   <p>While a command is queued the header shows a <b>pending</b> badge with a <b>Cancel</b> link — cancelling before the agent's next check-in withdraws it. Each command is delivered <b>exactly once</b>: if the machine never acts on it (for example it went offline first), nothing loops — just click again.</p>
   <div class="callout"><b>When the button can't help:</b> both buttons rely on the agent checking in. For a machine that is offline, or whose agent is too broken to reach the server at all, use the <b>Uninstall / remove agent</b> tab on the Enrolment page (run elevated, no key needed) — or re-run the enrolment script to repair it in place.</div>
+
+  <h3>5.7 Retiring and deleting — the lifecycle rules</h3>
+  <p>Deletion is deliberately hard to do by accident. Three rules hold for <b>everyone</b>, admins included:</p>
+  <table>
+    <tr><th>Rule</th><th>Why</th></tr>
+    <tr><td>A machine with a live agent can only be <b>retired</b> (the bin icon on the Computers list), never deleted.</td><td>Deleting the record would orphan a working agent — which would simply re-register. Retired machines sit under <i>Show deleted</i> with their history kept, and are revived automatically if their agent reports again.</td></tr>
+    <tr><td><b>Delete permanently</b> (in the retired list) works only once the agent is confirmed gone.</td><td>"Gone" means: the machine never enrolled, or an <i>Uninstall agent</i> command was delivered and the machine has stayed silent since. A machine that checks in after the uninstall visibly still has its agent — the proof resets itself and deletion stays blocked.</td></tr>
+    <tr><td>A project cannot be deleted while <b>any</b> machine exists in it — active <i>or</i> retired.</td><td>Machines anchor jobs, history and compliance records. The path to deleting a project is: uninstall agents → permanently delete the machines → delete the project.</td></tr>
+  </table>
 </section>
 
 <!-- 6 POLICIES -->

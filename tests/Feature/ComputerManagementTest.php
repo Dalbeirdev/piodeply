@@ -96,6 +96,65 @@ class ComputerManagementTest extends TestCase
         $this->assertNull($computer->fresh()->uninstall_requested_at);
     }
 
+    public function test_a_machine_with_a_live_agent_can_only_be_retired_not_deleted(): void
+    {
+        $computer = Computer::factory()->create(['last_seen_at' => now()]);
+        $service = app(ComputerService::class);
+
+        // Retiring (soft delete) is always allowed.
+        $service->delete($computer);
+        $this->assertNotNull($computer->fresh()->deleted_at);
+
+        // Permanent deletion is not: the agent was never uninstalled.
+        try {
+            $service->forceDelete($computer->fresh());
+            $this->fail('force delete should have been blocked');
+        } catch (\DomainException) {
+        }
+        $this->assertNotNull(Computer::withTrashed()->find($computer->id));
+    }
+
+    public function test_permanent_delete_is_allowed_once_the_agent_is_gone(): void
+    {
+        $service = app(ComputerService::class);
+
+        // Never enrolled — nothing to uninstall, deletable.
+        $never = Computer::factory()->create(['last_seen_at' => null]);
+        $service->forceDelete($never);
+        $this->assertNull(Computer::withTrashed()->find($never->id));
+
+        // Uninstall delivered and the machine stayed silent — deletable.
+        $uninstalled = Computer::factory()->create([
+            'last_seen_at'          => now()->subHour(),
+            'uninstall_requested_at' => now()->subHour(),
+        ]);
+        $service->pullAgentCommand($uninstalled, 'uninstall_requested_at');
+        $service->forceDelete($uninstalled->fresh());
+        $this->assertNull(Computer::withTrashed()->find($uninstalled->id));
+    }
+
+    public function test_a_heartbeat_after_uninstall_delivery_voids_the_proof(): void
+    {
+        $service = app(ComputerService::class);
+        $computer = Computer::factory()->create([
+            'last_seen_at'           => now(),
+            'uninstall_requested_at' => now(),
+        ]);
+
+        $service->pullAgentCommand($computer, 'uninstall_requested_at');
+        $this->assertNotNull($computer->fresh()->agent_uninstalled_at);
+
+        // The machine checks in again — it obviously did not uninstall.
+        $service->heartbeat($computer->fresh());
+        $this->assertNull($computer->fresh()->agent_uninstalled_at);
+
+        try {
+            $service->forceDelete($computer->fresh());
+            $this->fail('a machine that still checks in must not be deletable');
+        } catch (\DomainException) {
+        }
+    }
+
     public function test_registration_is_idempotent_per_agent_uuid(): void
     {
         $project = Project::factory()->create();

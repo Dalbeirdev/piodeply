@@ -44,6 +44,11 @@ class Project extends Model
         return $this->hasMany(Computer::class);
     }
 
+    public function apiKeys(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ProjectApiKey::class);
+    }
+
     public function softwarePolicies(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(SoftwarePolicy::class);
@@ -59,7 +64,9 @@ class Project extends Model
 
     /**
      * Resolve a project from a plaintext agent API key. Returns null for
-     * unknown/rotated keys and never touches plaintext storage.
+     * unknown/revoked keys and never touches plaintext storage. A project
+     * can hold several keys at once; any active one authenticates, so
+     * issuing or revoking one key never affects machines using another.
      */
     public static function findByApiKey(string $plainKey): ?self
     {
@@ -67,9 +74,20 @@ class Project extends Model
             return null;
         }
 
-        return static::query()
-            ->where('api_key_hash', hash('sha256', $plainKey))
+        $key = ProjectApiKey::query()
+            ->where('key_hash', hash('sha256', $plainKey))
+            ->whereNull('revoked_at')
             ->first();
+
+        if ($key === null) {
+            return null;
+        }
+
+        $key->touchUsage();
+
+        // The relation is withTrashed for record-keeping; a deleted
+        // project's keys must not authenticate anything.
+        return $key->project !== null && ! $key->project->trashed() ? $key->project : null;
     }
 
     public function downloadUrl(): string

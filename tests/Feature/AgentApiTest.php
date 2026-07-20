@@ -360,12 +360,25 @@ class AgentApiTest extends TestCase
         ], $this->agentHeaders())->assertNotFound();
     }
 
-    public function test_rotated_key_locks_out_old_key(): void
+    public function test_a_new_key_authenticates_alongside_the_old_and_revocation_is_per_key(): void
     {
+        // Rotation used to lock out the whole fleet at once; keys are now
+        // independent rows. A new key works immediately, the old keeps
+        // working, and revoking targets exactly one key.
         $uuid = (string) Str::uuid();
         $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
 
         $newKey = app(ProjectService::class)->rotateApiKey($this->project);
+
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk();
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders($newKey))
+            ->assertOk();
+
+        // Revoke the ORIGINAL key: it dies, the new one keeps working.
+        app(ProjectService::class)->revokeApiKey(
+            $this->project->apiKeys()->where('key_hash', hash('sha256', $this->apiKey))->first()
+        );
 
         $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
             ->assertUnauthorized();

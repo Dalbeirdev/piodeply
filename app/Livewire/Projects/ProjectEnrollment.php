@@ -22,6 +22,15 @@ class ProjectEnrollment extends Component
 
     public string $method = 'gpo';
 
+    public string $newKeyLabel = '';
+
+    /**
+     * A key just created, shown once. This IS briefly a Livewire property —
+     * unavoidable for show-once — so dismiss clears it immediately and it
+     * never persists anywhere else.
+     */
+    public ?string $revealedKey = null;
+
     public function mount(Project $project): void
     {
         $this->authorize('view', $project);
@@ -31,6 +40,34 @@ class ProjectEnrollment extends Component
     public function select(string $method): void
     {
         $this->method = $method;
+    }
+
+    /**
+     * Issues an additional key for this project. Existing keys — and every
+     * machine enrolled with them — keep working untouched.
+     */
+    public function createKey(\App\Services\ProjectService $service): void
+    {
+        $this->authorize('rotateApiKey', $this->project);
+
+        $this->revealedKey = $service->createApiKey($this->project, $this->newKeyLabel)['plain_api_key'];
+        $this->newKeyLabel = '';
+    }
+
+    /** Stops only agents enrolled with this key; other keys are unaffected. */
+    public function revokeKey(int $keyId, \App\Services\ProjectService $service): void
+    {
+        $this->authorize('rotateApiKey', $this->project);
+
+        $key = $this->project->apiKeys()->findOrFail($keyId);
+        $service->revokeApiKey($key);
+
+        session()->flash('status', "Key {$key->key_prefix}… revoked. Machines enrolled with other keys are unaffected.");
+    }
+
+    public function dismissKey(): void
+    {
+        $this->revealedKey = null;
     }
 
     public function render(EnrollmentScriptService $scripts)
@@ -46,6 +83,7 @@ class ProjectEnrollment extends Component
             'selected'    => $method,
             'placeholder' => EnrollmentScriptService::KEY_PLACEHOLDER,
             'keyPattern'  => EnrollmentScriptService::KEY_PATTERN,
+            'apiKeys'     => $this->project->apiKeys()->orderByDesc('created_at')->get(),
         ])->layout('layouts.app');
     }
 }

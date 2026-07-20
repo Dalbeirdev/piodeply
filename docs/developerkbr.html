@@ -98,7 +98,9 @@
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>
 <tr><td class="f">Projects</td><td class="why">The unit of targeting: policies, browser policies and bulk deploys aim at a project; computers belong to one.</td></tr>
-<tr><td class="f">Enrolment page (per project)</td><td class="why">One PowerShell script per project (GPO / Intune / RMM / manual tabs) with the API key baked in; the script self-heals prerequisites (execution policy, VC++ runtime, winget-as-SYSTEM) because real fleets are messy.</td></tr>
+<tr><td class="f">Enrolment page (per project)</td><td class="why">One PowerShell script per project (GPO / Intune / RMM / manual / uninstall tabs) with the API key baked in; the script self-heals prerequisites (execution policy, VC++ runtime, winget-as-SYSTEM) because real fleets are messy.</td></tr>
+<tr><td class="f">Multiple API keys per project</td><td class="why">One shared key made rotation an outage: replacing it stopped every enrolled agent at once. Keys are now rows (hash-only, shown once) — one per site/RMM/wave. Creating a key touches nothing; revoking stops only the machines enrolled with that key. The old ⚿ rotate deliberately became "add a key", never "replace".</td></tr>
+<tr><td class="f">Project deletion blocked by machines</td><td class="why">Machines anchor jobs, history and compliance records; a project must not vanish from under them. Retired machines count too — retirement parks a machine, it does not erase it. Enforced in the service so no caller (or role) can skip it.</td></tr>
 </table>
 
 <h2>6. Computers — list</h2>
@@ -122,6 +124,7 @@
 <tr><td class="f">Deployment log — collapsed</td><td class="why">Every attempt with the agent's own output; collapsed by default with an attempt count because it grows long and is a drill-down, not a summary.</td></tr>
 <tr><td class="f">Reinstall agent (header button)</td><td class="why">Born from a real incident: a broken self-updater looped and took a machine offline, and the only fix was hands on the keyboard. The button queues a one-shot flag delivered on the next heartbeat; the agent re-downloads the current bundle and swaps itself while keeping its config and identity. Delivered <b>exactly once</b> (cleared as it's handed out) so a failed attempt can never loop — a human re-queues it.</td></tr>
 <tr><td class="f">Uninstall agent (header button)</td><td class="why">Decommissioning shouldn't need a visit either. Same one-shot delivery; the agent deletes its own service and files via a detached scheduled task (a service can't delete itself), logging to Windows temp because every PioDeploy folder is gone when it finishes. The portal record and history stay until deleted deliberately — removal of the agent and removal of the audit trail are different decisions.</td></tr>
+<tr><td class="f">Retire vs. Delete permanently</td><td class="why">The bin icon retires (soft delete — history kept, auto-revived if the agent reports again). Permanent deletion demands proof the agent is gone: never enrolled, or uninstall delivered and the machine silent since. The proof is self-correcting — any heartbeat clears it, so a lying flag can't outlive a live agent. Guard lives in the service; no caller can bypass it.</td></tr>
 </table>
 
 <h2>8. Device Groups</h2>

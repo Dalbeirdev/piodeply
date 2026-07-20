@@ -18,6 +18,11 @@
                     {{ session('status') }}
                 </div>
             @endif
+            @if (session('error'))
+                <div class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700" role="alert">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             @if (session('new_api_key'))
                 <div class="rounded-md bg-yellow-50 border border-yellow-300 p-4 text-sm text-yellow-800" role="alert">
@@ -114,7 +119,7 @@
                                     @can('delete', $project)
                                         <x-icon-button icon="delete" variant="danger" label="Delete"
                                                        wire:click="delete({{ $project->id }})"
-                                                       wire:confirm="Delete project “{{ $project->name }}”? It can be restored later." />
+                                                       wire:confirm="Delete project “{{ $project->name }}”? Only possible when it has no machines — active or retired. It can be restored later." />
                                     @endcan
                                 @endif
                             </div>

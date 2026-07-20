@@ -50,7 +50,36 @@ class ProjectEnrollmentTest extends TestCase
             ->assertSee('Group Policy (Active Directory)')
             ->assertSee('Intune / Entra')
             ->assertSee('RMM / one-liner')
-            ->assertSee('Single machine');
+            ->assertSee('Single machine')
+            ->assertSee('Uninstall / remove agent');
+    }
+
+    public function test_keys_can_be_created_and_revoked_from_the_page(): void
+    {
+        $page = $this->page()
+            ->set('newKeyLabel', 'London office')
+            ->call('createKey');
+
+        // Shown once, valid shape, and stored only as a hash.
+        $revealed = $page->get('revealedKey');
+        $this->assertTrue(EnrollmentScriptService::looksLikeAKey($revealed));
+        $this->assertTrue(Project::findByApiKey($revealed)->is($this->project));
+
+        $key = $this->project->apiKeys()->where('label', 'London office')->first();
+        $this->assertNotNull($key);
+
+        $this->page()->call('revokeKey', $key->id);
+        $this->assertNull(Project::findByApiKey($revealed), 'revoked key must stop authenticating');
+    }
+
+    public function test_key_management_requires_the_rotate_permission(): void
+    {
+        $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));
+
+        Livewire::actingAs($viewer)
+            ->test(ProjectEnrollment::class, ['project' => $this->project])
+            ->call('createKey')
+            ->assertForbidden();
     }
 
     public function test_the_page_explains_fresh_vms_are_auto_prepared(): void

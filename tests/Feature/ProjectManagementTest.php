@@ -88,8 +88,11 @@ class ProjectManagementTest extends TestCase
         $this->assertNull(Project::findByApiKey('not-even-prefixed'));
     }
 
-    public function test_rotating_the_key_kills_the_old_one_and_logs_activity(): void
+    public function test_rotating_adds_a_key_without_breaking_the_old_one(): void
     {
+        // Rotation used to replace the single key, stopping every enrolled
+        // agent at once. Now it ADDS a key; retiring an old one is a
+        // separate, per-key revoke.
         $client = Client::factory()->create();
         $service = app(ProjectService::class);
         $created = $service->create(new ProjectData(clientId: $client->id, name: 'Rotate Me'));
@@ -99,14 +102,59 @@ class ProjectManagementTest extends TestCase
         $newKey = $service->rotateApiKey($project);
 
         $this->assertNotSame($oldKey, $newKey);
-        $this->assertNull(Project::findByApiKey($oldKey));
+        $this->assertTrue(Project::findByApiKey($oldKey)->is($project), 'existing fleets keep working');
         $this->assertTrue(Project::findByApiKey($newKey)->is($project));
-        $this->assertNotNull($project->fresh()->api_key_rotated_at);
         $this->assertDatabaseHas('activity_log', [
             'log_name'    => 'projects',
-            'description' => 'api_key_rotated',
+            'description' => 'api_key_created',
             'subject_id'  => $project->id,
         ]);
+    }
+
+    public function test_revoking_one_key_leaves_the_others_working(): void
+    {
+        $client = Client::factory()->create();
+        $service = app(ProjectService::class);
+        $created = $service->create(new ProjectData(clientId: $client->id, name: 'Multi Key'));
+        $project = $created['project'];
+        $keyA = $created['plain_api_key'];
+        $keyB = $service->createApiKey($project, 'London office')['plain_api_key'];
+
+        $service->revokeApiKey($project->apiKeys()->where('label', 'London office')->first());
+
+        $this->assertNull(Project::findByApiKey($keyB), 'the revoked key is dead');
+        $this->assertTrue(Project::findByApiKey($keyA)->is($project), 'the other key is untouched');
+    }
+
+    public function test_a_project_with_machines_cannot_be_deleted(): void
+    {
+        $project = Project::factory()->create();
+        $computer = \App\Models\Computer::factory()->create(['project_id' => $project->id]);
+        $service = app(ProjectService::class);
+
+        // Active machine blocks deletion.
+        try {
+            $service->delete($project);
+            $this->fail('deletion should have been blocked');
+        } catch (\App\Exceptions\ProjectHasMachinesException $e) {
+            $this->assertSame(1, $e->active);
+        }
+
+        // A RETIRED machine still blocks it — retirement parks, not erases.
+        $computer->delete();
+        try {
+            $service->delete($project->fresh());
+            $this->fail('deletion should still be blocked by the retired machine');
+        } catch (\App\Exceptions\ProjectHasMachinesException $e) {
+            $this->assertSame(1, $e->retired);
+        }
+
+        $this->assertNull($project->fresh()->deleted_at);
+
+        // Machine permanently gone → the project may go too.
+        $computer->forceDelete();
+        $service->delete($project->fresh());
+        $this->assertNotNull($project->fresh()->deleted_at);
     }
 
     public function test_form_creates_project_and_flashes_key_once(): void

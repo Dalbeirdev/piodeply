@@ -10,6 +10,11 @@
                     {{ session('status') }}
                 </div>
             @endif
+            @if (session('error'))
+                <div class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700" role="alert">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
@@ -112,14 +117,19 @@
                                         @can('restore', $computer)
                                             <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $computer->id }})" />
                                         @endcan
+                                        @can('forceDelete', $computer)
+                                            <x-icon-button icon="delete" variant="danger" label="Delete permanently"
+                                                           wire:click="forceDelete({{ $computer->id }})"
+                                                           wire:confirm="Permanently delete “{{ $computer->hostname }}” and all its history? Only possible once its agent is uninstalled — this cannot be undone." />
+                                        @endcan
                                     @else
                                         @can('update', $computer)
                                             <x-icon-button icon="reassign" label="Reassign project" :href="route('computers.edit', $computer)" />
                                         @endcan
                                         @can('delete', $computer)
-                                            <x-icon-button icon="delete" variant="danger" label="Delete"
+                                            <x-icon-button icon="delete" variant="danger" label="Retire"
                                                            wire:click="delete({{ $computer->id }})"
-                                                           wire:confirm="Delete “{{ $computer->hostname }}”? If its agent reports again it will be revived automatically." />
+                                                           wire:confirm="Retire “{{ $computer->hostname }}”? It moves to the retired list (Show deleted) with its history kept. If its agent reports again it is revived automatically. To remove it for good: uninstall the agent, then delete permanently from the retired list." />
                                         @endcan
                                     @endif
                                 </td>

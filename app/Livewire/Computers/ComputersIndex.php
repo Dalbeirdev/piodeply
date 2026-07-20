@@ -51,6 +51,24 @@ class ComputersIndex extends Component
         $service->restore($computer);
     }
 
+    /**
+     * Permanent removal, from the retired view only. The service enforces
+     * the agent-first rule: a machine whose agent still checks in cannot be
+     * deleted — retire it and uninstall the agent first.
+     */
+    public function forceDelete(int $computerId, ComputerService $service): void
+    {
+        $computer = Computer::withTrashed()->findOrFail($computerId);
+        $this->authorize('forceDelete', $computer);
+
+        try {
+            $service->forceDelete($computer);
+            session()->flash('status', "{$computer->hostname} permanently deleted.");
+        } catch (\DomainException $e) {
+            session()->flash('error', $e->getMessage());
+        }
+    }
+
     public function render(ComputerRepositoryInterface $computers)
     {
         $this->authorize('viewAny', Computer::class);

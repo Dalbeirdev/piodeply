@@ -38,6 +38,8 @@ class ComputerService
             'project_id'    => $project->id,
             'agent_version' => $agentVersion,
             'last_seen_at'  => now(),
+            // Re-enrolment is a live agent: void any standing proof-of-removal.
+            'agent_uninstalled_at' => null,
         ];
 
         $existing = $this->computers->findByAgentUuid($agentUuid, withTrashed: true);
@@ -78,6 +80,10 @@ class ComputerService
             'agent_version' => $agentVersion,
         ]) + [
             'offline_notified_at' => null, // machine is back — re-arm the offline alert
+            // A checking-in agent is by definition not uninstalled. This is
+            // what keeps the uninstalled-proof honest: it survives only on a
+            // machine that actually went silent after the command.
+            'agent_uninstalled_at' => null,
         ])->saveQuietly(); // heartbeats must not spam the activity log
 
         return $computer;
@@ -95,9 +101,48 @@ class ComputerService
             return false;
         }
 
-        $computer->forceFill([$column => null])->saveQuietly();
+        $update = [$column => null];
+
+        // Delivering an uninstall starts the proof-of-removal clock: the
+        // marker stands unless the machine checks in again (which clears it
+        // — see heartbeat). Permanent deletion requires this marker.
+        if ($column === 'uninstall_requested_at') {
+            $update['agent_uninstalled_at'] = now();
+        }
+
+        $computer->forceFill($update)->saveQuietly();
 
         return true;
+    }
+
+    /**
+     * Whether this machine may be permanently deleted: its agent was never
+     * there (never checked in), or an uninstall was delivered and the
+     * machine has stayed silent since. A machine with a live agent can only
+     * be retired — deleting the record would orphan a working agent that
+     * would simply re-register.
+     */
+    public function agentIsGone(Computer $computer): bool
+    {
+        return $computer->last_seen_at === null
+            || $computer->agent_uninstalled_at !== null;
+    }
+
+    /**
+     * Permanent removal — record, history, jobs. Guarded here so no caller
+     * (UI, console, future API) can skip the agent-first rule.
+     */
+    public function forceDelete(Computer $computer): void
+    {
+        if (! $this->agentIsGone($computer)) {
+            throw new \DomainException(
+                "{$computer->hostname} still has its agent installed. Use \"Uninstall agent\" on the "
+                .'machine page (or the enrolment page\'s uninstall script for unreachable machines), '
+                .'wait for it to go silent, then delete permanently.'
+            );
+        }
+
+        $computer->forceDelete();
     }
 
     public function updateInventory(Computer $computer, array $inventory): Computer
