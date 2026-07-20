@@ -52,7 +52,13 @@
                     </div>
                 </dl>
 
-                @if ($status === 'past_due')
+                @if ($client->billing_suspended_at !== null)
+                    <p class="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-md p-3">
+                        <b>Your account is suspended for non-payment.</b> Your data and machine history are safe —
+                        settling the outstanding payment via <em>Manage billing</em> reactivates everything
+                        automatically, no need to contact us.
+                    </p>
+                @elseif ($status === 'past_due')
                     <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
                         Your last payment did not go through. Stripe will retry automatically — or update your card
                         now via <em>Manage billing</em> to settle it immediately. Your fleet keeps working meanwhile.

@@ -21,12 +21,16 @@ class BillingSettings extends Component
 
     public string $webhookSecret = '';
 
+    /** Days a client may stay past-due before dunning suspends them. */
+    public int $clientGraceDays = 14;
+
     public function mount(SettingsService $settings, StripeSettingsService $stripe): void
     {
         $this->authorizeManage();
         $this->enabled = (bool) $settings->get('billing.enabled', '0');
         $this->currency = (string) $settings->get('billing.currency', 'usd');
         $this->publishableKey = (string) $stripe->publishableKey();
+        $this->clientGraceDays = (int) $settings->get('billing.client_grace_days', '14');
     }
 
     public function save(SettingsService $settings, StripeSettingsService $stripe): void
@@ -41,9 +45,11 @@ class BillingSettings extends Component
             // Secrets are write-only; blank means "leave the stored one".
             'secretKey'      => ['nullable', 'string', 'starts_with:sk_test_,sk_live_,rk_test_,rk_live_', 'max:255'],
             'webhookSecret'  => ['nullable', 'string', 'starts_with:whsec_', 'max:255'],
+            'clientGraceDays' => ['required', 'integer', 'between:3,60'],
         ]);
 
         $settings->set('billing.enabled', $validated['enabled'] ? '1' : '0');
+        $settings->set('billing.client_grace_days', (string) $validated['clientGraceDays']);
 
         $stripe->save(
             publishableKey: $validated['publishableKey'] ?: null,

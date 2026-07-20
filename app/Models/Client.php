@@ -35,6 +35,10 @@ class Client extends Model
             'subscription_machines' => 'integer',
             'subscription_cents' => 'integer',
             'subscription_period_end' => 'datetime',
+            'subscription_past_due_since' => 'datetime',
+            'dunning_stage' => 'integer',
+            'dunning_last_sent_at' => 'datetime',
+            'billing_suspended_at' => 'datetime',
         ];
     }
 

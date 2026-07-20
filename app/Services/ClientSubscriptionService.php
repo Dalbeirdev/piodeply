@@ -64,6 +64,8 @@ class ClientSubscriptionService
             'subscription_cents'      => $invoice['amount_paid'] ?? null,
             'subscription_period_end' => $periodEnd !== null ? date('Y-m-d H:i:s', (int) $periodEnd) : null,
         ]))->saveQuietly();
+
+        $this->settleDunning($client);
     }
 
     /**
@@ -78,7 +80,13 @@ class ClientSubscriptionService
             return;
         }
 
-        $client->forceFill(['subscription_status' => 'past_due'])->saveQuietly();
+        $client->forceFill([
+            'subscription_status' => 'past_due',
+            // The dunning clock starts on the FIRST failure and keeps
+            // running through Stripe's retries; later failures of the same
+            // stretch never reset it.
+            'subscription_past_due_since' => $client->subscription_past_due_since ?? now(),
+        ])->saveQuietly();
 
         $this->notifications->notify(
             'billing.payment_failed',
@@ -90,6 +98,55 @@ class ClientSubscriptionService
                 'attempt' => $invoice['attempt_count'] ?? null,
             ]
         );
+
+        // First failure of this stretch → tell the CLIENT immediately.
+        // Stripe retries on its own; the paced reminders live in the
+        // billing:client-dunning command, not here.
+        if ($client->dunning_stage === 0) {
+            $this->sendDunningMail($client, 'failed');
+            $client->forceFill(['dunning_stage' => 1, 'dunning_last_sent_at' => now()])->saveQuietly();
+        }
+    }
+
+    /**
+     * Payment arrived (or the subscription turned active again): end the
+     * dunning stretch, and lift a suspension — but only one BILLING made.
+     * A suspension an operator applied by hand stays until they lift it.
+     */
+    public function settleDunning(\App\Models\Client $client): void
+    {
+        $wasSuspendedByBilling = $client->billing_suspended_at !== null;
+
+        if ($client->dunning_stage === 0 && ! $wasSuspendedByBilling && $client->subscription_past_due_since === null) {
+            return; // nothing to settle — the common case for healthy renewals
+        }
+
+        $client->forceFill([
+            'subscription_past_due_since' => null,
+            'dunning_stage'               => 0,
+            'dunning_last_sent_at'        => null,
+            'billing_suspended_at'        => null,
+        ] + ($wasSuspendedByBilling ? ['status' => \App\Enums\ClientStatus::Active] : []))->saveQuietly();
+
+        if ($wasSuspendedByBilling) {
+            $this->sendDunningMail($client, 'restored');
+            $this->notifications->notify(
+                'billing.client_restored',
+                "Payment received — {$client->company_name} reactivated",
+                ['client' => $client->company_name]
+            );
+        }
+    }
+
+    /** Best-effort: a mailer outage must never break webhook processing. */
+    public function sendDunningMail(\App\Models\Client $client, string $stage, ?int $daysLeft = null): void
+    {
+        try {
+            \Illuminate\Support\Facades\Mail::to($client->billing_email ?: $client->email)
+                ->send(new \App\Mail\ClientBillingMail($client, $stage, $daysLeft));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Dunning mail ({$stage}) to {$client->company_name} failed: {$e->getMessage()}");
+        }
     }
 
     /** customer.subscription.updated — status or price changed at Stripe. */
@@ -107,6 +164,10 @@ class ClientSubscriptionService
                 ? date('Y-m-d H:i:s', (int) $subscription['current_period_end'])
                 : null,
         ]))->saveQuietly();
+
+        if (in_array($subscription['status'] ?? '', ['active', 'trialing'], true)) {
+            $this->settleDunning($client->fresh());
+        }
     }
 
     /** customer.subscription.deleted — cancelled, by them or by dunning. */

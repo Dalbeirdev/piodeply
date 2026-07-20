@@ -72,6 +72,12 @@
                     <x-input-error for="currency" class="mt-1" />
                     <p class="text-xs text-slate-500 mt-1">Stripe supports 135+ currencies — e.g. usd, eur, gbp, inr, aud.</p>
                 </div>
+                <div class="max-w-[10rem]">
+                    <x-label for="clientGraceDays" value="Dunning grace (days)" />
+                    <x-input id="clientGraceDays" type="number" min="3" max="60" class="mt-1 block w-full" wire:model="clientGraceDays" />
+                    <x-input-error for="clientGraceDays" class="mt-1" />
+                    <p class="text-xs text-slate-500 mt-1">How long a client can stay past-due before their account is suspended. Reminders go out every 3 days meanwhile; paying reactivates automatically.</p>
+                </div>
                 <div class="text-sm text-slate-600">
                     <span class="font-semibold">Graduated per-machine schedule</span> (monthly):
                     @php $prev = 0; @endphp

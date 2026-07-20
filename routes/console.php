@@ -31,5 +31,9 @@ Schedule::command('billing:trial-reminders')->dailyAt('09:00');
 // Paced follow-ups for unpaid subscriptions (post-Stripe-retry dunning).
 Schedule::command('billing:dunning-reminders')->dailyAt('09:30');
 
+// Per-client dunning for the SaaS layer: reminders while past due,
+// suspension when the grace window (Admin → Billing settings) closes.
+Schedule::command('billing:client-dunning')->dailyAt('09:45');
+
 // Monthly compliance PDFs for opted-in clients.
 Schedule::command('reports:client-compliance')->monthlyOn(1, '07:00');
