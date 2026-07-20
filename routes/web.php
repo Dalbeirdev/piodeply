@@ -165,6 +165,11 @@ Route::middleware([
         Route::get('/packages/{package}/edit', \App\Livewire\Packages\PackageForm::class)->name('packages.edit');
     });
 
+    // Paid-license register. Tenancy + key secrecy enforced in the component
+    // and model (revealKeyFor refuses everyone outside the owning tenant).
+    Route::get('/licenses', \App\Livewire\Licenses\LicensesIndex::class)
+        ->middleware('permission:licenses.view')->name('licenses.index');
+
     Route::middleware('permission:deployments.view')->group(function () {
         Route::get('/deployments', \App\Livewire\Deployments\DeploymentsIndex::class)->name('deployments.index');
         Route::get('/deployments/bulk', \App\Livewire\Deployments\BulkDeploy::class)->name('deployments.bulk');

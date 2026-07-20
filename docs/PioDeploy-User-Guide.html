@@ -208,6 +208,10 @@
 
   <h3>4.3 The software catalogue</h3>
   <p><b>Packages</b> lists the software you can deploy — pre-seeded with ~120 popular titles (Chrome, 7-Zip, Firefox, VLC, Notepad++, …), each with its winget/Chocolatey id. To add your own, click <b>New Package</b> and provide the name, type (winget / choco / MSI / EXE / MSIX / ZIP) and identifier or installer URL.</p>
+  <h3>4.4 Software licenses</h3>
+  <p>The <b>Licenses</b> page is each organisation's register of paid software: name, vendor, optional link to a catalogue package, seat count, expiry date and the license key itself. Assign seats to specific machines to see usage at a glance (<i>3 / 5 used</i>); a full license refuses further assignments, and licenses expiring within 30 days (or already expired) carry a warning badge.</p>
+  <div class="callout"><b>Key secrecy:</b> license keys are <b>encrypted at rest</b> and only the owning organisation can reveal one. Platform staff see that a license exists — name, seats, expiry, and the key's last 4 characters for support conversations — but <b>never the key's value</b>. Like private packages, a license can only ever be assigned to its own organisation's machines; the rule reads ownership, not roles, so it binds Super Admins too.</div>
+
   <div class="callout"><b>Private packages (per client):</b> when a <b>customer</b> creates a package (their in-house tools, custom installers), it is born <b>private to their organisation</b> — marked with a Private badge, invisible to every other tenant, and <b>undeployable to any other client's machines</b>. That last rule is absolute: it binds Super Admins too, because it reads the package's ownership, not the caller's role — staff can <i>view</i> a private package for support, but no one can reuse one client's software for another. Customers manage only their own packages; the shared catalogue stays staff-curated.</div>
 </section>
 

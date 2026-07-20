@@ -56,6 +56,8 @@ class NavigationService
                 'icon' => '<path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/>'],
             ['label' => 'Deployments', 'route' => 'deployments.index', 'active' => 'deployments.*', 'permission' => Permission::DeploymentsView, 'group' => self::SOFTWARE,
                 'icon' => '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>'],
+            ['label' => 'Licenses', 'route' => 'licenses.index', 'active' => 'licenses.*', 'permission' => Permission::LicensesView, 'group' => self::SOFTWARE,
+                'icon' => '<path d="M15 7a4 4 0 1 0-8 0c0 1.5.8 2.8 2 3.5V21l2-2 2 2v-10.5c1.2-.7 2-2 2-3.5z"/>'],
             ['label' => 'Policies', 'route' => 'policies.index', 'active' => 'policies.*', 'permission' => Permission::PoliciesView, 'group' => self::SOFTWARE,
                 'icon' => '<path d="M12 22s8-3.6 8-9V5l-8-3-8 3v8c0 5.4 8 9 8 9z"/><path d="m9 12 2 2 4-4"/>'],
             ['label' => 'Browser Policies', 'route' => 'browser-policies.index', 'active' => 'browser-policies.*', 'permission' => Permission::PoliciesView, 'group' => self::SOFTWARE,

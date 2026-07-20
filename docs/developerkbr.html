@@ -170,6 +170,13 @@
 <tr><td class="f">Tenant packages born private</td><td class="why">A tenant's new package is stamped with their client id server-side — not offered as a choice — so a tenant can never publish into the shared catalogue. Pickers everywhere (policy form, deploy forms, update-now) filter to catalogue + own; a smuggled foreign package id fails validation or the funnel guard.</td></tr>
 </table>
 
+<h2>9c. Software licenses</h2>
+<table>
+<tr><th>What</th><th>Why we added it</th></tr>
+<tr><td class="f">Per-client license register</td><td class="why">Paid keys, seats, expiry — the part of an MSP's estate that lives in spreadsheets. Keys are Crypt-encrypted at rest with only a last-4 fingerprint stored readably; <code>revealKeyFor()</code> is the single door to plaintext and refuses everyone outside the owning tenant — staff included. Support can see a license exists; the value stays the client's secret.</td></tr>
+<tr><td class="f">Seat assignments</td><td class="why">A seat pinned to a computer makes usage honest (3/5 used) and over-allocation impossible — the service refuses past the seat count, idempotently re-assigning the same machine costs nothing, and cross-client assignment is refused by ownership (role-blind, same rule as private packages).</td></tr>
+</table>
+
 <h2>11b. Policy templates</h2>
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>

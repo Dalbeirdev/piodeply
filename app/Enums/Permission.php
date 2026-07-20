@@ -33,6 +33,9 @@ enum Permission: string
     case PackagesView = 'packages.view';
     case PackagesManage = 'packages.manage';
 
+    case LicensesView = 'licenses.view';
+    case LicensesManage = 'licenses.manage';
+
     case DeploymentsView = 'deployments.view';
     case DeploymentsManage = 'deployments.manage';
 
