@@ -120,6 +120,8 @@
 <tr><td class="f">Installed software (patch table)</td><td class="why">Application / Installed / Latest / Update required (Yes-No badge) / Status — the patch-management layout operators know. Opens on <b>Deployed by PioDeploy</b> because the first question is "what did WE put here?". <b>Update now →</b> on outdated catalogue apps queues the update through the guarded path.</td></tr>
 <tr><td class="f">Software status (per policy, in words)</td><td class="why">Answers "so why isn't it installed?" when there is no job to point at ("waiting for maintenance window", "ring eligible in 2 hours"…).</td></tr>
 <tr><td class="f">Deployment log — collapsed</td><td class="why">Every attempt with the agent's own output; collapsed by default with an attempt count because it grows long and is a drill-down, not a summary.</td></tr>
+<tr><td class="f">Reinstall agent (header button)</td><td class="why">Born from a real incident: a broken self-updater looped and took a machine offline, and the only fix was hands on the keyboard. The button queues a one-shot flag delivered on the next heartbeat; the agent re-downloads the current bundle and swaps itself while keeping its config and identity. Delivered <b>exactly once</b> (cleared as it's handed out) so a failed attempt can never loop — a human re-queues it.</td></tr>
+<tr><td class="f">Uninstall agent (header button)</td><td class="why">Decommissioning shouldn't need a visit either. Same one-shot delivery; the agent deletes its own service and files via a detached scheduled task (a service can't delete itself), logging to Windows temp because every PioDeploy folder is gone when it finishes. The portal record and history stay until deleted deliberately — removal of the agent and removal of the audit trail are different decisions.</td></tr>
 </table>
 
 <h2>8. Device Groups</h2>
@@ -201,13 +203,16 @@
 <tr><td class="f">Impersonation</td><td class="why">Support tool with a loud banner and a one-click leave.</td></tr>
 </table>
 
-<h2>17. The agent (.NET 8, v1.4.0)</h2>
+<h2>17. The agent (.NET 8, v1.4.3)</h2>
 <table>
 <tr><th>What</th><th>Why we added it</th></tr>
 <tr><td class="f">Silent SYSTEM service</td><td class="why">Registers, heartbeats, reports inventory, claims jobs, applies browser policies — no user ever sees a window.</td></tr>
 <tr><td class="f">Checksum gate</td><td class="why">A downloaded binary that doesn't match its catalogue SHA-256 is never executed.</td></tr>
 <tr><td class="f">Browser-policy manifest</td><td class="why">Everything the agent wrote is recorded locally; anything the server no longer wants is rolled back on the next run — deleting a policy undoes it automatically.</td></tr>
 <tr><td class="f">Self-update</td><td class="why">The heartbeat advertises the latest version; agents upgrade themselves. The server must have the new bundle <i>published</i> or the fleet stays put — the dashboard card shows the spread.</td></tr>
+<tr><td class="f">Self-update via Scheduled Task (1.4.2)</td><td class="why">The original helper launch used UseShellExecute, which silently does nothing in a service's session 0 — agents looped downloading forever and one ended up offline. A one-shot Scheduled Task is owned by Windows, not by the dying service; the helper now logs before acting so a failed swap is visible, and it never overwrites the machine's <code>appsettings.json</code> (the bundle's copy is a placeholder template — copying it disconnected the agent).</td></tr>
+<tr><td class="f">winget --scope machine (1.4.1)</td><td class="why">winget under SYSTEM defaults to per-user, so installs "succeeded" into the invisible SYSTEM profile. Machine scope makes them real; packages with no machine-wide installer now fail loudly with a hint instead of vanishing.</td></tr>
+<tr><td class="f">Remote reinstall / uninstall (1.4.3)</td><td class="why">One-shot commands riding the heartbeat: reinstall re-runs the swap regardless of version (the remote fix for a broken install that still checks in); uninstall removes service and files via the same detached-task pattern. Server clears each flag as it is delivered, so neither can ever loop.</td></tr>
 </table>
 
 <h2>18. Under the hood</h2>

@@ -47,6 +47,42 @@ public class SelfUpdatePlanTests
         Assert.False(SelfUpdatePlan.ShouldUpdate("dev", "1.3.4", Bundle));
     }
 
+    [Fact]
+    public void ReinstallIgnoresVersionsButNeedsABundle()
+    {
+        // A reinstall is an operator's "replace it regardless" — same-version
+        // is the normal case, so no comparison. But with nothing to download
+        // it must not stage a swap that would install nothing.
+        Assert.True(SelfUpdatePlan.ShouldReinstall(true, Bundle));
+        Assert.False(SelfUpdatePlan.ShouldReinstall(true, null));
+        Assert.False(SelfUpdatePlan.ShouldReinstall(true, ""));
+        Assert.False(SelfUpdatePlan.ShouldReinstall(false, Bundle));
+    }
+
+    [Fact]
+    public void UninstallScriptRemovesServiceFilesAndState()
+    {
+        var script = SelfUpdater.BuildUninstallScript(@"C:\Program Files\PioDeploy\Agent");
+
+        Assert.Contains("sc.exe delete", script);
+        Assert.Contains(@"C:\Program Files\PioDeploy\Agent", script);
+        Assert.Contains("Join-Path $env:ProgramData 'PioDeploy'", script);
+        // Both one-shot tasks must be cleaned up, its own last.
+        Assert.Contains("PioDeployAgentSelfUpdate", script);
+        Assert.Contains("PioDeployAgentUninstall", script);
+    }
+
+    [Fact]
+    public void UninstallScriptLogsOutsideTheDirectoriesItDeletes()
+    {
+        // The uninstall log is the only trace left when something goes wrong;
+        // writing it under ProgramData\PioDeploy would delete the evidence.
+        var script = SelfUpdater.BuildUninstallScript(@"C:\i");
+
+        Assert.Contains(@"Join-Path $env:windir 'Temp\piodeploy-uninstall.log'", script);
+        Assert.DoesNotContain(@"$state\", script.Split('\n').First(l => l.Contains("$log")));
+    }
+
     // The swap script runs unattended as SYSTEM on every fleet machine; these
     // pin the behaviours a bad script broke in the field.
 

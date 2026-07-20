@@ -9,9 +9,36 @@
                     <span class="ml-2 align-middle pd-badge pd-badge-slate"><span class="pd-dot"></span>Offline</span>
                 @endif
             </h2>
-            @can('update', $computer)
-                <a href="{{ route('computers.edit', $computer) }}" class="text-sm pd-action">Reassign project</a>
-            @endcan
+            <div class="flex items-center gap-4">
+                @if ($computer->reinstall_requested_at !== null || $computer->uninstall_requested_at !== null)
+                    <span class="pd-badge pd-badge-amber" title="Delivered at the agent's next check-in">
+                        {{ $computer->uninstall_requested_at !== null ? 'Uninstall' : 'Reinstall' }} pending
+                    </span>
+                    @can('update', $computer)
+                        <button type="button" wire:click="cancelAgentCommand" class="text-sm pd-action">Cancel</button>
+                    @endcan
+                @else
+                    @can('update', $computer)
+                        <button type="button" wire:click="requestReinstall"
+                            wire:confirm="Reinstall the agent on {{ $computer->hostname }}? At its next check-in it re-downloads the current bundle and replaces itself. Its settings and identity are kept."
+                            class="text-sm pd-action"
+                            title="Remote fix for a broken agent that still checks in — the machine replaces its own install">
+                            Reinstall agent
+                        </button>
+                    @endcan
+                    @can('delete', $computer)
+                        <button type="button" wire:click="requestUninstall"
+                            wire:confirm="Remove the PioDeploy agent from {{ $computer->hostname }}? The machine will delete the service and all agent files at its next check-in. Software installed through PioDeploy stays. This computer record and its history remain here until you delete them."
+                            class="text-sm text-rose-600 hover:text-rose-700 font-medium"
+                            title="The machine removes its own agent — service and files — at the next check-in">
+                            Uninstall agent
+                        </button>
+                    @endcan
+                @endif
+                @can('update', $computer)
+                    <a href="{{ route('computers.edit', $computer) }}" class="text-sm pd-action">Reassign project</a>
+                @endcan
+            </div>
         </div>
     </x-slot>
 

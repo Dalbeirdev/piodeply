@@ -133,6 +133,45 @@ class AgentApiTest extends TestCase
         $this->assertSame('1.0.1', $computer->agent_version);
     }
 
+    public function test_heartbeat_delivers_agent_commands_exactly_once(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        // Nothing queued: both flags read false.
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('reinstall', false)
+            ->assertJsonPath('uninstall', false);
+
+        Computer::first()->forceFill(['reinstall_requested_at' => now()])->save();
+
+        // Queued: delivered true once...
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('reinstall', true);
+
+        // ...and cleared by that delivery — an agent that acts on it but
+        // fails must not be told again in a loop.
+        $this->assertNull(Computer::first()->reinstall_requested_at);
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('reinstall', false);
+    }
+
+    public function test_heartbeat_delivers_a_queued_uninstall(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+        Computer::first()->forceFill(['uninstall_requested_at' => now()])->save();
+
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('uninstall', true);
+
+        $this->assertNull(Computer::first()->uninstall_requested_at);
+    }
+
     public function test_heartbeat_advertises_the_current_agent_version(): void
     {
         \Illuminate\Support\Facades\Storage::fake('local');

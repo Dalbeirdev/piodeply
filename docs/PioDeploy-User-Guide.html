@@ -227,6 +227,7 @@
     <tr><td><b>Intune / Entra</b></td><td>Machines are cloud-managed through Microsoft Intune.</td></tr>
     <tr><td><b>RMM / one-liner</b></td><td>You run NinjaOne, Datto, Atera, Action1, ConnectWise…</td></tr>
     <tr><td><b>Single machine</b></td><td>One-off, by hand — testing or a special case.</td></tr>
+    <tr><td><b>Uninstall / remove agent</b></td><td>Take the agent off a machine by hand — decommissioning, or an agent too broken to reach remotely. Needs no API key.</td></tr>
   </table>
 
   <h3>5.3 Test on one machine first</h3>
@@ -248,6 +249,16 @@
   <p>The <b>Intune</b> tab's script goes to <i>Devices → Scripts and remediations → Platform scripts</i>. Set <b>Run this script using the logged on credentials: No</b> — that is what makes it run as SYSTEM — and <b>Run script in 64 bit PowerShell host: Yes</b>. Assign it to the device group.</p>
   <p>The <b>RMM</b> tab's script pastes straight into a "run script" job targeted at a device group; RMM agents already run as SYSTEM. Both carry the same version check, so re-running them is harmless.</p>
   <div class="callout"><b>Result:</b> every targeted machine enrols silently in the background, and from then on all deployments are invisible to users. This is how you reach thousands of endpoints with zero interruption.</div>
+
+  <h3>5.6 Fixing or removing an agent remotely</h3>
+  <p>Open <b>Computers → a machine</b>. In the page header, next to <i>Reassign project</i>:</p>
+  <table>
+    <tr><th>Button</th><th>What happens</th></tr>
+    <tr><td><b>Reinstall agent</b></td><td>At its next check-in (within about a minute while online) the machine re-downloads the current agent bundle and replaces its own install — service, binaries, everything. Its settings, API key and identity are kept, so it comes back as the same computer. This is the remote fix for a broken or outdated agent that still checks in: nobody touches the machine.</td></tr>
+    <tr><td><b>Uninstall agent</b></td><td>At its next check-in the machine removes its own agent: the service is deleted and all agent files are wiped. Software that was installed through PioDeploy stays on the machine. The computer record and its full history remain in the portal until you delete them there.</td></tr>
+  </table>
+  <p>While a command is queued the header shows a <b>pending</b> badge with a <b>Cancel</b> link — cancelling before the agent's next check-in withdraws it. Each command is delivered <b>exactly once</b>: if the machine never acts on it (for example it went offline first), nothing loops — just click again.</p>
+  <div class="callout"><b>When the button can't help:</b> both buttons rely on the agent checking in. For a machine that is offline, or whose agent is too broken to reach the server at all, use the <b>Uninstall / remove agent</b> tab on the Enrolment page (run elevated, no key needed) — or re-run the enrolment script to repair it in place.</div>
 </section>
 
 <!-- 6 POLICIES -->

@@ -215,6 +215,19 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertStringContainsString("-ApiKey 'pio_realkey1'", $exec[0]);
     }
 
+    public function test_the_uninstall_script_removes_the_agent_and_never_needs_a_key(): void
+    {
+        // The escape hatch for a machine whose agent is broken or offline —
+        // the portal button can't reach those. Local-only, so no API key may
+        // appear in it: it gets pasted into tickets and left on desktops.
+        $body = app(EnrollmentScriptService::class)->all($this->project, 'pio_realkey1')['uninstall']['body'];
+
+        $this->assertStringContainsString('sc.exe delete PioDeployAgent', $body);
+        $this->assertStringContainsString("Remove-Item 'C:\Program Files\PioDeploy'", $body);
+        $this->assertStringContainsString("Remove-Item 'C:\ProgramData\PioDeploy'", $body);
+        $this->assertStringNotContainsString('pio_realkey1', $body, 'the uninstall script must not carry the key');
+    }
+
     public function test_switching_method_changes_the_script_shown(): void
     {
         $this->page()

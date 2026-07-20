@@ -62,6 +62,48 @@ class ComputerShow extends Component
     }
 
     /**
+     * Queues a full agent reinstall: on its next heartbeat the machine
+     * re-downloads the current bundle and swaps itself, whatever state its
+     * install is in. This is the remote fix for a broken agent that is
+     * still checking in — no one touches the machine by hand.
+     */
+    public function requestReinstall(): void
+    {
+        $this->authorize('update', $this->computer);
+
+        $this->computer->forceFill(['reinstall_requested_at' => now()])->save();
+
+        session()->flash('status', 'Reinstall queued — the agent will replace itself at its next check-in (within ~1 minute while online).');
+    }
+
+    /**
+     * Queues agent removal. The machine uninstalls its own agent at the next
+     * heartbeat: service deleted, files removed. The computer record stays
+     * (with its history) until someone deletes it here.
+     */
+    public function requestUninstall(): void
+    {
+        $this->authorize('delete', $this->computer);
+
+        $this->computer->forceFill(['uninstall_requested_at' => now()])->save();
+
+        session()->flash('status', 'Uninstall queued — the agent will remove itself from the machine at its next check-in. The computer record and its history remain until you delete them.');
+    }
+
+    /** Withdraws a queued command the agent has not collected yet. */
+    public function cancelAgentCommand(): void
+    {
+        $this->authorize('update', $this->computer);
+
+        $this->computer->forceFill([
+            'reinstall_requested_at' => null,
+            'uninstall_requested_at' => null,
+        ])->save();
+
+        session()->flash('status', 'Pending agent command cancelled.');
+    }
+
+    /**
      * MSP-style health checks derived from inventory + heartbeat data.
      *
      * @return list<array{level: string, message: string}>

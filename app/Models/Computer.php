@@ -31,6 +31,8 @@ class Computer extends Model
         return [
             'ring' => \App\Enums\DeploymentRing::class,
             'last_seen_at' => 'datetime',
+            'reinstall_requested_at' => 'datetime',
+            'uninstall_requested_at' => 'datetime',
             'ram_bytes' => 'integer',
             'disk_total_bytes' => 'integer',
             'disk_free_bytes' => 'integer',

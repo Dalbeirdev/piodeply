@@ -83,6 +83,23 @@ class ComputerService
         return $computer;
     }
 
+    /**
+     * Reads and clears an operator-queued agent command in one step. The
+     * heartbeat is the only caller, so "delivered" and "cleared" cannot
+     * drift apart: an agent is told exactly once, and a command that never
+     * took effect is visibly gone from the UI rather than looping forever.
+     */
+    public function pullAgentCommand(Computer $computer, string $column): bool
+    {
+        if ($computer->{$column} === null) {
+            return false;
+        }
+
+        $computer->forceFill([$column => null])->saveQuietly();
+
+        return true;
+    }
+
     public function updateInventory(Computer $computer, array $inventory): Computer
     {
         $this->computers->update($computer, $this->onlyInventory($inventory) + ['last_seen_at' => now()]);

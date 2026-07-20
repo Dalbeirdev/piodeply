@@ -71,6 +71,11 @@ class AgentController extends Controller
         return response()->json([
             'status'            => 'ok',
             'pending_jobs'      => $this->deployments->pendingCountFor($computer),
+            // Operator-queued agent commands, delivered exactly once: the flag
+            // is cleared as it is handed out, so a command that fails on the
+            // machine is re-queued by clicking again — never by looping.
+            'reinstall'         => $this->computers->pullAgentCommand($computer, 'reinstall_requested_at'),
+            'uninstall'         => $this->computers->pullAgentCommand($computer, 'uninstall_requested_at'),
             'heartbeat_seconds' => (int) config('piodeploy.agent.heartbeat_seconds'),
             'server_time'       => now()->toIso8601String(),
             // What the agent should be running, and where to get it. An agent

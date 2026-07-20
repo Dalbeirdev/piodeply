@@ -56,6 +56,12 @@ public sealed class HeartbeatResponse
     /// itself, so a machine is upgraded once and never touched by hand again.</summary>
     [JsonPropertyName("latest_agent_version")] public string? LatestAgentVersion { get; set; }
     [JsonPropertyName("bundle_url")] public string? BundleUrl { get; set; }
+
+    /// <summary>Operator-queued one-shot commands. The server clears each as
+    /// it is delivered, so acting on them can never loop: a command that
+    /// fails is re-queued by a human, not retried blindly.</summary>
+    [JsonPropertyName("reinstall")] public bool Reinstall { get; set; }
+    [JsonPropertyName("uninstall")] public bool Uninstall { get; set; }
 }
 
 public sealed class InventoryRequest

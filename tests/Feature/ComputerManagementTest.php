@@ -50,6 +50,52 @@ class ComputerManagementTest extends TestCase
         $this->actingAs($technician)->get("/computers/{$computer->id}/edit")->assertOk();
     }
 
+    public function test_operator_can_queue_and_cancel_agent_reinstall(): void
+    {
+        $computer = Computer::factory()->create();
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->call('requestReinstall');
+
+        $this->assertNotNull($computer->fresh()->reinstall_requested_at);
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer->fresh()])
+            ->call('cancelAgentCommand');
+
+        $this->assertNull($computer->fresh()->reinstall_requested_at);
+    }
+
+    public function test_operator_can_queue_agent_uninstall(): void
+    {
+        $computer = Computer::factory()->create();
+
+        Livewire::actingAs($this->admin())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->call('requestUninstall');
+
+        $this->assertNotNull($computer->fresh()->uninstall_requested_at);
+    }
+
+    public function test_viewer_cannot_queue_agent_commands(): void
+    {
+        $computer = Computer::factory()->create();
+
+        Livewire::actingAs($this->viewer())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->call('requestReinstall')
+            ->assertForbidden();
+
+        Livewire::actingAs($this->viewer())
+            ->test(\App\Livewire\Computers\ComputerShow::class, ['computer' => $computer])
+            ->call('requestUninstall')
+            ->assertForbidden();
+
+        $this->assertNull($computer->fresh()->reinstall_requested_at);
+        $this->assertNull($computer->fresh()->uninstall_requested_at);
+    }
+
     public function test_registration_is_idempotent_per_agent_uuid(): void
     {
         $project = Project::factory()->create();

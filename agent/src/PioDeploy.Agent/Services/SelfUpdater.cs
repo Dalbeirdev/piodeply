@@ -71,6 +71,71 @@ public sealed class SelfUpdater
         }
     }
 
+    /// <summary>Removes this agent from the machine, on an operator's explicit
+    /// request from the portal. The same detached-helper pattern as an update
+    /// (a service cannot delete itself), but one-way: service deleted, install
+    /// dir and state removed. Software the agent installed stays.</summary>
+    /// <returns>True when the helper was scheduled — the caller should then
+    /// let the service stop.</returns>
+    public bool Uninstall()
+    {
+        var root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "PioDeploy", "update");
+        var installDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
+
+        try
+        {
+            Directory.CreateDirectory(root);
+
+            var script = Path.Combine(root, "uninstall-agent.ps1");
+            File.WriteAllText(script, BuildUninstallScript(installDir));
+
+            LaunchDetached(script, "PioDeployAgentUninstall");
+            _logger.LogInformation("Uninstall requested from the server; the service will now stop and be removed.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Uninstall could not be staged; the agent stays installed.");
+            return false;
+        }
+    }
+
+    /// <summary>The uninstall helper. Logs to the Windows temp dir — every
+    /// PioDeploy directory is gone by the time it finishes. Internal so tests
+    /// can pin what the script must (and must not) do.</summary>
+    internal static string BuildUninstallScript(string installDir)
+    {
+        return $$"""
+$ErrorActionPreference = 'SilentlyContinue'
+$svc = 'PioDeployAgent'
+$install = '{{installDir}}'
+$state   = Join-Path $env:ProgramData 'PioDeploy'
+$log     = Join-Path $env:windir 'Temp\piodeploy-uninstall.log'
+function Log($m) { "{0}  {1}" -f (Get-Date -Format 's'), $m | Out-File $log -Append -Encoding utf8 }
+
+Log "Uninstall helper started (waiting for the agent to exit)"
+Start-Sleep -Seconds 8
+
+Log "Stopping and deleting $svc"
+Stop-Service $svc -Force
+Start-Sleep -Seconds 3
+sc.exe delete $svc | Out-Null
+
+Log "Removing $install"
+Remove-Item $install -Recurse -Force
+
+Log "Removing $state"
+Remove-Item $state -Recurse -Force
+
+schtasks.exe /Delete /TN PioDeployAgentSelfUpdate /F 2>$null
+Log "Agent removed"
+# Last: unregister the task running this very script.
+schtasks.exe /Delete /TN PioDeployAgentUninstall /F 2>$null
+""";
+    }
+
     /// <summary>The helper. Backs up, swaps, verifies, and rolls back on
     /// failure — all after this process has exited. Internal so tests can
     /// pin what the script must (and must not) do.</summary>
@@ -137,7 +202,7 @@ catch {
 """;
     }
 
-    private static void LaunchDetached(string scriptPath)
+    private static void LaunchDetached(string scriptPath, string taskName = "PioDeployAgentSelfUpdate")
     {
         // A Windows service runs in session 0. Starting the helper directly
         // from here was unreliable: with UseShellExecute=true the process
@@ -148,8 +213,6 @@ catch {
         // owns the helper, runs it as SYSTEM a few seconds out, and it is in
         // no way tied to this dying service. We delete any prior task of the
         // same name first so repeated updates don't stack.
-        const string taskName = "PioDeployAgentSelfUpdate";
-
         Run("schtasks.exe", $"/Delete /TN {taskName} /F");
 
         var command = $"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \\\"{scriptPath}\\\"";

@@ -77,6 +77,15 @@ public sealed class Worker : BackgroundService
                     _heartbeatSeconds = Math.Clamp(response.HeartbeatSeconds, 15, 3600);
                     backoff = TimeSpan.FromSeconds(_heartbeatSeconds);
 
+                    // An operator asked for this agent's removal. First, before
+                    // anything else — an agent being uninstalled must not pick
+                    // up work or update itself on the way out.
+                    if (response.Uninstall && _selfUpdater.Uninstall())
+                    {
+                        _lifetime.StopApplication(); // let the helper remove us
+                        break;
+                    }
+
                     // A newer build on the server upgrades this machine with no
                     // one re-running a script. Checked before jobs, so an agent
                     // known to be superseded is replaced rather than kept busy.
@@ -133,16 +142,27 @@ public sealed class Worker : BackgroundService
     /// service and lets the detached helper take over.</summary>
     private async Task<bool> TrySelfUpdateAsync(HeartbeatResponse response, CancellationToken ct)
     {
-        if (_updating || !SelfUpdatePlan.ShouldUpdate(AgentVersion, response.LatestAgentVersion, response.BundleUrl))
+        var reinstall = SelfUpdatePlan.ShouldReinstall(response.Reinstall, response.BundleUrl);
+
+        if (_updating || (!reinstall
+            && !SelfUpdatePlan.ShouldUpdate(AgentVersion, response.LatestAgentVersion, response.BundleUrl)))
         {
             return false;
         }
 
         _updating = true; // never stage twice, even if the swap is slow to take
-        _logger.LogInformation("Server offers agent {Version}; updating from {Current}.",
-            response.LatestAgentVersion, AgentVersion);
+        if (reinstall)
+        {
+            _logger.LogInformation("Operator requested a reinstall; replacing this {Current} install with the server's bundle.", AgentVersion);
+        }
+        else
+        {
+            _logger.LogInformation("Server offers agent {Version}; updating from {Current}.",
+                response.LatestAgentVersion, AgentVersion);
+        }
 
-        return await _selfUpdater.UpdateAsync(response.BundleUrl!, response.LatestAgentVersion!, ct);
+        return await _selfUpdater.UpdateAsync(
+            response.BundleUrl!, response.LatestAgentVersion ?? AgentVersion, ct);
     }
 
     private async Task RegisterWithRetryAsync(CancellationToken ct)

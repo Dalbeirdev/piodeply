@@ -22,4 +22,13 @@ public static class SelfUpdatePlan
 
         return target > current;
     }
+
+    /// <summary>A reinstall is an operator's explicit "replace this install,
+    /// whatever version it claims to be" — the remote fix for a broken agent
+    /// that still checks in. No version comparison: same-version is the
+    /// normal case. Only a missing bundle stops it.</summary>
+    public static bool ShouldReinstall(bool requested, string? bundleUrl)
+    {
+        return requested && !string.IsNullOrWhiteSpace(bundleUrl);
+    }
 }
