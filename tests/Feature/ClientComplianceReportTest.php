@@ -61,6 +61,30 @@ class ClientComplianceReportTest extends TestCase
         $this->assertFalse($data['computers']->pluck('hostname')->contains('GLOBEX-01'));
     }
 
+    public function test_report_includes_the_clients_software_policies(): void
+    {
+        // Guards the policy query itself: a wrong column name slipped past
+        // sqlite once (it reads an unknown double-quoted identifier as a
+        // string literal and silently matches nothing) while MySQL threw a
+        // 500 in production. Asserting a real policy shows up means the
+        // query must actually resolve columns, on every driver.
+        [$client] = $this->fixtures();
+        $project = $client->projects()->firstOrFail();
+        $package = \App\Models\Package::factory()->create(['name' => 'Report Widget']);
+        \App\Models\SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+        \App\Models\SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => \App\Models\Package::factory()->create()->id,
+            'action' => 'update', 'mode' => \App\Enums\PolicyMode::Disabled,
+        ]);
+
+        $data = app(ClientComplianceReportService::class)->dataFor($client);
+
+        $this->assertCount(1, $data['software']); // disabled policy excluded
+        $this->assertSame('Report Widget', $data['software']->first()['policy']->package->name);
+    }
+
     public function test_staff_can_download_the_pdf(): void
     {
         [$client] = $this->fixtures();
