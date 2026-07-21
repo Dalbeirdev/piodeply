@@ -116,6 +116,11 @@ Route::middleware([
     Route::post('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'start'])
         ->middleware('role:Super Admin')
         ->name('impersonate.start');
+    // The start form opens a new tab, so this URL sits in that tab's
+    // history: refreshing or reopening it issues a GET. Starting an
+    // impersonation from a GET would be CSRF-able, so this changes nothing
+    // — it just lands the person somewhere sensible instead of a raw 405.
+    Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\ImpersonationController::class, 'landing']);
     Route::post('/impersonate/leave', [\App\Http\Controllers\ImpersonationController::class, 'leave'])
         ->name('impersonate.leave');
 

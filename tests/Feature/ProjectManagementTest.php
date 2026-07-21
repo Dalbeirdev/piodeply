@@ -30,6 +30,30 @@ class ProjectManagementTest extends TestCase
         return tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
     }
 
+    public function test_a_tenant_only_ever_sees_and_uses_their_own_client(): void
+    {
+        $mine = \App\Models\Client::factory()->create(['company_name' => 'Koms Global Technologies']);
+        $other = \App\Models\Client::factory()->create(['company_name' => 'ROBOTEK']);
+        $owner = tap(\App\Models\User::factory()->create(['client_id' => $mine->id]),
+            fn ($u) => $u->assignRole(\App\Enums\Role::ClientOwner->value));
+
+        // The picker offers exactly one organisation: their own.
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Projects\ProjectForm::class)
+            ->assertSee('Koms Global Technologies')
+            ->assertDontSee('ROBOTEK');
+
+        // And hiding it is only presentation — the id itself is refused.
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Projects\ProjectForm::class)
+            ->set('name', 'Smuggled project')
+            ->set('client_id', $other->id)
+            ->call('save')
+            ->assertHasErrors('client_id');
+
+        $this->assertDatabaseMissing('projects', ['name' => 'Smuggled project']);
+    }
+
     public function test_project_pages_are_permission_gated(): void
     {
         $project = Project::factory()->create();

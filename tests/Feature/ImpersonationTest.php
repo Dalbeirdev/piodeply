@@ -57,6 +57,30 @@ class ImpersonationTest extends TestCase
         $this->assertDatabaseHas('activity_log', ['description' => 'impersonation_ended']);
     }
 
+    public function test_refreshing_the_impersonation_tab_lands_somewhere_sane(): void
+    {
+        // The start form opens a new tab, so this URL sits in that tab's
+        // history — a refresh is a GET and used to return a raw 405.
+        $this->actingAs($this->superAdmin)
+            ->post("/admin/impersonate/{$this->technician->id}");
+        $this->freshAuth();
+
+        $this->get("/admin/impersonate/{$this->technician->id}")
+            ->assertRedirect(route('dashboard'));
+    }
+
+    public function test_a_get_can_never_start_an_impersonation(): void
+    {
+        // Starting from a GET would be CSRF-able: a link could switch a
+        // Super Admin into someone else's account.
+        $this->actingAs($this->superAdmin)
+            ->get("/admin/impersonate/{$this->technician->id}")
+            ->assertRedirect(route('admin.users'));
+
+        $this->assertFalse(session()->has(ImpersonationController::SESSION_KEY));
+        $this->assertAuthenticatedAs($this->superAdmin);
+    }
+
     public function test_non_super_admin_cannot_impersonate(): void
     {
         $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));

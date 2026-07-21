@@ -41,7 +41,11 @@ class ProjectForm extends Component
         $this->authorize($this->project ? 'update' : 'create', $this->project ?? Project::class);
 
         $validated = $this->validate([
-            'client_id'   => ['required', 'integer', Rule::exists('clients', 'id')->withoutTrashed()],
+            // Scoped at validation too: hiding a client from the dropdown
+            // is presentation, refusing the id is the actual boundary.
+            'client_id'   => ['required', 'integer', Rule::exists('clients', 'id')->withoutTrashed()
+                ->when(auth()->user()->tenantClientId() !== null,
+                    fn ($rule) => $rule->where('id', auth()->user()->tenantClientId()))],
             'name'        => ['required', 'string', 'max:255',
                 Rule::unique('projects', 'name')
                     ->where('client_id', $this->client_id)
@@ -75,7 +79,12 @@ class ProjectForm extends Component
     public function render()
     {
         return view('livewire.projects.project-form', [
-            'clients'  => Client::orderBy('company_name')->get(['id', 'company_name']),
+            // Tenancy: a customer creates projects for their own
+            // organisation and nobody else's, so that is the whole list.
+            'clients'  => Client::query()
+                ->when(auth()->user()->tenantClientId() !== null,
+                    fn ($q) => $q->whereKey(auth()->user()->tenantClientId()))
+                ->orderBy('company_name')->get(['id', 'company_name']),
             'statuses' => ProjectStatus::cases(),
         ])->layout('layouts.app');
     }

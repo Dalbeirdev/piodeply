@@ -36,6 +36,18 @@ class ImpersonationController extends Controller
         return redirect()->route('dashboard');
     }
 
+    /**
+     * Where a refresh of the impersonation tab lands. Deliberately inert:
+     * it never starts or stops anything — mid-impersonation you carry on
+     * where you are, otherwise you go back to the users list.
+     */
+    public function landing(): RedirectResponse
+    {
+        return session()->has(self::SESSION_KEY)
+            ? redirect()->route('dashboard')
+            : redirect()->route('admin.users');
+    }
+
     public function leave(): RedirectResponse
     {
         $impersonatorId = session()->pull(self::SESSION_KEY);
