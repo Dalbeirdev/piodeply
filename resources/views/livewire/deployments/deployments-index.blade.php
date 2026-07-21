@@ -91,7 +91,7 @@
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->priority }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $job->attempts }}/{{ $job->max_attempts }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap">
+                                <td class="px-6 py-3 align-top min-w-[16rem] max-w-sm">
                                     @php
                                         $badge = match ($job->status) {
                                             \App\Enums\JobStatus::Succeeded => 'bg-green-50 text-green-700 border-green-200',
@@ -102,11 +102,14 @@
                                             default => 'bg-slate-100 text-slate-700 border-slate-200',
                                         };
                                     @endphp
-                                    <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $badge }}">{{ $job->status->label() }}</span>
+                                    <span class="inline-block whitespace-nowrap text-xs font-semibold rounded-full px-2 py-0.5 border {{ $badge }}">{{ $job->status->label() }}</span>
                                     @if ($job->failure_reason)
-                                        <p class="text-xs text-red-500 max-w-xs truncate" title="{{ $job->failure_reason }}">{{ $job->failure_reason }}</p>
+                                        {{-- Explanations sit UNDER the badge and wrap: a one-line
+                                             cell pushed the table sideways, so the reason a job
+                                             failed was the one thing you had to scroll to read. --}}
+                                        <p class="text-xs text-red-500 break-words">{{ $job->failure_reason }}</p>
                                         @if ($hint = $job->failureHint())
-                                            <p class="text-xs text-slate-500 max-w-xs mt-0.5">{{ $hint }}</p>
+                                            <p class="text-xs text-slate-500 break-words mt-0.5">{{ $hint }}</p>
                                         @endif
                                     @endif
                                 </td>
