@@ -35,12 +35,16 @@
                         <option value="{{ $statusOption->value }}">{{ $statusOption->label() }}</option>
                     @endforeach
                 </select>
-                <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" wire:model.live="showTrashed" class="rounded border-slate-300">
-                    Show deleted
-                </label>
+                @unless ($isTenant)
+                    <label class="flex items-center gap-2 text-sm text-slate-600">
+                        <input type="checkbox" wire:model.live="showTrashed" class="rounded border-slate-300">
+                        Show deleted
+                    </label>
+                @endunless
                 <span class="flex-1"></span>
-                <button wire:click="export" class="text-sm pd-action">Export CSV</button>
+                @unless ($isTenant)
+                    <button wire:click="export" class="text-sm pd-action">Export CSV</button>
+                @endunless
                 @can('create', \App\Models\Client::class)
                     <form wire:submit="import" class="flex items-center gap-2">
                         <input type="file" wire:model="importFile" accept=".csv,.txt" aria-label="Import CSV"

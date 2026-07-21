@@ -9,17 +9,17 @@ use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 /**
- * A client's own staff page: the owner (client-bound Manager) invites the
- * technicians who will run their fleet — without ever seeing, or needing,
- * the platform's admin area.
+ * A client's own staff page: the account owner invites the people who will
+ * run their fleet — without ever seeing, or needing, the platform's admin
+ * area.
  *
  * Hard tenancy rules, enforced on every action, not just the view:
- * - only client-bound users may use this page, and they see exactly the
+ * - only the account OWNER may use this page, and they see exactly the
  *   users bound to their own client;
  * - created users are bound to that same client — the binding comes from
  *   the session, never from the form;
- * - only Technician and Viewer can be handed out here. Manager (a peer
- *   owner) is deliberately the platform admin's call.
+ * - the roles on offer stop at their own organisation's ceiling: platform
+ *   roles (Admin, Super Admin) can never be granted from here.
  */
 class TeamIndex extends Component
 {
@@ -33,8 +33,29 @@ class TeamIndex extends Component
 
     public string $newRole = 'Technician';
 
-    /** The roles a client owner may grant. */
-    public const GRANTABLE = [RoleEnum::Technician->value, RoleEnum::Viewer->value];
+    /**
+     * The ladder an owner hands out inside their own organisation. Every
+     * one of these is client-bound, so authority never reaches past their
+     * own environment:
+     *  - Client Owner: co-administrator — billing and the team included.
+     *  - Manager:      runs the whole fleet; no billing, no team changes.
+     *  - Technician:   deploys software and manages machines.
+     *  - Viewer:       read-only.
+     */
+    public const GRANTABLE = [
+        RoleEnum::ClientOwner->value,
+        RoleEnum::Manager->value,
+        RoleEnum::Technician->value,
+        RoleEnum::Viewer->value,
+    ];
+
+    /** What each grantable role means, in the customer's own terms. */
+    public const ROLE_HELP = [
+        'Client Owner' => 'Administrator — full access, including billing and managing this team.',
+        'Manager'      => 'Runs the fleet: projects, machines, policies, deployments. No billing or team changes.',
+        'Technician'   => 'Deploys software and manages machines. Cannot change policies, billing or the team.',
+        'Viewer'       => 'Read-only.',
+    ];
 
     public function mount(): void
     {
@@ -44,7 +65,9 @@ class TeamIndex extends Component
     private function assertTenantManager(): void
     {
         abort_if(auth()->user()->tenantClientId() === null, 403, 'The Team page is for client accounts.');
-        abort_unless(auth()->user()->can(\App\Enums\Permission::UsersView->value), 403);
+        // Owner-gated, not permission-gated: a Manager runs the fleet, an
+        // owner runs the organisation. Managing people is the second job.
+        abort_unless(auth()->user()->isClientOwner(), 403, 'Only account owners can manage the team.');
     }
 
     public function create(): void
@@ -95,9 +118,9 @@ class TeamIndex extends Component
             return;
         }
 
-        // A fellow owner (Client Owner, or a staff-granted Manager) is the
-        // platform admin's to manage, not a peer's.
-        if ($target->hasRole(RoleEnum::Manager->value) || $target->hasRole(RoleEnum::ClientOwner->value)) {
+        // A fellow owner is not a peer's to delete — that stays with
+        // PioDeploy support, so an organisation can never lock itself out.
+        if ($target->isClientOwner()) {
             session()->flash('error', 'Owner accounts are managed by PioDeploy support.');
 
             return;
@@ -127,7 +150,7 @@ class TeamIndex extends Component
 
         $target = User::where('client_id', auth()->user()->tenantClientId())->findOrFail($userId);
 
-        if ($target->hasRole(RoleEnum::Manager->value) || $target->hasRole(RoleEnum::ClientOwner->value)) {
+        if ($target->isClientOwner()) {
             session()->flash('error', 'Owners always have access to every project.');
 
             return;
@@ -166,6 +189,7 @@ class TeamIndex extends Component
                 ->where('client_id', auth()->user()->tenantClientId())
                 ->orderBy('name')->get(),
             'grantable' => self::GRANTABLE,
+            'roleHelp'  => self::ROLE_HELP,
             'projects'  => \App\Models\Project::where('client_id', auth()->user()->tenantClientId())
                 ->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app');

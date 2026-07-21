@@ -42,11 +42,11 @@ class NavigationService
                 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],
             // A client owner's own staff — invisible to platform staff, who
             // use Administration -> Users instead.
-            ['label' => 'Team', 'route' => 'team.index', 'active' => 'team.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true,
+            ['label' => 'Team', 'route' => 'team.index', 'active' => 'team.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/>'],
             // A client owner's own subscription — staff manage billing from
             // Administration instead, so this stays tenant-only.
-            ['label' => 'Billing', 'route' => 'tenant.billing', 'active' => 'tenant.billing', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true,
+            ['label' => 'Billing', 'route' => 'tenant.billing', 'active' => 'tenant.billing', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
                 'icon' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'],
             ['label' => 'Device Groups', 'route' => 'computers.groups', 'active' => 'computers.groups', 'permission' => Permission::ComputersView, 'group' => self::FLEET, 'staffOnly' => true,
                 'icon' => '<path d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87"/><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/>'],
@@ -109,6 +109,10 @@ class NavigationService
             // Cross-client surfaces (device groups) never appear for tenants.
             ->filter(fn (array $item) => ! ($item['staffOnly'] ?? false) || $user->tenantClientId() === null)
             ->filter(fn (array $item) => ! ($item['tenantOnly'] ?? false) || $user->tenantClientId() !== null)
+            // Team and Billing belong to the account owner: a Manager runs
+            // the fleet, so a link they would only be refused is worse than
+            // no link at all.
+            ->filter(fn (array $item) => ! ($item['ownerOnly'] ?? false) || $user->isClientOwner())
             ->map(fn (array $item) => [
                 'label'  => $item['label'],
                 'route'  => $item['route'],

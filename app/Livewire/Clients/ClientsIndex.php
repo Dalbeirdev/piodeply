@@ -109,6 +109,7 @@ class ClientsIndex extends Component
             return view('livewire.clients.clients-index', [
                 'clients'  => Client::whereKey(auth()->user()->tenantClientId())->paginate(15),
                 'statuses' => \App\Enums\ClientStatus::cases(),
+                'isTenant' => true,
             ])->layout('layouts.app');
         }
 
@@ -119,6 +120,7 @@ class ClientsIndex extends Component
                 withTrashed: $this->showTrashed,
             ),
             'statuses' => \App\Enums\ClientStatus::cases(),
+            'isTenant' => false,
         ])->layout('layouts.app');
     }
 }

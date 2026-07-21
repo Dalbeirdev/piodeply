@@ -36,6 +36,26 @@ class ClientManagementTest extends TestCase
         return tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
     }
 
+    public function test_a_tenant_sees_only_their_own_organisation_and_cannot_create_clients(): void
+    {
+        $mine = \App\Models\Client::factory()->create(['company_name' => 'Koms Global Technologies']);
+        \App\Models\Client::factory()->create(['company_name' => 'Someone Else Ltd']);
+
+        $owner = tap(\App\Models\User::factory()->create(['client_id' => $mine->id]),
+            fn ($u) => $u->assignRole(\App\Enums\Role::ClientOwner->value));
+
+        $this->actingAs($owner)->get('/clients')
+            ->assertOk()
+            ->assertSee('Koms Global Technologies')
+            ->assertDontSee('Someone Else Ltd')
+            // Creating clients is the platform operator's act; a customer's
+            // "Clients" page is their own organisation, not a directory.
+            ->assertDontSee('New Client');
+
+        $this->assertFalse($owner->can('create', \App\Models\Client::class));
+        $this->actingAs($owner)->get('/clients/create')->assertForbidden();
+    }
+
     public function test_clients_pages_are_permission_gated(): void
     {
         $client = Client::factory()->create();

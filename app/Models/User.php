@@ -79,6 +79,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole(\App\Enums\Role::Client->value) ? 0 : null;
     }
 
+    /**
+     * Owns their organisation: billing, the team, everything. Managers and
+     * below run the fleet but never the account — that separation is what
+     * lets an owner hand out real authority without handing over the card.
+     */
+    public function isClientOwner(): bool
+    {
+        return $this->hasRole(\App\Enums\Role::ClientOwner->value);
+    }
+
     /** Projects this user is explicitly confined to (none = unrestricted). */
     public function assignedProjects(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {

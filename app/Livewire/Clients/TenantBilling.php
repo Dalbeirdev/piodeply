@@ -33,13 +33,13 @@ class TenantBilling extends Component
     }
 
     /**
-     * Billing actions are the owner's, not every technician's. UsersView is
-     * the same line the Team page draws: Client Owners (and staff-granted
-     * Managers) have it, Technicians and Viewers do not.
+     * Billing belongs to whoever owns the account — not to the Manager who
+     * runs the fleet, and certainly not to a technician. Same line the Team
+     * page draws.
      */
     private function authorizeOwner(): void
     {
-        abort_unless(auth()->user()->can(\App\Enums\Permission::UsersView->value), 403);
+        abort_unless(auth()->user()->isClientOwner(), 403);
     }
 
     /**
@@ -127,7 +127,7 @@ class TenantBilling extends Component
             'upcoming'     => $client->stripe_customer_id
                 ? app(BillingService::class)->upcomingInvoice($client->stripe_customer_id)
                 : null,
-            'isOwner'      => auth()->user()->can(\App\Enums\Permission::UsersView->value),
+            'isOwner'      => auth()->user()->isClientOwner(),
         ])->layout('layouts.app');
     }
 }

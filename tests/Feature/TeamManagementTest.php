@@ -65,6 +65,54 @@ class TeamManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'sneaky@client.example']);
     }
 
+    public function test_the_owner_grants_the_whole_ladder_inside_their_own_organisation(): void
+    {
+        foreach ([RoleEnum::ClientOwner, RoleEnum::Manager, RoleEnum::Technician, RoleEnum::Viewer] as $i => $role) {
+            Livewire::actingAs($this->owner)
+                ->test(TeamIndex::class)
+                ->set('newName', "Person {$i}")
+                ->set('newEmail', "person{$i}@client.example")
+                ->set('newPassword', 'Strong-pass-1234')
+                ->set('newRole', $role->value)
+                ->call('create')
+                ->assertHasNoErrors();
+
+            $created = User::where('email', "person{$i}@client.example")->first();
+            $this->assertTrue($created->hasRole($role->value));
+            // Every level is bound to the granting owner's client — authority
+            // never reaches past their own environment.
+            $this->assertSame($this->client->id, $created->client_id);
+        }
+    }
+
+    public function test_a_manager_runs_the_fleet_but_not_the_account(): void
+    {
+        $manager = User::factory()->create(['client_id' => $this->client->id]);
+        $manager->assignRole(RoleEnum::Manager->value);
+
+        // The fleet: yes.
+        $this->actingAs($manager)->get('/computers')->assertOk();
+        $this->actingAs($manager)->get('/projects')->assertOk();
+
+        // The account: no. Managing people and paying the bill stay with
+        // the owner, so a Manager can be handed real authority safely.
+        $this->actingAs($manager)->get('/team')->assertForbidden();
+
+        $nav = collect(app(\App\Services\NavigationService::class)->items($manager))->pluck('label');
+        $this->assertFalse($nav->contains('Team'), 'no link to a page they would only be refused');
+        $this->assertFalse($nav->contains('Billing'));
+    }
+
+    public function test_an_owner_can_remove_a_manager_they_granted(): void
+    {
+        $manager = User::factory()->create(['client_id' => $this->client->id]);
+        $manager->assignRole(RoleEnum::Manager->value);
+
+        Livewire::actingAs($this->owner)->test(TeamIndex::class)->call('remove', $manager->id);
+
+        $this->assertNull($manager->fresh(), 'a Manager is the owner\'s to manage');
+    }
+
     public function test_the_page_is_closed_to_unbound_staff_and_to_technicians(): void
     {
         $staff = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Manager->value));
@@ -97,9 +145,10 @@ class TeamManagementTest extends TestCase
 
     public function test_an_owner_cannot_remove_themselves_or_another_owner(): void
     {
+        // A fellow OWNER is untouchable; a Manager they granted is not.
         $peer = User::factory()->create();
         $peer->forceFill(['client_id' => $this->client->id])->save();
-        $peer->assignRole(RoleEnum::Manager->value);
+        $peer->assignRole(RoleEnum::ClientOwner->value);
 
         $page = Livewire::actingAs($this->owner)->test(TeamIndex::class);
 

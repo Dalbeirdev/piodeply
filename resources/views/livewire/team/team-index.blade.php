@@ -22,9 +22,9 @@
                 <div class="pd-card p-6 space-y-3">
                     <h3 class="text-sm font-semibold text-slate-800">New team member</h3>
                     <p class="text-xs text-slate-500">
-                        <strong>Technician</strong> can deploy software and manage machines.
-                        <strong>Viewer</strong> can see everything but change nothing.
-                        They sign in at this same site with the email and password you set here.
+                        Everyone you add here belongs to your organisation and can only ever see your
+                        projects, machines and data. Pick the level of access below — they sign in at this
+                        same site with the email and password you set.
                     </p>
                     <div class="grid sm:grid-cols-2 gap-3">
                         <div>
@@ -44,11 +44,12 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600">Role</label>
-                            <select wire:model="newRole" class="mt-1 block w-full text-sm border-slate-300 rounded-md">
+                            <select wire:model.live="newRole" class="mt-1 block w-full text-sm border-slate-300 rounded-md">
                                 @foreach ($grantable as $role)
-                                    <option value="{{ $role }}">{{ $role }}</option>
+                                    <option value="{{ $role }}">{{ $role === 'Client Owner' ? 'Administrator' : $role }}</option>
                                 @endforeach
                             </select>
+                            <p class="text-xs text-slate-500 mt-1">{{ $roleHelp[$newRole] ?? '' }}</p>
                             @error('newRole')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
                         </div>
                     </div>
@@ -82,10 +83,12 @@
                                 </td>
                                 <td class="px-6 py-3">{{ $member->email }}</td>
                                 <td class="px-6 py-3">
-                                    <span class="pd-badge pd-badge-slate">{{ $member->getRoleNames()->first() ?? '—' }}</span>
+                                    @php $memberRole = $member->getRoleNames()->first(); @endphp
+                                    <span class="pd-badge pd-badge-slate"
+                                          title="{{ $roleHelp[$memberRole] ?? '' }}">{{ $memberRole === 'Client Owner' ? 'Administrator' : ($memberRole ?? '—') }}</span>
                                 </td>
                                 <td class="px-6 py-3">
-                                    @php $isOwner = $member->hasRole(\App\Enums\Role::Manager->value) || $member->hasRole(\App\Enums\Role::ClientOwner->value); @endphp
+                                    @php $isOwner = $member->isClientOwner(); @endphp
                                     @if ($isOwner)
                                         <span class="text-xs text-slate-400">All projects (owner)</span>
                                     @else
@@ -114,7 +117,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 text-right">
-                                    @if ($member->id !== auth()->id() && ! $member->hasRole(\App\Enums\Role::Manager->value))
+                                    @if ($member->id !== auth()->id() && ! $member->isClientOwner())
                                         <button type="button" wire:click="remove({{ $member->id }})"
                                                 wire:confirm="Remove {{ $member->name }}? They will no longer be able to sign in."
                                                 class="text-sm text-rose-600 hover:text-rose-700">Remove</button>

@@ -20,7 +20,10 @@ class ClientPolicy
 
     public function create(User $user): bool
     {
-        return $user->can(Permission::ClientsCreate->value);
+        // A customer's "Clients" page is their own organisation. Creating
+        // clients is the platform operator's act, not a tenant's.
+        return $user->can(Permission::ClientsCreate->value)
+            && $user->tenantClientId() === null;
     }
 
     public function update(User $user, Client $client): bool
