@@ -109,6 +109,54 @@ class PackageShow extends Component
         $this->package->refresh()->load('versions');
     }
 
+    /**
+     * What this package's versions actually look like on the fleet.
+     *
+     * A winget/choco package has no version WE own — winget resolves one at
+     * install time — but the agents report what they found. "auto" was
+     * honest and useless; this answers the real questions: what is out
+     * there, what is the newest anyone has been offered, and how many
+     * machines are behind it.
+     *
+     * @return array{latest: ?string, installed: \Illuminate\Support\Collection, outdated: int, tracked: int}
+     */
+    private function fleetVersions(): array
+    {
+        $id = $this->package->winget_id ?? $this->package->choco_id;
+        $source = $this->package->winget_id !== null ? 'winget' : 'choco';
+
+        if ($id === null) {
+            return ['latest' => null, 'installed' => collect(), 'outdated' => 0, 'tracked' => 0];
+        }
+
+        $rows = \App\Models\ComputerSoftware::query()
+            ->where('source', $source)
+            ->where('name', $id)
+            // Tenancy: a customer's view of "the fleet" is their own fleet.
+            ->when(auth()->user()->tenantClientId() !== null, fn ($q) => $q
+                ->whereHas('computer.project', fn ($p) => $p
+                    ->where('client_id', auth()->user()->tenantClientId())))
+            ->get(['version', 'available_version']);
+
+        // Newest version anyone has been offered — the closest thing to a
+        // true "latest" for a source-resolved package.
+        $latest = $rows->pluck('available_version')
+            ->merge($rows->pluck('version'))
+            ->filter(fn (?string $v) => $v !== null && trim($v) !== '')
+            ->sort(fn ($a, $b) => version_compare($a, $b))
+            ->last();
+
+        return [
+            'latest'    => $latest,
+            'installed' => $rows->pluck('version')
+                ->filter(fn (?string $v) => $v !== null && trim($v) !== '')
+                ->countBy()
+                ->sortKeysDesc(),
+            'outdated'  => $rows->filter->hasUpdate()->count(),
+            'tracked'   => $rows->count(),
+        ];
+    }
+
     public function render()
     {
         $jobs = DeploymentJob::where('package_id', $this->package->id);
@@ -131,6 +179,7 @@ class PackageShow extends Component
                 ? Computer::orderBy('hostname')->get(['id', 'hostname'])
                 : collect(),
             'actions'    => JobAction::cases(),
+            'fleet'      => $this->fleetVersions(),
         ])->layout('layouts.app');
     }
 }

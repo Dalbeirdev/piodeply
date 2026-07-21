@@ -67,8 +67,12 @@
                         <dd class="text-slate-900 font-medium">
                             @if ($package->installer_type->requiresBinary())
                                 {{ $package->latestVersion?->version ?? 'none yet' }}
+                            @elseif ($fleet['latest'])
+                                {{ $fleet['latest'] }}
+                                <span class="text-xs font-normal text-slate-400">newest seen on your fleet</span>
                             @else
-                                auto — winget resolves at install
+                                <span class="text-slate-400">not seen yet</span>
+                                <span class="text-xs font-normal text-slate-400">— {{ $package->winget_id ? 'winget' : 'the package source' }} resolves the version at install</span>
                             @endif
                         </dd>
                     </div>
@@ -83,6 +87,29 @@
                     @if ($package->homepage)
                         <div class="col-span-2"><dt class="text-slate-400">Homepage</dt>
                             <dd><a href="{{ $package->homepage }}" target="_blank" rel="noopener" class="pd-link font-normal">{{ $package->homepage }}</a></dd></div>
+                    @endif
+                    @if ($fleet['installed']->isNotEmpty())
+                        <div class="col-span-2">
+                            <dt class="text-slate-400">Versions on your fleet</dt>
+                            <dd class="mt-1 flex flex-wrap items-center gap-1.5">
+                                @foreach ($fleet['installed'] as $installedVersion => $count)
+                                    <span @class([
+                                        'text-xs rounded-full px-2 py-0.5 border',
+                                        'bg-emerald-50 text-emerald-700 border-emerald-200' => $installedVersion === $fleet['latest'],
+                                        'bg-slate-100 text-slate-600 border-slate-200' => $installedVersion !== $fleet['latest'],
+                                    ]) title="{{ $installedVersion === $fleet['latest'] ? 'Current' : 'Behind the newest version seen' }}">
+                                        {{ $installedVersion }} · {{ $count }} {{ \Illuminate\Support\Str::plural('machine', $count) }}
+                                    </span>
+                                @endforeach
+                                @if ($fleet['outdated'] > 0)
+                                    <a href="{{ route('computers.index', ['agentStatus' => '']) }}"
+                                       class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+                                       title="These machines' package manager is offering something newer">
+                                        {{ $fleet['outdated'] }} with an update waiting
+                                    </a>
+                                @endif
+                            </dd>
+                        </div>
                     @endif
                     <div><dt class="text-slate-400">Added</dt><dd class="text-slate-700">{{ $package->created_at->format('Y-m-d') }}</dd></div>
                     <div><dt class="text-slate-400">Updated</dt><dd class="text-slate-700">{{ $package->updated_at->diffForHumans() }}</dd></div>
