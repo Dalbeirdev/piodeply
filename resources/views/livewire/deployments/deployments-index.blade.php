@@ -2,12 +2,21 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Deployments') }}</h2>
-            @can('create', \App\Models\DeploymentJob::class)
-                <a href="{{ route('deployments.bulk') }}"
-                   class="inline-flex items-center gap-1.5 text-sm font-semibold rounded-md px-3 py-1.5 bg-teal-600 text-white hover:bg-teal-700 transition-colors">
-                    <span aria-hidden="true">+</span> Bulk deploy
-                </a>
-            @endcan
+            <div class="flex items-center gap-3">
+                @can('create', \App\Models\DeploymentJob::class)
+                    @if ($failedCount > 0)
+                        <button type="button" wire:click="retryAllFailed"
+                                wire:confirm="Retry all {{ $failedCount }} failed {{ \Illuminate\Support\Str::plural('deployment', $failedCount) }}? Agents pick them up at their next check-in."
+                                class="inline-flex items-center gap-1.5 text-sm font-semibold rounded-md px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">
+                            Retry all failed ({{ $failedCount }})
+                        </button>
+                    @endif
+                    <a href="{{ route('deployments.bulk') }}"
+                       class="inline-flex items-center gap-1.5 text-sm font-semibold rounded-md px-3 py-1.5 bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                        <span aria-hidden="true">+</span> Bulk deploy
+                    </a>
+                @endcan
+            </div>
         </div>
     </x-slot>
 

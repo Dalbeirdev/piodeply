@@ -128,6 +128,10 @@ class DeploymentJob extends Model
                 . 'for all users (--scope machine); this package only publishes a per-user installer, which under '
                 . 'the SYSTEM account would vanish into the SYSTEM profile. Package it as an EXE/MSI with '
                 . 'machine-wide silent switches instead.',
+            -1978335210 => 'Several copies of this package are installed on the machine (0x8A150016) — typically a '
+                . 'per-user copy alongside the machine-wide one. Agents from 1.4.7 uninstall every copy '
+                . '(--all-versions), so retrying on an updated agent clears this. Older agents need the machine '
+                . 'updated first.',
             -1978335216 => 'winget has no installer for this machine’s architecture (0x8A150010) — e.g. an x64-only '
                          . 'package on an Arm device.',
             -1978334975 => 'The downloaded installer’s hash did not match (0x8A150041) — a corrupt or tampered '

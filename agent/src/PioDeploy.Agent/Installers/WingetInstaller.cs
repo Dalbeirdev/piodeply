@@ -18,6 +18,15 @@ public sealed class WingetInstaller : IInstaller
     /// cancelled ("A package version is already installed").</summary>
     public const int AlreadyInstalledNoUpgrade = unchecked((int) 0x8A150061);
 
+    /// <summary>winget: nothing installed matches the id. For an uninstall
+    /// that is the goal already reached, not a failure.</summary>
+    public const int NoInstalledPackageFound = unchecked((int) 0x8A150014); // -1978335212
+
+    /// <summary>winget: several copies of the package are installed (the
+    /// classic per-user + machine-wide pair). Uninstall now passes
+    /// --all-versions so this can no longer stop a removal.</summary>
+    public const int MultiplePackagesFound = unchecked((int) 0x8A150016); // -1978335210
+
     private readonly IProcessRunner _processRunner;
     private readonly TimeSpan _timeout;
 
@@ -62,6 +71,14 @@ public sealed class WingetInstaller : IInstaller
             AlreadyInstalled => InstallResult.Ok(result.ExitCode, result.Output + "\n(already installed — treated as success)"),
             AlreadyInstalledNoUpgrade => InstallResult.Ok(result.ExitCode, result.Output + "\n(already installed — treated as success)"),
             NoApplicableUpgrade => InstallResult.Ok(result.ExitCode, result.Output + "\n(no applicable upgrade — treated as success)"),
+
+            // Removal is about the END STATE, not the act: a package that is
+            // not there satisfies "uninstall" completely. Reporting failure
+            // for it turned every already-clean machine into a red row and a
+            // retry that could never go green.
+            NoInstalledPackageFound when job.Action == "uninstall"
+                => InstallResult.Ok(result.ExitCode, result.Output + "\n(not installed — nothing to remove, treated as success)"),
+
             _ => InstallResult.Fail($"winget exited with {result.ExitCode}.", result.ExitCode, result.Output),
         };
     }
@@ -90,7 +107,16 @@ public sealed class WingetInstaller : IInstaller
             "install" or "repair" => ["install", .. common, "--scope", "machine", "--no-upgrade"],
             "update" => ["upgrade", .. common],
             "rollback" => version is null ? null : ["install", .. common, "--scope", "machine", "--version", version, "--force"],
-            "uninstall" => ["uninstall", "--id", wingetId, "--exact", "--silent", "--disable-interactivity"],
+            // --all-versions: a machine often carries the SAME app twice —
+            // a per-user copy (pre-1.4.1 agents installed those invisibly)
+            // plus the machine-wide one. Without this winget refuses the
+            // ambiguous removal (0x8A150016) and the job fails forever, so
+            // "uninstall" would mean "uninstall if there happens to be
+            // exactly one". Removal means gone: every copy, one click.
+            "uninstall" => [
+                "uninstall", "--id", wingetId, "--exact", "--silent",
+                "--disable-interactivity", "--all-versions",
+            ],
             _ => null,
         };
 

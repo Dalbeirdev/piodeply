@@ -153,7 +153,9 @@ class ClientPortalTest extends TestCase
             ->test(Dashboard::class)
             ->assertSee('Your projects')
             ->assertSee('Acme Fleet')
-            ->assertSee('Download agent')
+            // The card leads to the guided Enrolment page (key-filled,
+            // copy-paste commands), not a bare install script.
+            ->assertSee('Enrol machines')
             ->assertSee('ACME-PC')
             ->assertDontSee('Globex')
             ->assertViewHas('stats', fn ($stats) => $stats['online'] === 1 && $stats['failed'] === 1);

@@ -203,6 +203,96 @@ public class InstallerEngineTests
         Assert.Equal(3010, result.ExitCode);
     }
 
+    /* ---- Removal must mean gone: the field failures behind 1.4.7 ---- */
+
+    [Fact]
+    public void Winget_Uninstall_Removes_Every_Copy()
+    {
+        // A machine commonly carries the same app twice (a per-user copy
+        // from a pre-1.4.1 agent plus the machine-wide one). Without
+        // --all-versions winget refuses the ambiguous removal (0x8A150016)
+        // and the job fails on every retry, forever.
+        var args = WingetInstaller.BuildArguments("uninstall", "Brave.Brave", null)!;
+
+        Assert.Contains("--all-versions", args);
+    }
+
+    [Fact]
+    public async Task Winget_Uninstall_Of_An_Absent_Package_Is_Success()
+    {
+        // "Uninstall" describes an end state. A package that is not there
+        // satisfies it — reporting failure turned every already-clean
+        // machine into a red row nobody could ever clear.
+        var runner = new FakeProcessRunner
+        {
+            Result = new ProcessResult(WingetInstaller.NoInstalledPackageFound, "No installed package found", false),
+        };
+        var installer = new WingetInstaller(runner);
+
+        var result = await installer.ExecuteAsync(WingetJob("uninstall"), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Contains("nothing to remove", result.Log);
+    }
+
+    [Fact]
+    public async Task Winget_Install_Of_An_Absent_Package_Still_Fails()
+    {
+        // The same code on an INSTALL is a genuine failure (the id matched
+        // nothing) — leniency must not leak across actions.
+        var runner = new FakeProcessRunner
+        {
+            Result = new ProcessResult(WingetInstaller.NoInstalledPackageFound, "No package found", false),
+        };
+        var installer = new WingetInstaller(runner);
+
+        var result = await installer.ExecuteAsync(WingetJob(), CancellationToken.None);
+
+        Assert.False(result.Success);
+    }
+
+    [Fact]
+    public void Choco_Uninstall_Removes_Every_Copy()
+    {
+        var args = ChocoInstaller.BuildArguments("uninstall", "brave", null)!;
+
+        Assert.Contains("--all-versions", args);
+    }
+
+    [Fact]
+    public async Task Choco_Uninstall_Of_An_Absent_Package_Is_Success()
+    {
+        // Chocolatey has no exit code for "was not installed" — it says so
+        // in words and exits 1, so the words are what we read.
+        var runner = new FakeProcessRunner
+        {
+            Result = new ProcessResult(1, "brave is not installed. Cannot uninstall a non-existent package", false),
+        };
+        var installer = new ChocoInstaller(runner);
+        var job = WingetJob("uninstall");
+        job.InstallerType = "choco";
+        job.ChocoId = "brave";
+
+        var result = await installer.ExecuteAsync(job, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Contains("nothing to remove", result.Log);
+    }
+
+    [Fact]
+    public async Task Choco_Real_Failures_Still_Fail()
+    {
+        var runner = new FakeProcessRunner { Result = new ProcessResult(1, "The install of brave was NOT successful", false) };
+        var installer = new ChocoInstaller(runner);
+        var job = WingetJob("uninstall");
+        job.InstallerType = "choco";
+        job.ChocoId = "brave";
+
+        var result = await installer.ExecuteAsync(job, CancellationToken.None);
+
+        Assert.False(result.Success);
+    }
+
     [Fact]
     public async Task Exe_Uninstall_Is_Reported_Unsupported()
     {

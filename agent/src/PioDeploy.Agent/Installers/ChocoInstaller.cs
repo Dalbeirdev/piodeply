@@ -37,9 +37,33 @@ public sealed class ChocoInstaller : IInstaller
         }
 
         // 0 = ok, 1641/3010 = success + reboot initiated/required
-        return result.ExitCode is 0 or 1641 or 3010
-            ? InstallResult.Ok(result.ExitCode, result.Output)
-            : InstallResult.Fail($"choco exited with {result.ExitCode}.", result.ExitCode, result.Output);
+        if (result.ExitCode is 0 or 1641 or 3010)
+        {
+            return InstallResult.Ok(result.ExitCode, result.Output);
+        }
+
+        // Removal is about the end state: a package that was never there is
+        // already "uninstalled". Chocolatey has no exit code for it — it
+        // says so in words — so this reads the words it actually prints.
+        if (job.Action == "uninstall" && NotInstalled(result.Output))
+        {
+            return InstallResult.Ok(result.ExitCode, result.Output + "\n(not installed — nothing to remove, treated as success)");
+        }
+
+        return InstallResult.Fail($"choco exited with {result.ExitCode}.", result.ExitCode, result.Output);
+    }
+
+    /// <summary>Chocolatey's way of saying the package was not there.</summary>
+    public static bool NotInstalled(string? output)
+    {
+        if (string.IsNullOrEmpty(output))
+        {
+            return false;
+        }
+
+        return output.Contains("is not installed", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("Cannot uninstall a non-existent package", StringComparison.OrdinalIgnoreCase)
+            || output.Contains("not installed. Cannot uninstall", StringComparison.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<string>? BuildArguments(string action, string chocoId, string? version)
@@ -49,7 +73,9 @@ public sealed class ChocoInstaller : IInstaller
             "install" or "repair" => ["install", chocoId, "-y", "--no-progress"],
             "update" => ["upgrade", chocoId, "-y", "--no-progress"],
             "rollback" => version is null ? null : ["install", chocoId, "-y", "--no-progress", "--version", version, "--force"],
-            "uninstall" => ["uninstall", chocoId, "-y"],
+            // --all-versions for the same reason winget needs it: a machine
+            // carrying two copies must end up with none, not with an error.
+            "uninstall" => ["uninstall", chocoId, "-y", "--all-versions"],
             _ => null,
         };
 

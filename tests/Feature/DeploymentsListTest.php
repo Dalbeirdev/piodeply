@@ -31,6 +31,72 @@ class DeploymentsListTest extends TestCase
         return tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
     }
 
+    public function test_retry_all_failed_requeues_the_fleet_in_one_click(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create();
+
+        // Three genuinely failed jobs...
+        DeploymentJob::factory()->count(3)->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Uninstall, 'status' => JobStatus::Failed,
+            'attempts' => 3, 'exit_code' => -1978335210,
+            'failure_reason' => 'winget exited with -1978335210.',
+        ]);
+        // ...one that already succeeded (must not be touched)...
+        $ok = DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Succeeded,
+        ]);
+        // ...and one whose failure is in the job itself: a rollback with no
+        // target version can never succeed, so it is skipped, not looped.
+        $impossible = DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Rollback, 'status' => JobStatus::Failed,
+            'target_version' => null, 'package_version_id' => null,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(DeploymentsIndex::class)
+            ->call('retryAllFailed');
+
+        $this->assertSame(3, DeploymentJob::where('status', JobStatus::Pending)->count());
+        $this->assertSame(JobStatus::Succeeded, $ok->fresh()->status, 'succeeded jobs are left alone');
+        $this->assertSame(JobStatus::Failed, $impossible->fresh()->status, 'impossible jobs are skipped, not requeued');
+
+        // Requeued jobs start clean — attempts reset, old failure cleared.
+        $requeued = DeploymentJob::where('status', JobStatus::Pending)->first();
+        $this->assertSame(0, $requeued->attempts);
+        $this->assertNull($requeued->failure_reason);
+    }
+
+    public function test_retry_all_failed_never_reaches_another_tenants_jobs(): void
+    {
+        $mine = \App\Models\Client::factory()->create();
+        $myMachine = Computer::factory()->create([
+            'project_id' => \App\Models\Project::factory()->create(['client_id' => $mine->id])->id,
+        ]);
+        $foreignMachine = Computer::factory()->create(); // another client entirely
+        $package = Package::factory()->create();
+
+        $myJob = DeploymentJob::factory()->create([
+            'computer_id' => $myMachine->id, 'package_id' => $package->id, 'status' => JobStatus::Failed,
+        ]);
+        $foreignJob = DeploymentJob::factory()->create([
+            'computer_id' => $foreignMachine->id, 'package_id' => $package->id, 'status' => JobStatus::Failed,
+        ]);
+
+        $owner = tap(User::factory()->create(['client_id' => $mine->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        Livewire::actingAs($owner)
+            ->test(DeploymentsIndex::class)
+            ->call('retryAllFailed');
+
+        $this->assertSame(JobStatus::Pending, $myJob->fresh()->status);
+        $this->assertSame(JobStatus::Failed, $foreignJob->fresh()->status, 'a bulk action cannot reach further than the eye can see');
+    }
+
     public function test_repeated_jobs_collapse_to_one_row_with_a_repeat_count(): void
     {
         $computer = Computer::factory()->create(['hostname' => 'SUSHMITA-L11']);
