@@ -225,7 +225,15 @@ catch {
     /// swallowed. UseShellExecute=false is a raw CreateProcess: no shell,
     /// no Task Scheduler, works in session 0, and Windows does not kill
     /// child processes when the parent service exits. The helper sleeps 8s
-    /// first, so it comfortably outlives our shutdown.</summary>
+    /// first, so it comfortably outlives our shutdown.
+    ///
+    /// THE fix for the update that never applied: a service has no console,
+    /// so a child powershell that inherits its (invalid) std handles dies
+    /// on startup with exit 1 before running a single line — which is
+    /// exactly what stranded the whole fleet. Redirecting the three streams
+    /// gives powershell valid handles. The helper writes to a log FILE, not
+    /// stdout, so the pipes stay near-empty and never block; we drain them
+    /// on a background thread so a chatty step can never wedge either.</summary>
     private void LaunchDetached(string scriptPath)
     {
         var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -234,12 +242,20 @@ catch {
             Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
             // NOT the script's own directory: the uninstall script deletes
             // that tree, and Windows cannot remove a live process's working
             // directory — it would leave an empty ProgramData\PioDeploy
             // skeleton on every "uninstalled" machine.
             WorkingDirectory = Path.GetTempPath(),
         }) ?? throw new InvalidOperationException("Process.Start returned null for the update helper.");
+
+        // Drain the streams so the detached helper can never block on a full
+        // pipe once we exit; we do not care what they contain.
+        p.BeginOutputReadLine();
+        p.BeginErrorReadLine();
 
         // A helper that dies instantly (bad powershell path, corrupt script)
         // must fail the staging attempt NOW — stopping the service on the
