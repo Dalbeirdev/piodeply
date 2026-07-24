@@ -22,6 +22,9 @@ class SettingsPage extends Component
 
     public string $require_two_factor = 'off';
 
+    /** Fleet auto-update: agents self-update to the published version. */
+    public bool $agent_auto_update = true;
+
     public function mount(SettingsService $settings): void
     {
         $this->authorizeManage();
@@ -33,6 +36,7 @@ class SettingsPage extends Component
         $this->failure_backoff_hours = (int) $settings->get('policies.failure_backoff_hours');
         $this->activity_retention_days = (int) $settings->get('retention.activity_days');
         $this->require_two_factor = (string) $settings->get('security.require_two_factor');
+        $this->agent_auto_update = (bool) $settings->get('agent.auto_update', '1');
     }
 
     public function save(SettingsService $settings): void
@@ -47,6 +51,7 @@ class SettingsPage extends Component
             'failure_backoff_hours'    => ['required', 'integer', 'between:1,168'],
             'activity_retention_days'  => ['required', 'integer', 'between:7,3650'],
             'require_two_factor'       => ['required', 'in:off,staff,all'],
+            'agent_auto_update'        => ['boolean'],
         ]);
 
         $map = [
@@ -57,6 +62,7 @@ class SettingsPage extends Component
             'policies.failure_backoff_hours'       => (int) $validated['failure_backoff_hours'],
             'retention.activity_days'              => (int) $validated['activity_retention_days'],
             'security.require_two_factor'          => $validated['require_two_factor'],
+            'agent.auto_update'                    => $validated['agent_auto_update'] ? '1' : '0',
         ];
 
         foreach ($map as $key => $value) {

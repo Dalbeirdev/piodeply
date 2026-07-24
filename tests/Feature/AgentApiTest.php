@@ -195,6 +195,31 @@ class AgentApiTest extends TestCase
         $this->assertSame(4, Computer::count());
     }
 
+    public function test_heartbeat_advertises_the_agent_version_when_auto_update_is_on(): void
+    {
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('latest_agent_version', \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION);
+    }
+
+    public function test_pausing_auto_update_stops_the_server_offering_a_version(): void
+    {
+        // The fleet-freeze switch: with it off, the heartbeat advertises no
+        // version and no bundle, so agents hold exactly where they are.
+        app(\App\Services\SettingsService::class)->set('agent.auto_update', '0');
+
+        $uuid = (string) Str::uuid();
+        $this->postJson('/api/v1/agent/register', $this->samplePayload($uuid), $this->agentHeaders())->assertCreated();
+
+        $this->postJson('/api/v1/agent/heartbeat', ['agent_uuid' => $uuid], $this->agentHeaders())
+            ->assertOk()
+            ->assertJsonPath('latest_agent_version', null)
+            ->assertJsonPath('bundle_url', null);
+    }
+
     public function test_heartbeat_delivers_a_queued_uninstall(): void
     {
         $uuid = (string) Str::uuid();

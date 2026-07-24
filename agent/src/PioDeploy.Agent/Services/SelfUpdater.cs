@@ -118,6 +118,9 @@ function Log($m) { "{0}  {1}" -f (Get-Date -Format 's'), $m | Out-File $log -App
 Log "Uninstall helper started (waiting for the agent to exit)"
 Start-Sleep -Seconds 8
 
+# Kill the watchdog first, or it restarts the service we are removing.
+schtasks.exe /Delete /TN PioDeployAgentWatchdog /F 2>$null
+
 Log "Stopping and deleting $svc"
 Stop-Service $svc -Force
 Start-Sleep -Seconds 3
@@ -163,6 +166,12 @@ Log "Helper started (waiting for the agent process to exit)"
 # so Stop-Service below is a no-op and the executable is unlocked.
 Start-Sleep -Seconds 8
 
+# Hold the watchdog off for the swap: it restarts a stopped service every
+# two minutes, which would relaunch the old agent mid-copy. Disabled now,
+# re-enabled in both the success and rollback paths so the machine is never
+# left without its keep-alive.
+schtasks.exe /Change /TN PioDeployAgentWatchdog /DISABLE 2>$null
+
 try {
     Log "Stopping $svc"
     Stop-Service $svc -Force -ErrorAction SilentlyContinue
@@ -188,8 +197,10 @@ try {
     }
     Log "Update applied and service running"
     Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
+    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null
 }
 catch {
+    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null
     Log "FAILED: $($_.Exception.Message) — rolling back"
     try {
         Stop-Service $svc -Force -ErrorAction SilentlyContinue

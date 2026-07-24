@@ -137,9 +137,29 @@ New-Service -Name $serviceName `
     -DisplayName 'PioDeploy Agent' `
     -Description 'TechPio PioDeploy software deployment agent.' `
     -StartupType Automatic | Out-Null
+
+# Windows restarts the service by itself if it CRASHES. failureflag=1 makes
+# that apply to any non-zero exit too, not just a hard crash.
 sc.exe failure $serviceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+sc.exe failureflag $serviceName 1 | Out-Null
+
+# 7. Watchdog — the piece that keeps the agent alive no matter what.
+#    Recovery actions only cover an unexpected exit; they do NOT restart a
+#    service someone STOPS by hand, or one left stopped by a bad update. A
+#    SYSTEM scheduled task every 2 minutes closes that gap: if the service is
+#    not running, it starts it. Stopping the agent therefore does nothing
+#    lasting — it is back within two minutes — without blocking the agent's
+#    own controlled stops for self-update (the update helper restarts it far
+#    faster than the watchdog interval). This is exactly what would have kept
+#    a fleet of older agents from going dark.
+$watchdogName = 'PioDeployAgentWatchdog'
+$watchdogCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " +
+    "`"if ((Get-Service '$serviceName' -ErrorAction SilentlyContinue).Status -ne 'Running') { Start-Service '$serviceName' -ErrorAction SilentlyContinue }`""
+schtasks.exe /Delete /TN $watchdogName /F 2>$null | Out-Null
+schtasks.exe /Create /TN $watchdogName /TR $watchdogCmd /SC MINUTE /MO 2 /RU SYSTEM /RL HIGHEST /F | Out-Null
+
 Start-Service $serviceName
 
-Write-Host 'PioDeploy agent installed and started.'
+Write-Host 'PioDeploy agent installed and started (with self-healing watchdog).'
 Write-Host "Logs: $env:ProgramData\PioDeploy\logs"
 @endif

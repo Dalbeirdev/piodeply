@@ -39,6 +39,15 @@
                             <p class="mt-1 text-xs text-slate-500">Silence this long raises an “agent offline” notification (once per outage).</p>
                             <x-input-error for="offline_after_minutes" class="mt-1" />
                         </div>
+                        <div class="sm:col-span-2">
+                            <label class="flex items-start gap-2">
+                                <input type="checkbox" wire:model="agent_auto_update" class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                                <span>
+                                    <span class="text-sm font-medium text-slate-700">Auto-update agents</span>
+                                    <span class="block text-xs text-slate-500">On: every machine self-updates to the published agent version. Off: agents hold their current version — you still update any machine on demand with “Reinstall agent”. Turn off only to freeze the fleet during a change window.</span>
+                                </span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 

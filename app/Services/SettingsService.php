@@ -26,6 +26,8 @@ class SettingsService
             'retention.activity_days'           => 180,
             // 'off' | 'staff' (everyone but client-portal users) | 'all'
             'security.require_two_factor'       => 'off',
+            // Agents self-update to the published version by default.
+            'agent.auto_update'                 => '1',
         ];
     }
 

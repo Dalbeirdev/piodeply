@@ -257,7 +257,12 @@
   <p>The <b>RMM</b> tab's script pastes straight into a "run script" job targeted at a device group; RMM agents already run as SYSTEM. Both carry the same version check, so re-running them is harmless.</p>
   <div class="callout"><b>Result:</b> every targeted machine enrols silently in the background, and from then on all deployments are invisible to users. This is how you reach thousands of endpoints with zero interruption.</div>
 
-  <h3>5.6 Fixing or removing an agent remotely</h3>
+  <h3>5.6 The agent keeps itself alive (watchdog)</h3>
+  <p>Every enrolment installs a <b>self-healing watchdog</b>: Windows restarts the agent if it crashes, and a SYSTEM scheduled task checks every 2 minutes and restarts the service if anything left it stopped — a manual stop, a hung state, a bad update. In practice the agent cannot be kept down: stop it and it is back within two minutes. This does not block the agent's own controlled restarts for self-update; the update helper pauses the watchdog for the few seconds it swaps files, then re-enables it.</p>
+  <h3>5.7 Controlling agent updates</h3>
+  <p><b>Admin → Settings → Agents → Auto-update</b> governs the whole fleet. <b>On</b> (default): every machine self-updates to the version you publish, within a minute or two, no action needed. <b>Off</b>: agents freeze at their current version — the server simply stops advertising a newer one — which is how you hold a fleet steady during a change window. Either way you can still update any single machine on demand with <b>Reinstall agent</b>.</p>
+
+  <h3>5.8 Fixing or removing an agent remotely</h3>
   <p>Open <b>Computers → a machine</b>. In the page header, next to <i>Reassign project</i>:</p>
   <table>
     <tr><th>Button</th><th>What happens</th></tr>

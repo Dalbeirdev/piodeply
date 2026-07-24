@@ -68,6 +68,10 @@ class AgentController extends Controller
 
         $this->computers->heartbeat($computer, $validated['agent_version'] ?? null);
 
+        // Fleet auto-update policy — default ON, so existing installs keep
+        // self-updating unless an operator deliberately pauses it.
+        $autoUpdate = (bool) app(\App\Services\SettingsService::class)->get('agent.auto_update', '1');
+
         return response()->json([
             'status'            => 'ok',
             'pending_jobs'      => $this->deployments->pendingCountFor($computer),
@@ -81,8 +85,13 @@ class AgentController extends Controller
             // What the agent should be running, and where to get it. An agent
             // already on this version ignores both; an older one self-updates,
             // so a machine is upgraded once and never touched by hand again.
-            'latest_agent_version' => \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION,
-            'bundle_url'           => \Illuminate\Support\Facades\Storage::disk('local')
+            //
+            // Auto-update is a fleet policy (Admin -> Settings). When it is
+            // OFF the server simply stops advertising a version and bundle,
+            // so agents hold where they are — an operator still updates any
+            // machine on demand with the Reinstall button.
+            'latest_agent_version' => $autoUpdate ? \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION : null,
+            'bundle_url'           => $autoUpdate && \Illuminate\Support\Facades\Storage::disk('local')
                 ->exists(\App\Http\Controllers\AgentDownloadController::BUNDLE_PATH)
                     ? route('agent.bundle')
                     : null,

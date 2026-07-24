@@ -257,6 +257,24 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertStringNotContainsString('pio_realkey1', $body, 'the uninstall script must not carry the key');
     }
 
+    public function test_the_installer_sets_up_a_self_healing_watchdog(): void
+    {
+        // The reliability guarantee: a scheduled task restarts the service if
+        // anything leaves it stopped, and Windows recovery restarts it on a
+        // crash. Both must be in the script every enrolment downloads.
+        $body = \App\Models\AgentDownloadController::class; // touch autoload
+        $script = view('agent.install-script', [
+            'project'   => $this->project,
+            'serverUrl' => 'https://piodeploy.com',
+            'binaryUrl' => 'https://piodeploy.com/download/agent/x/binary',
+            'hasBundle' => true,
+        ])->render();
+
+        $this->assertStringContainsString('PioDeployAgentWatchdog', $script);
+        $this->assertStringContainsString('/SC MINUTE', $script);
+        $this->assertStringContainsString('sc.exe failure', $script);
+    }
+
     public function test_switching_method_changes_the_script_shown(): void
     {
         $this->page()
