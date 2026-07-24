@@ -56,7 +56,14 @@ public sealed class SelfUpdater
             }
 
             var script = Path.Combine(root, "apply-update.ps1");
-            await File.WriteAllTextAsync(script, BuildSwapScript(staging, installDir, root), ct);
+            // UTF-8 WITH BOM, not the default BOM-less flavour: Windows
+            // PowerShell 5.1 reads a BOM-less file as ANSI, where a UTF-8
+            // em-dash mis-decodes into a smart quote that TERMINATES a
+            // string early - a parse error, exit 1, script never runs.
+            // That single character stranded the entire fleet's updates.
+            await File.WriteAllTextAsync(
+                script, BuildSwapScript(staging, installDir, root),
+                new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true), ct);
 
             LaunchDetached(script);
             _logger.LogInformation("Self-update helper launched; the service will now stop to be replaced.");
@@ -89,7 +96,10 @@ public sealed class SelfUpdater
             Directory.CreateDirectory(root);
 
             var script = Path.Combine(root, "uninstall-agent.ps1");
-            File.WriteAllText(script, BuildUninstallScript(installDir));
+            // BOM for the same reason as the swap script: PowerShell 5.1
+            // treats a BOM-less file as ANSI and can misparse it fatally.
+            File.WriteAllText(script, BuildUninstallScript(installDir),
+                new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
             LaunchDetached(script);
             _logger.LogInformation("Uninstall requested from the server; the service will now stop and be removed.");
@@ -161,7 +171,7 @@ $log     = '{{log}}'
 function Log($m) { "{0}  {1}" -f (Get-Date -Format 's'), $m | Out-File $log -Append -Encoding utf8 }
 
 # Written before anything else so the log always proves the helper ran,
-# even if a later step throws — the previous launch mechanism produced no
+# even if a later step throws - the previous launch mechanism produced no
 # log at all, which is what made the loop invisible.
 Log "Helper started (waiting for the agent process to exit)"
 # The agent stops itself right after scheduling us; give the SCM a moment
@@ -203,7 +213,7 @@ try {
 }
 catch {
     schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null
-    Log "FAILED: $($_.Exception.Message) — rolling back"
+    Log "FAILED: $($_.Exception.Message) - rolling back"
     try {
         Stop-Service $svc -Force -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 2
@@ -227,15 +237,17 @@ catch {
     /// child processes when the parent service exits. The helper sleeps 8s
     /// first, so it comfortably outlives our shutdown.
     ///
-    /// THE fix for the update that never applied: a service has no console,
-    /// so a child powershell that inherits its (invalid) std handles dies
-    /// on startup with exit 1 before running a single line — which is
-    /// exactly what stranded the whole fleet. Redirecting the three streams
-    /// gives powershell valid handles. The helper writes to a log FILE, not
-    /// stdout, so the pipes stay near-empty and never block; we drain them
-    /// on a background thread so a chatty step can never wedge either.</summary>
+    /// stderr is captured so an instant death reports powershell's OWN error
+    /// (e.g. a parse error) instead of a bare exit code. The fleet was once
+    /// stranded for days by "exited immediately (code 1)" with no clue that
+    /// the real cause was a mis-encoded quote character in the script; the
+    /// error text was on stderr the whole time, discarded. The helper writes
+    /// its progress to a log FILE, not stdout, so in the happy path the
+    /// pipes stay empty and the event-based readers never block it.</summary>
     private void LaunchDetached(string scriptPath)
     {
+        var stderr = new System.Text.StringBuilder();
+
         var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
             FileName = "powershell.exe",
@@ -252,8 +264,11 @@ catch {
             WorkingDirectory = Path.GetTempPath(),
         }) ?? throw new InvalidOperationException("Process.Start returned null for the update helper.");
 
-        // Drain the streams so the detached helper can never block on a full
-        // pipe once we exit; we do not care what they contain.
+        // Event-based draining: keeps the pipes empty for the helper's whole
+        // life (it outlives this process) while still collecting anything
+        // powershell says on its way down.
+        p.OutputDataReceived += (_, _) => { };
+        p.ErrorDataReceived += (_, e) => { if (e.Data is not null) lock (stderr) stderr.AppendLine(e.Data); };
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
 
@@ -263,8 +278,14 @@ catch {
         // exists to prevent.
         if (p.WaitForExit(2_000))
         {
+            // Give the async stderr reader a beat to flush the final lines.
+            p.WaitForExit();
+            string said;
+            lock (stderr) said = stderr.ToString().Trim();
+
             throw new InvalidOperationException(
-                $"Update helper exited immediately (code {p.ExitCode}) instead of waiting for the service to stop.");
+                $"Update helper exited immediately (code {p.ExitCode}) instead of waiting for the service to stop."
+                + (said.Length > 0 ? $" It said: {said}" : " (stderr was empty)"));
         }
 
         _logger.LogInformation("Update helper running as PID {Pid}.", p.Id);

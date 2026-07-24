@@ -1,18 +1,20 @@
 #requires -RunAsAdministrator
-# One-time push of THIS machine onto agent 1.4.11 (the launcher fix).
-# A machine on the old broken launcher cannot self-update, so this admin-run
-# copy is the one manual hop needed; every update after 1.4.11 is automatic.
-# Preserves appsettings.json (the machine's real config) — only code changes.
+# One-time push of THIS machine onto agent 1.4.13 (the encoding fix: the
+# swap helper is now written as UTF-8 WITH BOM and pure-ASCII content, so
+# Windows PowerShell 5.1 can no longer misparse it into exit 1).
+# A machine on an older agent GENERATES the broken helper itself, so it
+# cannot self-update past it; this admin-run copy is the one manual hop
+# needed. Every update after 1.4.13 is automatic.
+# Preserves appsettings.json (the machine's real config) - only code changes.
 $ErrorActionPreference = 'Stop'
-$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.11'
+$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.13'
 $dst = 'C:\Program Files\PioDeploy\Agent'
 
-if (-not (Test-Path "$src\PioDeployAgent.dll")) { throw "Build not found at $src — run dotnet publish first." }
+if (-not (Test-Path "$src\PioDeployAgent.dll")) { throw "Build not found at $src - run dotnet publish first." }
 $new = (Get-Item "$src\PioDeployAgent.dll").VersionInfo.FileVersion
 Write-Host "Installing agent $new over $dst (config preserved)..."
 
 Stop-Service PioDeployAgent -Force
-# Let the process fully release its files.
 $deadline = (Get-Date).AddSeconds(20)
 while ((Get-Process PioDeployAgent -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
 
@@ -30,5 +32,5 @@ Start-Sleep -Seconds 3
 $now = (Get-Item "$dst\PioDeployAgent.dll").VersionInfo.FileVersion
 Write-Host "Service status: $((Get-Service PioDeployAgent).Status)"
 Write-Host "Installed version now: $now"
-if ($now -eq $new) { Write-Host 'SUCCESS — this machine is on the fixed launcher. It will now self-update automatically.' -ForegroundColor Green }
-else { Write-Warning "Version still $now — check C:\ProgramData\PioDeploy\logs." }
+if ($now -eq $new) { Write-Host 'SUCCESS - on the fixed launcher. It will now self-update automatically.' -ForegroundColor Green }
+else { Write-Warning "Version still $now - check C:\ProgramData\PioDeploy\logs." }

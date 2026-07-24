@@ -122,4 +122,26 @@ public class SelfUpdatePlanTests
         Assert.Contains("service did not start after update", script);
         Assert.Contains("Rolled back to previous version", script);
     }
+
+    [Fact]
+    public void GeneratedScriptsArePureAscii()
+    {
+        // THE bug that stranded the whole fleet: an em-dash inside a string,
+        // written to disk as BOM-less UTF-8. Windows PowerShell 5.1 decodes
+        // a BOM-less file as ANSI, where the em-dash's last byte becomes a
+        // smart quote that terminates the string early — parse error, exit 1,
+        // the helper never ran a single line, and no machine could update.
+        // The files are now written WITH a BOM, but generated scripts stay
+        // ASCII-only so no decoder anywhere can ever misread them.
+        var swap = SelfUpdater.BuildSwapScript(@"C:\s", @"C:\i", @"C:\r");
+        var uninstall = SelfUpdater.BuildUninstallScript(@"C:\i");
+
+        foreach (var (name, script) in new[] { ("swap", swap), ("uninstall", uninstall) })
+        {
+            var offenders = script.Where(c => c > 127).Distinct().ToArray();
+            Assert.True(offenders.Length == 0,
+                $"{name} script contains non-ASCII characters: " +
+                string.Join(", ", offenders.Select(c => $"U+{(int)c:X4} '{c}'")));
+        }
+    }
 }
