@@ -152,11 +152,13 @@ sc.exe failureflag $serviceName 1 | Out-Null
 #    own controlled stops for self-update (the update helper restarts it far
 #    faster than the watchdog interval). This is exactly what would have kept
 #    a fleet of older agents from going dark.
+#    "net start" on an already-running service is a harmless no-op error, so
+#    the task needs NO embedded quotes - schtasks /TR quoting silently broke
+#    the quoted-powershell variant (task never registered).
 $watchdogName = 'PioDeployAgentWatchdog'
-$watchdogCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " +
-    "`"if ((Get-Service '$serviceName' -ErrorAction SilentlyContinue).Status -ne 'Running') { Start-Service '$serviceName' -ErrorAction SilentlyContinue }`""
-schtasks.exe /Delete /TN $watchdogName /F 2>$null | Out-Null
-schtasks.exe /Create /TN $watchdogName /TR $watchdogCmd /SC MINUTE /MO 2 /RU SYSTEM /RL HIGHEST /F | Out-Null
+cmd.exe /c "schtasks /Delete /TN $watchdogName /F >nul 2>&1"
+schtasks.exe /Create /TN $watchdogName /TR "net start $serviceName" /SC MINUTE /MO 2 /RU SYSTEM /RL HIGHEST /F | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Warning "Watchdog task could not be created (schtasks exit $LASTEXITCODE)." }
 
 # 8. Tray status indicator (per-user). The service runs as SYSTEM in
 #    session 0 and cannot draw UI, so a tiny PowerShell helper runs in each
