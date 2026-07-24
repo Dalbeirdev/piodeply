@@ -24,6 +24,9 @@ public sealed class Worker : BackgroundService
 
     private bool _updating;
 
+    /** When a failed self-update may next be retried (null = no failure yet). */
+    private DateTime? _nextUpdateAttempt;
+
     private int _heartbeatSeconds = 60;
     private readonly int _inventoryEveryBeats = 60;      // full refresh ~hourly
     private readonly int _browserPolicyEveryBeats = 15;  // policy sync ~every 15 min
@@ -144,13 +147,26 @@ public sealed class Worker : BackgroundService
     {
         var reinstall = SelfUpdatePlan.ShouldReinstall(response.Reinstall, response.BundleUrl);
 
-        if (_updating || (!reinstall
-            && !SelfUpdatePlan.ShouldUpdate(AgentVersion, response.LatestAgentVersion, response.BundleUrl)))
+        // A swap is already staged and the service is on its way down.
+        if (_updating)
         {
             return false;
         }
 
-        _updating = true; // never stage twice, even if the swap is slow to take
+        if (!reinstall
+            && !SelfUpdatePlan.ShouldUpdate(AgentVersion, response.LatestAgentVersion, response.BundleUrl))
+        {
+            return false;
+        }
+
+        // A version update that failed once backs off before retrying, so a
+        // machine that genuinely cannot swap does not re-download the 35 MB
+        // bundle every heartbeat. An operator reinstall is honoured at once.
+        if (!reinstall && _nextUpdateAttempt.HasValue && DateTime.UtcNow < _nextUpdateAttempt.Value)
+        {
+            return false;
+        }
+
         if (reinstall)
         {
             _logger.LogInformation("Operator requested a reinstall; replacing this {Current} install with the server's bundle.", AgentVersion);
@@ -161,8 +177,24 @@ public sealed class Worker : BackgroundService
                 response.LatestAgentVersion, AgentVersion);
         }
 
-        return await _selfUpdater.UpdateAsync(
+        var staged = await _selfUpdater.UpdateAsync(
             response.BundleUrl!, response.LatestAgentVersion ?? AgentVersion, ct);
+
+        if (staged)
+        {
+            // The helper will swap us out; never stage twice.
+            _updating = true;
+
+            return true;
+        }
+
+        // Staging failed — stay on the current version and try again in half
+        // an hour rather than latching forever. THE bug that stranded the
+        // fleet one version behind: a single failure used to stop every
+        // future self-update on a machine that otherwise stayed healthy.
+        _nextUpdateAttempt = DateTime.UtcNow.AddMinutes(30);
+
+        return false;
     }
 
     private async Task RegisterWithRetryAsync(CancellationToken ct)
