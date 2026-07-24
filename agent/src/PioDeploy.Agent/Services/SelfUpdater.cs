@@ -129,9 +129,10 @@ Log "Uninstall helper started (waiting for the agent to exit)"
 Start-Sleep -Seconds 8
 
 # Kill the watchdog first, or it restarts the service we are removing.
-schtasks.exe /Delete /TN PioDeployAgentWatchdog /F 2>$null
+# Out-Null everywhere: a detached helper must never write to stdout.
+schtasks.exe /Delete /TN PioDeployAgentWatchdog /F 2>$null | Out-Null
 # And the per-user tray helper.
-schtasks.exe /Delete /TN PioDeployAgentTray /F 2>$null
+schtasks.exe /Delete /TN PioDeployAgentTray /F 2>$null | Out-Null
 
 Log "Stopping and deleting $svc"
 Stop-Service $svc -Force
@@ -144,10 +145,10 @@ Remove-Item $install -Recurse -Force
 Log "Removing $state"
 Remove-Item $state -Recurse -Force
 
-schtasks.exe /Delete /TN PioDeployAgentSelfUpdate /F 2>$null
+schtasks.exe /Delete /TN PioDeployAgentSelfUpdate /F 2>$null | Out-Null
 Log "Agent removed"
 # Last: unregister the task running this very script.
-schtasks.exe /Delete /TN PioDeployAgentUninstall /F 2>$null
+schtasks.exe /Delete /TN PioDeployAgentUninstall /F 2>$null | Out-Null
 """;
     }
 
@@ -181,8 +182,10 @@ Start-Sleep -Seconds 8
 # Hold the watchdog off for the swap: it restarts a stopped service every
 # two minutes, which would relaunch the old agent mid-copy. Disabled now,
 # re-enabled in both the success and rollback paths so the machine is never
-# left without its keep-alive.
-schtasks.exe /Change /TN PioDeployAgentWatchdog /DISABLE 2>$null
+# left without its keep-alive. Out-Null on purpose: the helper must never
+# write to stdout - it runs detached with no console, and host output is
+# exactly what once killed a helper mid-swap (broken pipe to a dead parent).
+schtasks.exe /Change /TN PioDeployAgentWatchdog /DISABLE 2>$null | Out-Null
 
 try {
     Log "Stopping $svc"
@@ -209,10 +212,10 @@ try {
     }
     Log "Update applied and service running"
     Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
-    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null
+    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null | Out-Null
 }
 catch {
-    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null
+    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null | Out-Null
     Log "FAILED: $($_.Exception.Message) - rolling back"
     try {
         Stop-Service $svc -Force -ErrorAction SilentlyContinue
@@ -228,25 +231,27 @@ catch {
     /// <summary>Starts the helper as a plain detached child process and
     /// PROVES it is alive before reporting success.
     ///
-    /// History, because this launch has now failed in the field twice:
+    /// History, because this launch has now failed in the field three ways:
     /// UseShellExecute=true silently does nothing in a service's session 0
-    /// (no shell to execute through), and a schtasks one-shot task proved
-    /// just as silent — /TR quoting is fragile and its errors were
-    /// swallowed. UseShellExecute=false is a raw CreateProcess: no shell,
-    /// no Task Scheduler, works in session 0, and Windows does not kill
-    /// child processes when the parent service exits. The helper sleeps 8s
-    /// first, so it comfortably outlives our shutdown.
+    /// (no shell to execute through); a schtasks one-shot task proved just
+    /// as silent (/TR quoting is fragile and its errors were swallowed);
+    /// and redirecting the helper's std streams to THIS process wedged the
+    /// swap mid-flight — the helper outlives us by design, so once we exit
+    /// its pipes point at a dead parent, and its first stdout write (a
+    /// schtasks "SUCCESS" line) killed powershell after the service was
+    /// already stopped and the watchdog already disabled: machine dark.
+    /// A detached child must NEVER hold pipes to a mortal parent — so no
+    /// redirects here; the helper reports through its log file instead.
     ///
-    /// stderr is captured so an instant death reports powershell's OWN error
-    /// (e.g. a parse error) instead of a bare exit code. The fleet was once
-    /// stranded for days by "exited immediately (code 1)" with no clue that
-    /// the real cause was a mis-encoded quote character in the script; the
-    /// error text was on stderr the whole time, discarded. The helper writes
-    /// its progress to a log FILE, not stdout, so in the happy path the
-    /// pipes stay empty and the event-based readers never block it.</summary>
+    /// UseShellExecute=false is a raw CreateProcess: no shell, no Task
+    /// Scheduler, works in session 0 (proven by a SYSTEM-context probe),
+    /// and Windows does not kill child processes when the parent exits.
+    /// The helper sleeps 8s first, so it comfortably outlives our
+    /// shutdown. Script diagnosability lives in ValidateScript, which runs
+    /// BEFORE launch in a process that never outlives us.</summary>
     private void LaunchDetached(string scriptPath)
     {
-        var stderr = new System.Text.StringBuilder();
+        ValidateScript(scriptPath);
 
         var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
@@ -254,9 +259,6 @@ catch {
             Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
             // NOT the script's own directory: the uninstall script deletes
             // that tree, and Windows cannot remove a live process's working
             // directory — it would leave an empty ProgramData\PioDeploy
@@ -264,30 +266,61 @@ catch {
             WorkingDirectory = Path.GetTempPath(),
         }) ?? throw new InvalidOperationException("Process.Start returned null for the update helper.");
 
-        // Event-based draining: keeps the pipes empty for the helper's whole
-        // life (it outlives this process) while still collecting anything
-        // powershell says on its way down.
-        p.OutputDataReceived += (_, _) => { };
-        p.ErrorDataReceived += (_, e) => { if (e.Data is not null) lock (stderr) stderr.AppendLine(e.Data); };
-        p.BeginOutputReadLine();
-        p.BeginErrorReadLine();
-
         // A helper that dies instantly (bad powershell path, corrupt script)
         // must fail the staging attempt NOW — stopping the service on the
         // strength of a dead helper is exactly the offline loop this code
         // exists to prevent.
         if (p.WaitForExit(2_000))
         {
-            // Give the async stderr reader a beat to flush the final lines.
-            p.WaitForExit();
-            string said;
-            lock (stderr) said = stderr.ToString().Trim();
-
             throw new InvalidOperationException(
-                $"Update helper exited immediately (code {p.ExitCode}) instead of waiting for the service to stop."
-                + (said.Length > 0 ? $" It said: {said}" : " (stderr was empty)"));
+                $"Update helper exited immediately (code {p.ExitCode}) instead of waiting for the service to stop.");
         }
 
         _logger.LogInformation("Update helper running as PID {Pid}.", p.Id);
+    }
+
+    /// <summary>Parses the helper script with THE SAME powershell.exe that
+    /// will run it, before anything is launched detached. The fleet was once
+    /// stranded for days by a helper dying with a bare "exit 1": Windows
+    /// PowerShell 5.1 misparsed a mis-encoded quote character, and the parse
+    /// error was never seen because the helper's stderr went nowhere. This
+    /// validator is a short-lived child that cannot outlive us, so capturing
+    /// ITS streams is safe — any parse error surfaces here, with the message,
+    /// while the service is still healthy and nothing has been stopped.</summary>
+    private static void ValidateScript(string scriptPath)
+    {
+        const string check =
+            "$e=$null;[void][System.Management.Automation.Language.Parser]::ParseFile($env:PIO_CHECK,[ref]$null,[ref]$e);" +
+            "if($e.Count){$e|ForEach-Object{[Console]::Error.WriteLine($_.Message)};exit 3};exit 0";
+
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = $"-NoProfile -NonInteractive -Command \"{check}\"",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        // The path rides in an environment variable so no quoting scheme can
+        // mangle it inside the doubly-nested command string.
+        psi.Environment["PIO_CHECK"] = scriptPath;
+
+        using var p = System.Diagnostics.Process.Start(psi)
+            ?? throw new InvalidOperationException("Process.Start returned null for the script validator.");
+
+        var stderr = p.StandardError.ReadToEnd();
+        p.StandardOutput.ReadToEnd();
+        if (!p.WaitForExit(15_000))
+        {
+            try { p.Kill(entireProcessTree: true); } catch { /* already gone */ }
+            throw new InvalidOperationException("Script validation timed out.");
+        }
+
+        if (p.ExitCode != 0)
+        {
+            throw new InvalidOperationException(
+                $"Helper script failed powershell parse validation (exit {p.ExitCode}): {stderr.Trim()}");
+        }
     }
 }
