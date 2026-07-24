@@ -1,6 +1,6 @@
 #Requires -RunAsAdministrator
 <#
-  PioDeploy agent installer — {{ $project->name }} ({{ $project->client->company_name }})
+  PioDeploy agent installer - {{ $project->name }} ({{ $project->client->company_name }})
   Generated {{ now()->toDateString() }} by {{ config('app.name') }}.
 
   Usage (elevated PowerShell):
@@ -55,13 +55,13 @@ $config | ConvertTo-Json -Depth 5 | Set-Content $configPath -Encoding UTF8
 # 5. Preflight the machine so the agent can actually deploy software.
 #    The agent runs as SYSTEM; two things have to work from that account or
 #    every install silently fails. We check each, repair only what is broken,
-#    verify, and never let a repair hiccup abort the agent install — the
+#    verify, and never let a repair hiccup abort the agent install - the
 #    portal's readiness banner reports anything that could not be fixed.
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Test-WingetWorks {
     # Resolve the real exe (the bare "winget" alias is not on SYSTEM's PATH),
-    # then prove it actually launches — a fresh VM often has it present but
+    # then prove it actually launches - a fresh VM often has it present but
     # crashing on load with -1073741515 (missing VC++/UWP dependency).
     $exe = Get-ChildItem "$env:ProgramFiles\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe\winget.exe" -ErrorAction SilentlyContinue |
         Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
@@ -70,8 +70,8 @@ function Test-WingetWorks {
     try { & $exe --version *> $null; return ($LASTEXITCODE -eq 0) } catch { return $false }
 }
 
-# 5a. Visual C++ desktop runtime. Many app installers (Chrome) — and winget
-#     itself — fail to launch without it: exit -1073741515 / 0xC0000135
+# 5a. Visual C++ desktop runtime. Many app installers (Chrome) - and winget
+#     itself - fail to launch without it: exit -1073741515 / 0xC0000135
 #     (STATUS_DLL_NOT_FOUND). The redist is idempotent (no-ops when current).
 try {
     Write-Host 'Ensuring Visual C++ runtime...'
@@ -143,12 +143,12 @@ New-Service -Name $serviceName `
 sc.exe failure $serviceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
 sc.exe failureflag $serviceName 1 | Out-Null
 
-# 7. Watchdog — the piece that keeps the agent alive no matter what.
+# 7. Watchdog - the piece that keeps the agent alive no matter what.
 #    Recovery actions only cover an unexpected exit; they do NOT restart a
 #    service someone STOPS by hand, or one left stopped by a bad update. A
 #    SYSTEM scheduled task every 2 minutes closes that gap: if the service is
 #    not running, it starts it. Stopping the agent therefore does nothing
-#    lasting — it is back within two minutes — without blocking the agent's
+#    lasting - it is back within two minutes - without blocking the agent's
 #    own controlled stops for self-update (the update helper restarts it far
 #    faster than the watchdog interval). This is exactly what would have kept
 #    a fleet of older agents from going dark.
@@ -161,13 +161,13 @@ schtasks.exe /Create /TN $watchdogName /TR $watchdogCmd /SC MINUTE /MO 2 /RU SYS
 # 8. Tray status indicator (per-user). The service runs as SYSTEM in
 #    session 0 and cannot draw UI, so a tiny PowerShell helper runs in each
 #    logged-in user's session, reads the status file the service writes, and
-#    shows a system-tray icon with agent health. Read-only — it changes
+#    shows a system-tray icon with agent health. Read-only - it changes
 #    nothing, it just lets the user see the agent is present and healthy.
 $trayDir = Join-Path $env:ProgramData 'PioDeploy'
 New-Item -ItemType Directory -Force $trayDir | Out-Null
 $trayScript = Join-Path $trayDir 'pio-tray.ps1'
 @'
-# PioDeploy tray helper — status only. Reads C:\ProgramData\PioDeploy\status.json.
+# PioDeploy tray helper - status only. Reads C:\ProgramData\PioDeploy\status.json.
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $ErrorActionPreference = 'SilentlyContinue'
 $statusPath = Join-Path $env:ProgramData 'PioDeploy\status.json'

@@ -2,7 +2,7 @@
         the machine's execution policy (often "Restricted") never blocks it, and
         nothing can run out of order. PowerShell, not HTML: interpolate raw; the
         service escapes. */ @endphp
-# PioDeploy agent — {!! $name !!} ({!! $company !!})
+# PioDeploy agent - {!! $name !!} ({!! $company !!})
 # Run in an ELEVATED PowerShell (Start menu -> right-click PowerShell ->
 # "Run as administrator"), then paste the ONE line below and press Enter.
 # It runs the installer in memory, so "running scripts is disabled" (execution

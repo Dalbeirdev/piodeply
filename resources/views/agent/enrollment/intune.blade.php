@@ -1,5 +1,5 @@
 <#
-    PioDeploy agent — Intune / Entra platform script
+    PioDeploy agent - Intune / Entra platform script
     Project: {!! $name !!} ({!! $company !!})
 
     HOW TO DEPLOY IT
@@ -52,7 +52,7 @@ try {
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    # Run the installer in memory, not from a saved .ps1 — a device on a
+    # Run the installer in memory, not from a saved .ps1 - a device on a
     # Restricted execution policy would refuse to run the file otherwise.
     $src = (Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing).Content
     & ([scriptblock]::Create($src)) -ApiKey $apiKey

@@ -2,7 +2,7 @@
         PowerShell, not HTML: interpolate raw and let the service make each
         value safe for the syntax it lands in. */ @endphp
 <#
-    PioDeploy agent — Group Policy computer startup script
+    PioDeploy agent - Group Policy computer startup script
     Project: {!! $name !!} ({!! $company !!})
 
     WHAT THIS DOES
@@ -25,7 +25,7 @@
 
     SAFE TO RUN EVERY BOOT
       It exits in milliseconds when the agent is already installed and at or
-      above {!! $minVersion !!}. It only acts when there is something to do —
+      above {!! $minVersion !!}. It only acts when there is something to do -
       a fresh install, or upgrading an agent left behind on an older build.
 
     Log: C:\Windows\Temp\PioDeploy-Enrollment.log
@@ -69,7 +69,7 @@ try {
     # Some Server builds still default to TLS 1.0, which the site rejects.
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-    # Run the installer in memory, not from a saved .ps1 — a domain machine on
+    # Run the installer in memory, not from a saved .ps1 - a domain machine on
     # a Restricted execution policy would refuse to run the file otherwise.
     $src = (Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing).Content
     & ([scriptblock]::Create($src)) -ApiKey $apiKey
