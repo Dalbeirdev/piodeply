@@ -367,21 +367,33 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-2.5 whitespace-nowrap">
-                                        @if ($item->hasUpdate())
-                                            @if ($item->source === 'winget' && $managedPackages->has($item->name))
-                                                @can('create', \App\Models\DeploymentJob::class)
+                                        @php $inFlight = $inFlightByWingetId[$item->name] ?? null; @endphp
+                                        @if ($inFlight)
+                                            {{-- A job is already queued/running for this app: show it,
+                                                 so a click reflects instantly and never double-queues. --}}
+                                            <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 border bg-blue-50 text-blue-700 border-blue-200">
+                                                <svg class="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+                                                {{ $inFlight === \App\Enums\JobStatus::Running ? 'Updating…' : 'Queued' }}
+                                            </span>
+                                        @elseif ($item->hasUpdate())
+                                            @can('create', \App\Models\DeploymentJob::class)
+                                                @if (in_array($item->source, ['winget', 'choco'], true))
+                                                    {{-- Clickable whether catalogued or not: an uncatalogued
+                                                         app is adopted into the catalogue on click, then updated. --}}
                                                     <button type="button" wire:click="queueUpdate({{ $item->id }})"
-                                                            class="inline-flex items-center text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 transition-colors"
-                                                            title="Queue an update to {{ $item->available_version }} on {{ $computer->hostname }}">
-                                                        Update now →
+                                                            wire:loading.attr="disabled" wire:target="queueUpdate({{ $item->id }})"
+                                                            class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 transition-colors disabled:opacity-60"
+                                                            title="{{ $managedPackages->has($item->name) ? 'Queue an update to '.$item->available_version : 'Add to your catalogue and update to '.$item->available_version }} on {{ $computer->hostname }}">
+                                                        <span wire:loading.remove wire:target="queueUpdate({{ $item->id }})">Update now →</span>
+                                                        <span wire:loading wire:target="queueUpdate({{ $item->id }})">Queuing…</span>
                                                     </button>
                                                 @else
-                                                    <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300">Update available</span>
-                                                @endcan
+                                                    <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300"
+                                                          title="No winget/Chocolatey id — cannot be managed automatically">Update available</span>
+                                                @endif
                                             @else
-                                                <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300"
-                                                      title="Not in the PioDeploy catalogue — add it as a package to manage updates">Update available</span>
-                                            @endif
+                                                <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-amber-50 text-amber-700 border-amber-300">Update available</span>
+                                            @endcan
                                         @else
                                             <span class="inline-flex text-xs font-semibold rounded-full px-3 py-1 border bg-green-50 text-green-700 border-green-300">Up to date</span>
                                         @endif

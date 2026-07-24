@@ -68,6 +68,95 @@ class UpdateAvailableTest extends TestCase
 
     /* ─────────── the model's own judgement ─────────── */
 
+    public function test_update_now_adopts_an_uncatalogued_app_then_queues_it(): void
+    {
+        // An outdated winget app the catalogue has never heard of.
+        ComputerSoftware::create([
+            'computer_id'       => $this->computer->id,
+            'name'              => 'Google.Chrome',
+            'version'           => '150.0.7871.182',
+            'available_version' => '150.0.7871.187',
+            'publisher'         => 'Google LLC',
+            'source'            => 'winget',
+        ]);
+        $this->assertDatabaseMissing('packages', ['winget_id' => 'Google.Chrome']);
+
+        Livewire::actingAs($this->admin())
+            ->test(ComputerShow::class, ['computer' => $this->computer])
+            ->call('queueUpdate', $this->computer->software()->first()->id);
+
+        // Adopted into the catalogue...
+        $package = Package::where('winget_id', 'Google.Chrome')->first();
+        $this->assertNotNull($package);
+        $this->assertSame('Google LLC', $package->vendor);
+        // ...and an update job queued in the same click.
+        $this->assertDatabaseHas('deployment_jobs', [
+            'computer_id' => $this->computer->id,
+            'package_id'  => $package->id,
+            'action'      => 'update',
+        ]);
+    }
+
+    public function test_update_now_refuses_software_with_no_manager_id(): void
+    {
+        // A control-panel entry with no winget/choco id cannot be managed.
+        ComputerSoftware::create([
+            'computer_id'       => $this->computer->id,
+            'name'              => 'Some Bespoke Tool',
+            'version'           => '1.0',
+            'available_version' => '2.0',
+            'source'            => 'inventory',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(ComputerShow::class, ['computer' => $this->computer])
+            ->call('queueUpdate', $this->computer->software()->first()->id);
+
+        $this->assertSame(0, Package::count());
+        $this->assertSame(0, \App\Models\DeploymentJob::count());
+    }
+
+    public function test_a_tenants_adopted_package_is_private_to_them(): void
+    {
+        $client = Client::factory()->create();
+        $computer = Computer::factory()->create([
+            'project_id' => \App\Models\Project::factory()->create(['client_id' => $client->id])->id,
+        ]);
+        ComputerSoftware::create([
+            'computer_id' => $computer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '139.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        Livewire::actingAs($owner)
+            ->test(ComputerShow::class, ['computer' => $computer])
+            ->call('queueUpdate', $computer->software()->first()->id);
+
+        $package = Package::where('winget_id', 'Mozilla.Firefox')->first();
+        $this->assertSame($client->id, $package->client_id, 'a customer adopts into their own private catalogue, not the shared one');
+    }
+
+    public function test_a_queued_update_shows_an_in_flight_state(): void
+    {
+        $package = Package::factory()->create(['winget_id' => 'Google.Chrome', 'name' => 'Google Chrome']);
+        ComputerSoftware::create([
+            'computer_id' => $this->computer->id, 'name' => 'Google.Chrome',
+            'version' => '150.0.7871.182', 'available_version' => '150.0.7871.187', 'source' => 'winget',
+        ]);
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $this->computer->id, 'package_id' => $package->id,
+            'action' => 'update', 'status' => \App\Enums\JobStatus::Pending,
+        ]);
+
+        // The row shows "Queued", not another "Update now" button that would
+        // double-queue.
+        Livewire::actingAs($this->admin())
+            ->test(ComputerShow::class, ['computer' => $this->computer])
+            ->assertSee('Queued')
+            ->assertDontSee('Update now');
+    }
+
     public function test_an_available_version_ahead_of_the_installed_one_is_an_update(): void
     {
         $this->assertTrue($this->installed('138.0.7615.129', '141.0.7390.55')->hasUpdate());
@@ -260,9 +349,10 @@ class UpdateAvailableTest extends TestCase
         $this->assertSame(1, \App\Models\DeploymentJob::count());
     }
 
-    public function test_update_now_on_an_uncatalogued_row_queues_nothing(): void
+    public function test_update_now_on_an_uncatalogued_winget_row_now_adopts_and_queues(): void
     {
-        // Outdated, but no matching package in the catalogue.
+        // Behaviour changed: an uncatalogued winget app is no longer a dead
+        // end — Update now adopts it into the catalogue and queues the job.
         $row = ComputerSoftware::factory()->create([
             'computer_id' => $this->computer->id, 'name' => 'Some.RandomApp',
             'version' => '1.0', 'available_version' => '2.0', 'source' => 'winget',
@@ -272,6 +362,7 @@ class UpdateAvailableTest extends TestCase
             ->set('softwareFilter', 'all')
             ->call('queueUpdate', $row->id);
 
-        $this->assertSame(0, \App\Models\DeploymentJob::count());
+        $this->assertSame(1, Package::where('winget_id', 'Some.RandomApp')->count());
+        $this->assertSame(1, \App\Models\DeploymentJob::where('action', 'update')->count());
     }
 }

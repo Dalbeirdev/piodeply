@@ -31,9 +31,10 @@ class ComputerShow extends Component
     }
 
     /**
-     * One-click "Update now" from the software table: queues an update job
-     * for the catalogue package behind an outdated winget row, through the
-     * same guarded path as the deploy form.
+     * One-click "Update now" from the software table. If the app is not yet
+     * in the catalogue, it is added on the spot (from the winget id the
+     * machine reported) and then updated — so an operator never has to leave
+     * this page to start managing a piece of software they can see.
      */
     public function queueUpdate(int $softwareId, \App\Services\DeploymentService $deployments): void
     {
@@ -46,10 +47,18 @@ class ComputerShow extends Component
             ->where('winget_id', $item->name)
             ->first();
 
+        // Not in the catalogue yet — add it. Only winget/choco apps can be
+        // adopted this way (their id resolves an installer); a bare
+        // inventory entry with no manager id cannot be managed.
         if ($package === null) {
-            session()->flash('status', "{$item->name} is not in the catalogue — add it as a package to manage its updates.");
+            if (! in_array($item->source, ['winget', 'choco'], true)) {
+                session()->flash('status', "{$item->name} has no winget/Chocolatey id, so PioDeploy cannot manage its updates. Add it as a package manually.");
 
-            return;
+                return;
+            }
+
+            $package = $this->adoptPackage($item);
+            session()->flash('status', "{$item->name} added to your catalogue — updating now.");
         }
 
         $result = $deployments->queueIfNeeded(
@@ -59,7 +68,42 @@ class ComputerShow extends Component
             createdBy: auth()->id(),
         );
 
-        session()->flash('status', $result->message);
+        if ($package->wasRecentlyCreated === false) {
+            session()->flash('status', $result->message);
+        }
+    }
+
+    /**
+     * Turns a reported software row into a managed catalogue package. Named
+     * after what it does — adopts an app the machine already runs into
+     * PioDeploy's management. Private to the client whose machine reported
+     * it when the operator is a tenant, so one customer's adoption never
+     * lands in the shared catalogue.
+     */
+    private function adoptPackage(\App\Models\ComputerSoftware $item): \App\Models\Package
+    {
+        $isWinget = $item->source === 'winget';
+
+        $slug = \Illuminate\Support\Str::slug($item->name);
+        if (\App\Models\Package::where('slug', $slug)->exists()) {
+            $slug .= '-'.\Illuminate\Support\Str::lower(\Illuminate\Support\Str::random(4));
+        }
+
+        return \App\Models\Package::create([
+            'package_category_id' => \App\Models\PackageCategory::firstOrCreate(
+                ['slug' => 'general'], ['name' => 'General', 'sort_order' => 99]
+            )->id,
+            // A tenant's adoption is private to their own client; staff
+            // adopt into the shared catalogue.
+            'client_id'      => auth()->user()->tenantClientId(),
+            'name'           => $item->name,
+            'slug'           => $slug,
+            'vendor'         => $item->publisher,
+            'installer_type' => $isWinget ? \App\Enums\InstallerType::Winget : \App\Enums\InstallerType::Choco,
+            'winget_id'      => $isWinget ? $item->name : null,
+            'choco_id'       => $isWinget ? null : $item->name,
+            'is_active'      => true,
+        ]);
     }
 
     /**
@@ -174,6 +218,20 @@ class ComputerShow extends Component
             ->filter(fn (int $packageId) => $deployedPackageIds->contains($packageId))
             ->keys();
 
+        // winget id -> the current in-flight action for that package on this
+        // machine, so the Status column can say "Queued" or "Updating…" the
+        // instant a job is queued, instead of the operator wondering whether
+        // the click landed.
+        $inFlightByWingetId = DeploymentJob::query()
+            ->where('computer_id', $this->computer->id)
+            ->whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])
+            ->whereIn('package_id', $managedPackages->values())
+            ->get(['package_id', 'status'])
+            ->keyBy('package_id')
+            // Flip package_id -> winget_id so the blade can look it up by the
+            // software row's name.
+            ->mapWithKeys(fn ($job) => [$managedPackages->search($job->package_id) => $job->status]);
+
         return view('livewire.computers.computer-show', [
             'health' => $this->healthChecks(),
             'readinessIssues' => app(\App\Services\ReadinessService::class)->issues($this->computer),
@@ -227,6 +285,7 @@ class ComputerShow extends Component
                 ->get(),
             'managedPackages' => $managedPackages,
             'deployedNames'   => $deployedNames,
+            'inFlightByWingetId' => $inFlightByWingetId,
             'browserPolicyRows' => \App\Models\BrowserPolicy::query()
                 ->where('project_id', $this->computer->project_id)
                 ->where('status', 'active')
