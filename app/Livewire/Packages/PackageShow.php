@@ -159,7 +159,16 @@ class PackageShow extends Component
 
     public function render()
     {
-        $jobs = DeploymentJob::where('package_id', $this->package->id);
+        // A customer's package page reports on THEIR fleet: the stats and
+        // recent-deployments list must not count another tenant's machines.
+        $tenantId = auth()->user()->tenantClientId();
+        $allowed = auth()->user()->visibleProjectIds();
+        $scopeToFleet = fn ($q) => $q->when($tenantId !== null || $allowed !== null, fn ($qq) => $qq
+            ->whereHas('computer.project', fn ($p) => $p
+                ->when($tenantId !== null, fn ($pp) => $pp->where('client_id', $tenantId))
+                ->when($allowed !== null, fn ($pp) => $pp->whereIn('projects.id', $allowed))));
+
+        $jobs = DeploymentJob::where('package_id', $this->package->id)->tap($scopeToFleet);
 
         $stats = [
             'installed_on' => (clone $jobs)->where('status', JobStatus::Succeeded)
@@ -174,9 +183,10 @@ class PackageShow extends Component
             'stats'      => $stats,
             'recentJobs' => DeploymentJob::with('computer')
                 ->where('package_id', $this->package->id)
+                ->tap($scopeToFleet)
                 ->orderByDesc('id')->limit(8)->get(),
             'computers'  => auth()->user()->can('create', DeploymentJob::class)
-                ? Computer::orderBy('hostname')->get(['id', 'hostname'])
+                ? Computer::visibleTo(auth()->user())->orderBy('hostname')->get(['id', 'hostname'])
                 : collect(),
             'actions'    => JobAction::cases(),
             'fleet'      => $this->fleetVersions(),

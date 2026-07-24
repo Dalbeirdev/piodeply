@@ -54,6 +54,21 @@ class Project extends Model
         return $this->hasMany(SoftwarePolicy::class);
     }
 
+    /**
+     * The projects a user may see in a picker: staff see all; a tenant sees
+     * their own client's, further narrowed to any projects a technician is
+     * explicitly confined to. One definition, so no dropdown can forget it.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        $tenantId = $user->tenantClientId();
+        $allowed = $user->visibleProjectIds();
+
+        return $query
+            ->when($tenantId !== null, fn (Builder $q) => $q->where('client_id', $tenantId))
+            ->when($allowed !== null, fn (Builder $q) => $q->whereIn('id', $allowed));
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(fn (Builder $q) => $q

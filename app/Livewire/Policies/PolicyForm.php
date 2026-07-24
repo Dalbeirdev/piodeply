@@ -113,10 +113,20 @@ class PolicyForm extends Component
         $action = PolicyAction::from($validated['action']);
         $package = Package::findOrFail($validated['package_id']);
 
+        // Tenancy: the project must be one this user may actually touch —
+        // hiding it from the dropdown is presentation, refusing the id is
+        // the boundary. A tenant policy for another client's project is
+        // never created.
+        $targetProject = Project::visibleTo(auth()->user())->find($validated['project_id']);
+        if ($targetProject === null) {
+            $this->addError('project_id', 'That project is not one you can manage.');
+
+            return null;
+        }
+
         // A private package only ever governs its own client's projects —
         // the deploy funnel enforces this too, but failing here is a form
         // error instead of a queued job that can never run.
-        $targetProject = \App\Models\Project::findOrFail($validated['project_id']);
         if (! $package->isUsableFor($targetProject)) {
             $this->addError('package_id', "\"{$package->name}\" is private to another client and cannot be used for this project.");
 
@@ -184,7 +194,7 @@ class PolicyForm extends Component
     public function render()
     {
         return view('livewire.policies.policy-form', [
-            'projects'     => Project::orderBy('name')->get(['id', 'name']),
+            'projects'     => Project::visibleTo(auth()->user())->orderBy('name')->get(['id', 'name']),
             'packages'     => Package::active()->visibleTo(auth()->user())->orderBy('name')->get(['id', 'name', 'installer_type']),
             'actions'      => PolicyAction::cases(),
             'modes'        => PolicyMode::cases(),

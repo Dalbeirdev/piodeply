@@ -96,7 +96,7 @@ class ComputerGroups extends Component
                 ->with(['computers' => fn ($q) => $q->orderBy('hostname')->with('project.client')])
                 ->orderBy('name')
                 ->get(),
-            'available' => Computer::orderBy('hostname')->get(['id', 'hostname']),
+            'available' => Computer::visibleTo(auth()->user())->orderBy('hostname')->get(['id', 'hostname']),
             'canManage' => auth()->user()->can(Permission::ComputersManage->value),
         ])->layout('layouts.app');
     }

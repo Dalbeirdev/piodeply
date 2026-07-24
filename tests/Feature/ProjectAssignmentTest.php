@@ -88,6 +88,36 @@ class ProjectAssignmentTest extends TestCase
         $this->assertNull($this->tech->fresh()->visibleProjectIds());
     }
 
+    public function test_pickers_and_forms_only_offer_a_tenants_own_projects(): void
+    {
+        $mine = \App\Models\Project::factory()->create(['client_id' => $this->client->id, 'name' => 'My Only Project']);
+        $foreign = \App\Models\Project::factory()->create(['name' => 'ROBOTEK Secret']);
+        $owner = tap(User::factory()->create(['client_id' => $this->client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        // Software policy form: the dropdown is their own projects only.
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Policies\PolicyForm::class)
+            ->assertSee('My Only Project')
+            ->assertDontSee('ROBOTEK Secret');
+
+        // And a smuggled foreign project id is refused server-side.
+        $package = \App\Models\Package::factory()->create(['winget_id' => 'Test.App']);
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Policies\PolicyForm::class)
+            ->set('project_id', $foreign->id)
+            ->set('package_id', $package->id)
+            ->call('save')
+            ->assertHasErrors('project_id');
+        $this->assertDatabaseMissing('software_policies', ['project_id' => $foreign->id]);
+
+        // The Project::visibleTo scope itself, used by every picker.
+        $visible = \App\Models\Project::visibleTo($owner)->pluck('id');
+        $this->assertTrue($visible->contains($mine->id));
+        $this->assertTrue($visible->contains($this->projectA->id), 'same-client projects are visible');
+        $this->assertFalse($visible->contains($foreign->id), "another client's project never is");
+    }
+
     public function test_owners_can_never_be_confined(): void
     {
         $owner = tap(User::factory()->create(['client_id' => $this->client->id]),

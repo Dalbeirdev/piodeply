@@ -139,6 +139,25 @@ class Computer extends Model
             ->where('agent_version', '!=', self::latestAgentVersion());
     }
 
+    /**
+     * The machines a user may see in a picker: staff see all; a tenant sees
+     * only machines in their own client's projects, narrowed to any
+     * projects a technician is confined to.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        $tenantId = $user->tenantClientId();
+        $allowed = $user->visibleProjectIds();
+
+        return $query
+            ->when($tenantId !== null || $allowed !== null, fn (Builder $q) => $q->whereHas(
+                'project',
+                fn ($p) => $p
+                    ->when($tenantId !== null, fn ($pp) => $pp->where('client_id', $tenantId))
+                    ->when($allowed !== null, fn ($pp) => $pp->whereIn('projects.id', $allowed))
+            ));
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(fn (Builder $q) => $q

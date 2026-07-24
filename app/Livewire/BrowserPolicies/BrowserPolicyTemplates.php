@@ -154,7 +154,7 @@ class BrowserPolicyTemplates extends Component
     {
         return view('livewire.browser-policies.browser-policy-templates', [
             'templates' => $templates->all(),
-            'projects'  => Project::orderBy('name')->get(['id', 'name']),
+            'projects'  => Project::visibleTo(auth()->user())->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app');
     }
 }

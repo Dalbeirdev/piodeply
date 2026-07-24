@@ -164,9 +164,9 @@ class BrowserPolicyForm extends Component
         return view('livewire.browser-policies.browser-policy-form', [
             'scopeOptions' => match ($this->scope_type) {
                 'client'   => Client::orderBy('company_name')->get(['id', 'company_name'])->map(fn ($c) => ['id' => $c->id, 'label' => $c->company_name]),
-                'project'  => Project::orderBy('name')->get(['id', 'name'])->map(fn ($p) => ['id' => $p->id, 'label' => $p->name]),
+                'project'  => Project::visibleTo(auth()->user())->orderBy('name')->get(['id', 'name'])->map(fn ($p) => ['id' => $p->id, 'label' => $p->name]),
                 'group'    => ComputerGroup::orderBy('name')->get(['id', 'name'])->map(fn ($g) => ['id' => $g->id, 'label' => $g->name]),
-                'computer' => Computer::orderBy('hostname')->get(['id', 'hostname'])->map(fn ($c) => ['id' => $c->id, 'label' => $c->hostname]),
+                'computer' => Computer::visibleTo(auth()->user())->orderBy('hostname')->get(['id', 'hostname'])->map(fn ($c) => ['id' => $c->id, 'label' => $c->hostname]),
                 default    => collect(),
             },
             'typesByCategory' => BrowserPolicyType::byCategory(),
