@@ -1,13 +1,15 @@
 #requires -RunAsAdministrator
-# Recovery + one-time hop onto agent 1.4.15 (the detached-pipe fix: the
-# update helper no longer holds std pipes to the dying service, so it can
-# no longer be killed mid-swap by a broken-pipe write).
-# Also repairs a machine left dark by the 1.4.13 hang: stray helper killed,
-# watchdog re-enabled, stale staging removed, service started.
+# Recovery + one-time hop onto agent 1.4.17 (the schtasks fix: the update
+# helper's generated script now routes every schtasks call through
+# cmd.exe /c, so a machine with NO watchdog task - anything enrolled
+# before 1.4.9 - can no longer kill the helper with a terminating
+# NativeCommandError right after "Helper started").
+# Also repairs a machine left mid-swap: stray helper killed, watchdog
+# re-enabled if present, stale staging removed, service started.
 # Preserves appsettings.json (the machine's real config) - only code changes.
 # KEEP THIS FILE PURE ASCII - PowerShell 5.1 misparses fancy punctuation.
 $ErrorActionPreference = 'Stop'
-$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.15'
+$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.17'
 $dst = 'C:\Program Files\PioDeploy\Agent'
 
 if (-not (Test-Path "$src\PioDeployAgent.dll")) { throw "Build not found at $src - run dotnet publish first." }
@@ -37,9 +39,14 @@ Get-ChildItem $src -Recurse -File | Where-Object { $_.Name -notlike 'appsettings
 Remove-Item 'C:\ProgramData\PioDeploy\update\staging' -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item 'C:\ProgramData\PioDeploy\update\PioDeployAgent.zip' -Force -ErrorAction SilentlyContinue
 
-# 5. Re-enable the watchdog the failed helper left disabled.
-schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null | Out-Null
-Write-Host "Watchdog re-enabled."
+# 5. Re-enable the watchdog the failed helper left disabled. Via cmd /c so
+# a missing task (machines enrolled before the watchdog existed) cannot
+# throw: under ErrorActionPreference=Stop, PS 5.1 turns a native command's
+# redirected stderr into a TERMINATING error - which once aborted this very
+# script right before Start-Service, leaving the machine down.
+cmd.exe /c "schtasks /Change /TN PioDeployAgentWatchdog /ENABLE >nul 2>&1"
+if ($LASTEXITCODE -eq 0) { Write-Host "Watchdog re-enabled." }
+else { Write-Host "No watchdog task on this machine (pre-1.4.9 enrolment) - skipping." }
 
 # 6. Start the service and verify.
 Start-Service PioDeployAgent

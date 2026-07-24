@@ -129,10 +129,11 @@ Log "Uninstall helper started (waiting for the agent to exit)"
 Start-Sleep -Seconds 8
 
 # Kill the watchdog first, or it restarts the service we are removing.
-# Out-Null everywhere: a detached helper must never write to stdout.
-schtasks.exe /Delete /TN PioDeployAgentWatchdog /F 2>$null | Out-Null
+# cmd.exe /c everywhere: a detached helper must never emit host output,
+# and a missing task must be a no-op, never a script-killing error.
+cmd.exe /c "schtasks /Delete /TN PioDeployAgentWatchdog /F >nul 2>&1"
 # And the per-user tray helper.
-schtasks.exe /Delete /TN PioDeployAgentTray /F 2>$null | Out-Null
+cmd.exe /c "schtasks /Delete /TN PioDeployAgentTray /F >nul 2>&1"
 
 Log "Stopping and deleting $svc"
 Stop-Service $svc -Force
@@ -145,10 +146,10 @@ Remove-Item $install -Recurse -Force
 Log "Removing $state"
 Remove-Item $state -Recurse -Force
 
-schtasks.exe /Delete /TN PioDeployAgentSelfUpdate /F 2>$null | Out-Null
+cmd.exe /c "schtasks /Delete /TN PioDeployAgentSelfUpdate /F >nul 2>&1"
 Log "Agent removed"
 # Last: unregister the task running this very script.
-schtasks.exe /Delete /TN PioDeployAgentUninstall /F 2>$null | Out-Null
+cmd.exe /c "schtasks /Delete /TN PioDeployAgentUninstall /F >nul 2>&1"
 """;
     }
 
@@ -182,10 +183,15 @@ Start-Sleep -Seconds 8
 # Hold the watchdog off for the swap: it restarts a stopped service every
 # two minutes, which would relaunch the old agent mid-copy. Disabled now,
 # re-enabled in both the success and rollback paths so the machine is never
-# left without its keep-alive. Out-Null on purpose: the helper must never
-# write to stdout - it runs detached with no console, and host output is
-# exactly what once killed a helper mid-swap (broken pipe to a dead parent).
-schtasks.exe /Change /TN PioDeployAgentWatchdog /DISABLE 2>$null | Out-Null
+# left without its keep-alive. Via cmd.exe /c on purpose, twice over: the
+# helper must never emit host output (a stdout write once killed a helper
+# holding pipes to its dead parent), and under ErrorActionPreference=Stop
+# PowerShell 5.1 turns a native command's redirected stderr into a
+# TERMINATING error - on a machine with no watchdog task (anything
+# enrolled before 1.4.9), a bare schtasks call here killed the helper
+# right after "Helper started", before the try block. cmd absorbs both
+# streams and the exit code, so a missing task is simply a no-op.
+cmd.exe /c "schtasks /Change /TN PioDeployAgentWatchdog /DISABLE >nul 2>&1"
 
 try {
     Log "Stopping $svc"
@@ -212,10 +218,10 @@ try {
     }
     Log "Update applied and service running"
     Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
-    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null | Out-Null
+    cmd.exe /c "schtasks /Change /TN PioDeployAgentWatchdog /ENABLE >nul 2>&1"
 }
 catch {
-    schtasks.exe /Change /TN PioDeployAgentWatchdog /ENABLE 2>$null | Out-Null
+    cmd.exe /c "schtasks /Change /TN PioDeployAgentWatchdog /ENABLE >nul 2>&1"
     Log "FAILED: $($_.Exception.Message) - rolling back"
     try {
         Stop-Service $svc -Force -ErrorAction SilentlyContinue

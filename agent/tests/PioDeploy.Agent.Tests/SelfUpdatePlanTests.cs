@@ -124,6 +124,29 @@ public class SelfUpdatePlanTests
     }
 
     [Fact]
+    public void GeneratedScriptsNeverCallNativeCommandsBare()
+    {
+        // Under $ErrorActionPreference='Stop', PowerShell 5.1 turns a native
+        // command's redirected stderr into a TERMINATING error. On machines
+        // with no watchdog task (anything enrolled before 1.4.9), a bare
+        // "schtasks ... 2>$null" killed the helper right after its first log
+        // line - service down, nothing swapped. Every native schtasks call
+        // must go through cmd.exe /c, which absorbs both streams and the
+        // exit code so a missing task is a no-op.
+        var swap = SelfUpdater.BuildSwapScript(@"C:\s", @"C:\i", @"C:\r");
+        var uninstall = SelfUpdater.BuildUninstallScript(@"C:\i");
+
+        foreach (var script in new[] { swap, uninstall })
+        {
+            Assert.DoesNotContain("schtasks.exe", script);
+            Assert.DoesNotContain("2>$null", script);
+        }
+
+        Assert.Contains("cmd.exe /c \"schtasks", swap);
+        Assert.Contains("cmd.exe /c \"schtasks", uninstall);
+    }
+
+    [Fact]
     public void GeneratedScriptsArePureAscii()
     {
         // THE bug that stranded the whole fleet: an em-dash inside a string,
