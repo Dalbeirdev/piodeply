@@ -103,6 +103,11 @@ public sealed class Worker : BackgroundService
                         _logger.LogInformation("{Jobs} job(s) pending on server", response.PendingJobs);
                         await ProcessJobsAsync(stoppingToken);
                     }
+
+                    // Leave a status crumb the user-session tray helper reads.
+                    // The service runs in session 0 and cannot draw UI itself;
+                    // this file is the whole contract between it and the tray.
+                    WriteStatus(response.PendingJobs, latest: response.LatestAgentVersion);
                 }
                 else
                 {
@@ -436,6 +441,34 @@ public sealed class Worker : BackgroundService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Software inventory collection failed; will retry next cycle");
+        }
+    }
+
+    /// <summary>Writes the status file the tray helper reads. Best-effort:
+    /// a failure here must never disturb the heartbeat loop.</summary>
+    private void WriteStatus(int pendingJobs, string? latest)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PioDeploy");
+            Directory.CreateDirectory(dir);
+
+            // Hand-rolled JSON (no serializer dependency, no reflection under
+            // trimming): four flat fields the tray reads by name.
+            var json =
+                "{\n" +
+                $"  \"version\": \"{AgentVersion}\",\n" +
+                $"  \"latest\": \"{latest ?? AgentVersion}\",\n" +
+                $"  \"pending_jobs\": {pendingJobs},\n" +
+                $"  \"checked_in_utc\": \"{DateTime.UtcNow:o}\"\n" +
+                "}\n";
+
+            File.WriteAllText(Path.Combine(dir, "status.json"), json);
+        }
+        catch
+        {
+            // No status crumb is a cosmetic loss, never a functional one.
         }
     }
 

@@ -120,6 +120,8 @@ Start-Sleep -Seconds 8
 
 # Kill the watchdog first, or it restarts the service we are removing.
 schtasks.exe /Delete /TN PioDeployAgentWatchdog /F 2>$null
+# And the per-user tray helper.
+schtasks.exe /Delete /TN PioDeployAgentTray /F 2>$null
 
 Log "Stopping and deleting $svc"
 Stop-Service $svc -Force

@@ -158,6 +158,68 @@ $watchdogCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle 
 schtasks.exe /Delete /TN $watchdogName /F 2>$null | Out-Null
 schtasks.exe /Create /TN $watchdogName /TR $watchdogCmd /SC MINUTE /MO 2 /RU SYSTEM /RL HIGHEST /F | Out-Null
 
+# 8. Tray status indicator (per-user). The service runs as SYSTEM in
+#    session 0 and cannot draw UI, so a tiny PowerShell helper runs in each
+#    logged-in user's session, reads the status file the service writes, and
+#    shows a system-tray icon with agent health. Read-only — it changes
+#    nothing, it just lets the user see the agent is present and healthy.
+$trayDir = Join-Path $env:ProgramData 'PioDeploy'
+New-Item -ItemType Directory -Force $trayDir | Out-Null
+$trayScript = Join-Path $trayDir 'pio-tray.ps1'
+@'
+# PioDeploy tray helper — status only. Reads C:\ProgramData\PioDeploy\status.json.
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+$ErrorActionPreference = 'SilentlyContinue'
+$statusPath = Join-Path $env:ProgramData 'PioDeploy\status.json'
+
+$ni = New-Object System.Windows.Forms.NotifyIcon
+$ni.Icon = [System.Drawing.SystemIcons]::Shield
+$ni.Text = 'PioDeploy Agent'
+$ni.Visible = $true
+$menu = New-Object System.Windows.Forms.ContextMenuStrip
+$miStatus  = $menu.Items.Add('Checking...'); $miStatus.Enabled = $false
+$miVersion = $menu.Items.Add('');            $miVersion.Enabled = $false
+$miSeen    = $menu.Items.Add('');            $miSeen.Enabled = $false
+$miPending = $menu.Items.Add('');            $miPending.Enabled = $false
+$menu.Items.Add('-') | Out-Null
+$miLogs = $menu.Items.Add('Open logs folder')
+$miLogs.add_Click({ Start-Process (Join-Path $env:ProgramData 'PioDeploy\logs') })
+$ni.ContextMenuStrip = $menu
+
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = 30000
+$refresh = {
+    try {
+        if (Test-Path $statusPath) {
+            $s = Get-Content $statusPath -Raw | ConvertFrom-Json
+            $seen = [datetime]::Parse($s.checked_in_utc).ToUniversalTime()
+            $mins = [math]::Round(([datetime]::UtcNow - $seen).TotalMinutes)
+            $online = $mins -lt 5
+            $miStatus.Text  = if ($online) { 'Status: Online' } else { 'Status: Offline' }
+            $miVersion.Text = "Version: $($s.version)" + $(if ($s.latest -and $s.latest -ne $s.version) { " (updating to $($s.latest))" } else { '' })
+            $miSeen.Text    = "Last check-in: $mins min ago"
+            $miPending.Text = "Pending updates: $($s.pending_jobs)"
+            $ni.Text = "PioDeploy Agent - " + $(if ($online) { "online, v$($s.version)" } else { 'offline' })
+        } else {
+            $miStatus.Text = 'Status: starting...'; $ni.Text = 'PioDeploy Agent'
+        }
+    } catch { $miStatus.Text = 'Status: unknown' }
+}
+& $refresh
+$timer.add_Tick($refresh)
+$timer.Start()
+$ctx = New-Object System.Windows.Forms.ApplicationContext
+[System.Windows.Forms.Application]::Run($ctx)
+'@ | Set-Content $trayScript -Encoding UTF8
+
+$trayTask = 'PioDeployAgentTray'
+$trayCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayScript`""
+schtasks.exe /Delete /TN $trayTask /F 2>$null | Out-Null
+# /RU Users + ONLOGON: runs in whichever user logs on, in their session.
+schtasks.exe /Create /TN $trayTask /TR $trayCmd /SC ONLOGON /RU Users /RL LIMITED /F | Out-Null
+# Start it now for the user running the installer, without waiting for a re-login.
+schtasks.exe /Run /TN $trayTask 2>$null | Out-Null
+
 Start-Service $serviceName
 
 Write-Host 'PioDeploy agent installed and started (with self-healing watchdog).'

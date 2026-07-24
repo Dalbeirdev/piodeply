@@ -275,6 +275,22 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertStringContainsString('sc.exe failure', $script);
     }
 
+    public function test_the_installer_sets_up_the_status_tray_helper(): void
+    {
+        $script = view('agent.install-script', [
+            'project'   => $this->project,
+            'serverUrl' => 'https://piodeploy.com',
+            'binaryUrl' => 'https://piodeploy.com/download/agent/x/binary',
+            'hasBundle' => true,
+        ])->render();
+
+        // The per-user tray, launched at logon, reading the service's status.
+        $this->assertStringContainsString('PioDeployAgentTray', $script);
+        $this->assertStringContainsString('/SC ONLOGON', $script);
+        $this->assertStringContainsString('pio-tray.ps1', $script);
+        $this->assertStringContainsString('NotifyIcon', $script);
+    }
+
     public function test_switching_method_changes_the_script_shown(): void
     {
         $this->page()
