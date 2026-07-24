@@ -173,7 +173,18 @@ $ErrorActionPreference = 'SilentlyContinue'
 $statusPath = Join-Path $env:ProgramData 'PioDeploy\status.json'
 
 $ni = New-Object System.Windows.Forms.NotifyIcon
+# Brand icon: pio.ico ships in the agent bundle; fall back to the exe's
+# embedded icon, then to a stock shield, so the tray never fails to show.
 $ni.Icon = [System.Drawing.SystemIcons]::Shield
+foreach ($cand in @(
+    (Join-Path $env:ProgramFiles 'PioDeploy\Agent\pio.ico'),
+    (Join-Path $env:ProgramData  'PioDeploy\pio.ico'))) {
+    if (Test-Path $cand) { try { $ni.Icon = New-Object System.Drawing.Icon($cand, 16, 16); break } catch {} }
+}
+if ($ni.Icon -eq [System.Drawing.SystemIcons]::Shield) {
+    $exe = Join-Path $env:ProgramFiles 'PioDeploy\Agent\PioDeployAgent.exe'
+    if (Test-Path $exe) { try { $ni.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe) } catch {} }
+}
 $ni.Text = 'PioDeploy Agent'
 $ni.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
