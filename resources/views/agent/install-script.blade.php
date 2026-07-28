@@ -170,6 +170,13 @@ New-Item -ItemType Directory -Force $trayDir | Out-Null
 $trayScript = Join-Path $trayDir 'pio-tray.ps1'
 @'
 # PioDeploy tray helper - status only. Reads C:\ProgramData\PioDeploy\status.json.
+# Crash log: %ProgramData%\PioDeploy\logs\tray.log (why-did-it-die evidence).
+$trayLog = Join-Path $env:ProgramData 'PioDeploy\logs\tray.log'
+try {
+"$(Get-Date -Format s)  tray starting (pid $PID)" | Out-File $trayLog -Append -Encoding utf8
+# At logon the taskbar may not exist yet; a NotifyIcon created too early
+# never shows. Give explorer a moment before creating the icon.
+Start-Sleep -Seconds 8
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $ErrorActionPreference = 'SilentlyContinue'
 $statusPath = Join-Path $env:ProgramData 'PioDeploy\status.json'
@@ -223,6 +230,10 @@ $timer.add_Tick($refresh)
 $timer.Start()
 $ctx = New-Object System.Windows.Forms.ApplicationContext
 [System.Windows.Forms.Application]::Run($ctx)
+"$(Get-Date -Format s)  tray exited normally" | Out-File $trayLog -Append -Encoding utf8
+} catch {
+"$(Get-Date -Format s)  tray CRASHED: $($_.Exception.Message)" | Out-File $trayLog -Append -Encoding utf8
+}
 '@ | Set-Content $trayScript -Encoding UTF8
 
 $trayTask = 'PioDeployAgentTray'
