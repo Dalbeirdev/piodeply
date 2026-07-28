@@ -1,15 +1,16 @@
 #requires -RunAsAdministrator
-# Recovery + one-time hop onto agent 1.4.17 (the schtasks fix: the update
-# helper's generated script now routes every schtasks call through
-# cmd.exe /c, so a machine with NO watchdog task - anything enrolled
-# before 1.4.9 - can no longer kill the helper with a terminating
-# NativeCommandError right after "Helper started").
-# Also repairs a machine left mid-swap: stray helper killed, watchdog
-# re-enabled if present, stale staging removed, service started.
+# Recovery + one-time hop onto the CURRENT agent build (1.4.19: all four
+# self-update fixes - script encoding, detached pipes, cmd.exe /c schtasks,
+# retry latch - plus the brand icon).
+# NORMAL machines never need this: they self-update from the server. Use it
+# only to rescue a machine whose agent is too old or broken to update
+# itself, when the portal's re-enrol one-liner is not convenient.
+# Repairs a machine left mid-swap: stray helper killed, watchdog re-enabled
+# if present, stale staging removed, service started.
 # Preserves appsettings.json (the machine's real config) - only code changes.
 # KEEP THIS FILE PURE ASCII - PowerShell 5.1 misparses fancy punctuation.
 $ErrorActionPreference = 'Stop'
-$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.17'
+$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.19'
 $dst = 'C:\Program Files\PioDeploy\Agent'
 
 if (-not (Test-Path "$src\PioDeployAgent.dll")) { throw "Build not found at $src - run dotnet publish first." }
