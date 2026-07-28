@@ -132,8 +132,13 @@ Start-Sleep -Seconds 8
 # cmd.exe /c everywhere: a detached helper must never emit host output,
 # and a missing task must be a no-op, never a script-killing error.
 cmd.exe /c "schtasks /Delete /TN PioDeployAgentWatchdog /F >nul 2>&1"
-# And the per-user tray helper.
+# And the per-user tray helper: both tasks, then any running copy - the
+# keeper would otherwise resurrect the icon on a machine with no agent.
 cmd.exe /c "schtasks /Delete /TN PioDeployAgentTray /F >nul 2>&1"
+cmd.exe /c "schtasks /Delete /TN PioDeployAgentTrayKeeper /F >nul 2>&1"
+Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
+    Where-Object { $_.CommandLine -like '*pio-tray*' } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 
 Log "Stopping and deleting $svc"
 Stop-Service $svc -Force

@@ -172,6 +172,10 @@ $trayScript = Join-Path $trayDir 'pio-tray.ps1'
 # PioDeploy tray helper - status only. Reads C:\ProgramData\PioDeploy\status.json.
 # Crash log: %ProgramData%\PioDeploy\logs\tray.log (why-did-it-die evidence).
 $trayLog = Join-Path $env:ProgramData 'PioDeploy\logs\tray.log'
+# Single instance per session: the keeper task fires every few minutes and
+# must be a silent no-op when the tray is already up (else: duplicate icons).
+$script:pioMutex = New-Object System.Threading.Mutex($false, 'Local\PioDeployTray')
+if (-not $script:pioMutex.WaitOne(0)) { exit }
 try {
 "$(Get-Date -Format s)  tray starting (pid $PID)" | Out-File $trayLog -Append -Encoding utf8
 # At logon the taskbar may not exist yet; a NotifyIcon created too early
@@ -236,13 +240,23 @@ $ctx = New-Object System.Windows.Forms.ApplicationContext
 }
 '@ | Set-Content $trayScript -Encoding UTF8
 
+# NO quotes inside /TR (the path has no spaces): schtasks mangles embedded
+# quotes and silently refuses the task - the same bug that once left the
+# watchdog unregistered. Exit codes are checked, not swallowed.
+$trayCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $trayScript"
 $trayTask = 'PioDeployAgentTray'
-$trayCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$trayScript`""
-schtasks.exe /Delete /TN $trayTask /F 2>$null | Out-Null
+cmd.exe /c "schtasks /Delete /TN $trayTask /F >nul 2>&1"
 # /RU Users + ONLOGON: runs in whichever user logs on, in their session.
 schtasks.exe /Create /TN $trayTask /TR $trayCmd /SC ONLOGON /RU Users /RL LIMITED /F | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Warning "Tray logon task not created (schtasks exit $LASTEXITCODE)." }
+# Keeper: every 5 minutes, relaunch the tray if someone closed it. The
+# mutex inside pio-tray.ps1 makes this a no-op while the tray is running.
+$keeperTask = 'PioDeployAgentTrayKeeper'
+cmd.exe /c "schtasks /Delete /TN $keeperTask /F >nul 2>&1"
+schtasks.exe /Create /TN $keeperTask /TR $trayCmd /SC MINUTE /MO 5 /RU Users /RL LIMITED /F | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Warning "Tray keeper task not created (schtasks exit $LASTEXITCODE)." }
 # Start it now for the user running the installer, without waiting for a re-login.
-schtasks.exe /Run /TN $trayTask 2>$null | Out-Null
+cmd.exe /c "schtasks /Run /TN $trayTask >nul 2>&1"
 
 Start-Service $serviceName
 

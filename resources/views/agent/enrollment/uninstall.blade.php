@@ -13,8 +13,9 @@ $ErrorActionPreference = 'SilentlyContinue'
 schtasks.exe /Delete /TN PioDeployAgentWatchdog /F 2>$null
 schtasks.exe /Delete /TN PioDeployAgentSelfUpdate /F 2>$null
 schtasks.exe /Delete /TN PioDeployAgentUninstall /F 2>$null
-# Tray helper: remove the logon task and stop any running copy.
+# Tray helper: remove the logon + keeper tasks and stop any running copy.
 schtasks.exe /Delete /TN PioDeployAgentTray /F 2>$null
+schtasks.exe /Delete /TN PioDeployAgentTrayKeeper /F 2>$null
 Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
     Where-Object { $_.CommandLine -like '*pio-tray.ps1*' } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force }

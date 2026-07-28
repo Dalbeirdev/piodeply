@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PioDeploy.Agent</RootNamespace>
     <AssemblyName>PioDeployAgent</AssemblyName>
-    <Version>1.4.19</Version>
+    <Version>1.4.20</Version>
     <!-- Brand icon: shows on the exe in Explorer, and ships in the bundle
          (Content below) so the tray helper can use it for the tray icon. -->
     <ApplicationIcon>pio.ico</ApplicationIcon>
