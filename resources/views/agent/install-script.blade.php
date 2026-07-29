@@ -254,10 +254,19 @@ $ctx = New-Object System.Windows.Forms.ApplicationContext
 }
 '@ | Set-Content $trayScript -Encoding UTF8
 
+# Launcher: the scheduled tasks run THIS one-second script, which spawns the
+# tray detached and exits. A forever-running tray must never BE the task -
+# Task Scheduler stops long-running instances at its own lifecycle points
+# (time limits, next-trigger policies), which kept killing the icon.
+$trayLauncher = Join-Path $trayDir 'pio-tray-launch.ps1'
+@'
+Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File','C:\ProgramData\PioDeploy\pio-tray.ps1'
+'@ | Set-Content $trayLauncher -Encoding UTF8
+
 # NO quotes inside /TR (the path has no spaces): schtasks mangles embedded
 # quotes and silently refuses the task - the same bug that once left the
 # watchdog unregistered. Exit codes are checked, not swallowed.
-$trayCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $trayScript"
+$trayCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $trayLauncher"
 $trayTask = 'PioDeployAgentTray'
 cmd.exe /c "schtasks /Delete /TN $trayTask /F >nul 2>&1"
 # /RU Users + ONLOGON: runs in whichever user logs on, in their session.
