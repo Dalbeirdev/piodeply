@@ -199,19 +199,31 @@ Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $ErrorActionPreference = 'SilentlyContinue'
 $statusPath = Join-Path $env:ProgramData 'PioDeploy\status.json'
 
-$ni = New-Object System.Windows.Forms.NotifyIcon
-# Brand icon: pio.ico ships in the agent bundle; fall back to the exe's
-# embedded icon, then to a stock shield, so the tray never fails to show.
-$ni.Icon = [System.Drawing.SystemIcons]::Shield
+# Brand icon: pio.ico ships in the agent bundle; fall back to a stock shield.
+$baseIcon = [System.Drawing.SystemIcons]::Shield
 foreach ($cand in @(
     (Join-Path $env:ProgramFiles 'PioDeploy\Agent\pio.ico'),
     (Join-Path $env:ProgramData  'PioDeploy\pio.ico'))) {
-    if (Test-Path $cand) { try { $ni.Icon = New-Object System.Drawing.Icon($cand, 16, 16); break } catch {} }
+    if (Test-Path $cand) { try { $baseIcon = New-Object System.Drawing.Icon($cand, 32, 32); break } catch {} }
 }
-if ($ni.Icon -eq [System.Drawing.SystemIcons]::Shield) {
-    $exe = Join-Path $env:ProgramFiles 'PioDeploy\Agent\PioDeployAgent.exe'
-    if (Test-Path $exe) { try { $ni.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe) } catch {} }
+
+# Status dot composed onto the brand icon: GREEN = agent healthy (service
+# running and checking in), RED = service stopped/disabled or not reporting.
+function New-StatusIcon($base, $color) {
+    $bmp = New-Object System.Drawing.Bitmap 32, 32
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $g.DrawIcon($base, (New-Object System.Drawing.Rectangle 0, 0, 32, 32))
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)), 16, 16, 16, 16)
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush $color), 18, 18, 12, 12)
+    $g.Dispose()
+    [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
 }
+$icoGreen = New-StatusIcon $baseIcon ([System.Drawing.Color]::FromArgb(34, 197, 94))
+$icoRed   = New-StatusIcon $baseIcon ([System.Drawing.Color]::FromArgb(239, 68, 68))
+
+$ni = New-Object System.Windows.Forms.NotifyIcon
+$ni.Icon = $icoGreen
 $ni.Text = 'PioDeploy Agent'
 $ni.Visible = $true
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
@@ -228,19 +240,25 @@ $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 30000
 $refresh = {
     try {
+        $svcRunning = (Get-Service PioDeployAgent -ErrorAction SilentlyContinue).Status -eq 'Running'
+        $online = $false
+        $ver = ''
         if (Test-Path $statusPath) {
             $s = Get-Content $statusPath -Raw | ConvertFrom-Json
             $seen = [datetime]::Parse($s.checked_in_utc).ToUniversalTime()
             $mins = [math]::Round(([datetime]::UtcNow - $seen).TotalMinutes)
             $online = $mins -lt 5
-            $miStatus.Text  = if ($online) { 'Status: Online' } else { 'Status: Offline' }
+            $ver = $s.version
             $miVersion.Text = "Version: $($s.version)" + $(if ($s.latest -and $s.latest -ne $s.version) { " (updating to $($s.latest))" } else { '' })
             $miSeen.Text    = "Last check-in: $mins min ago"
             $miPending.Text = "Pending updates: $($s.pending_jobs)"
-            $ni.Text = "PioDeploy Agent - " + $(if ($online) { "online, v$($s.version)" } else { 'offline' })
-        } else {
-            $miStatus.Text = 'Status: starting...'; $ni.Text = 'PioDeploy Agent'
         }
+        $healthy = $svcRunning -and $online
+        $ni.Icon = if ($healthy) { $icoGreen } else { $icoRed }
+        $miStatus.Text = if (-not $svcRunning) { 'Status: agent service STOPPED' }
+                         elseif ($online)      { 'Status: Online' }
+                         else                  { 'Status: Offline (not reporting)' }
+        $ni.Text = 'PioDeploy Agent - ' + $(if (-not $svcRunning) { 'service stopped' } elseif ($online) { "online, v$ver" } else { 'offline' })
     } catch { $miStatus.Text = 'Status: unknown' }
 }
 & $refresh
@@ -254,19 +272,22 @@ $ctx = New-Object System.Windows.Forms.ApplicationContext
 }
 '@ | Set-Content $trayScript -Encoding UTF8
 
-# Launcher: the scheduled tasks run THIS one-second script, which spawns the
-# tray detached and exits. A forever-running tray must never BE the task -
-# Task Scheduler stops long-running instances at its own lifecycle points
-# (time limits, next-trigger policies), which kept killing the icon.
-$trayLauncher = Join-Path $trayDir 'pio-tray-launch.ps1'
+# Launcher: the scheduled tasks run THIS one-second VBScript, which spawns
+# the tray hidden+detached and exits. Two reasons it is a VBS under wscript:
+# (1) a forever-running tray must never BE the task - Task Scheduler stops
+# long-running instances at its own lifecycle points, which kept killing
+# the icon; (2) wscript is a windowless host, so users never see the
+# console flash that powershell.exe shows even with -WindowStyle Hidden
+# (a cmd-like popup every keeper cycle, reported from the field).
+$trayLauncher = Join-Path $trayDir 'pio-tray-launch.vbs'
 @'
-Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File','C:\ProgramData\PioDeploy\pio-tray.ps1'
-'@ | Set-Content $trayLauncher -Encoding UTF8
+CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File C:\ProgramData\PioDeploy\pio-tray.ps1", 0, False
+'@ | Set-Content $trayLauncher -Encoding ASCII
 
 # NO quotes inside /TR (the path has no spaces): schtasks mangles embedded
 # quotes and silently refuses the task - the same bug that once left the
 # watchdog unregistered. Exit codes are checked, not swallowed.
-$trayCmd  = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $trayLauncher"
+$trayCmd  = "wscript.exe $trayLauncher"
 $trayTask = 'PioDeployAgentTray'
 cmd.exe /c "schtasks /Delete /TN $trayTask /F >nul 2>&1"
 # /RU Users + ONLOGON: runs in whichever user logs on, in their session.
