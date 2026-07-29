@@ -14,6 +14,13 @@ cmd.exe /c "schtasks /Delete /TN $watchdogName /F >nul 2>&1"
 schtasks.exe /Create /TN $watchdogName /TR "net start $serviceName" /SC MINUTE /MO 2 /RU SYSTEM /RL HIGHEST /F
 if ($LASTEXITCODE -ne 0) { throw "schtasks /Create failed with exit code $LASTEXITCODE" }
 
+# Battery: schtasks defaults to "start only on AC power" - on a laptop the
+# watchdog would never fire on battery. Strip the power conditions.
+$s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+     -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
+Set-ScheduledTask -TaskName $watchdogName -Settings $s | Out-Null
+Write-Host "Power conditions stripped: watchdog runs on battery too."
+
 # Belt and suspenders: make sure crash recovery + non-crash restart are set.
 sc.exe failure $serviceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
 sc.exe failureflag $serviceName 1 | Out-Null

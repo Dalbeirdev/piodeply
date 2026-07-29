@@ -155,10 +155,24 @@ sc.exe failureflag $serviceName 1 | Out-Null
 #    "net start" on an already-running service is a harmless no-op error, so
 #    the task needs NO embedded quotes - schtasks /TR quoting silently broke
 #    the quoted-powershell variant (task never registered).
+#
+#    Battery: schtasks-created tasks default to "start only on AC power" and
+#    "stop when switching to battery" - on a laptop running on battery the
+#    watchdog would simply NEVER fire (found the hard way: a keeper task
+#    silently skipped every slot until the charger was plugged in).
+#    Set-PioTaskBatteryProof strips those conditions from every task we make.
+function Set-PioTaskBatteryProof([string]$name) {
+    try {
+        $s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+             -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
+        Set-ScheduledTask -TaskName $name -Settings $s -ErrorAction Stop | Out-Null
+    } catch { Write-Warning "Could not set power conditions on task $name : $($_.Exception.Message)" }
+}
 $watchdogName = 'PioDeployAgentWatchdog'
 cmd.exe /c "schtasks /Delete /TN $watchdogName /F >nul 2>&1"
 schtasks.exe /Create /TN $watchdogName /TR "net start $serviceName" /SC MINUTE /MO 2 /RU SYSTEM /RL HIGHEST /F | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Warning "Watchdog task could not be created (schtasks exit $LASTEXITCODE)." }
+Set-PioTaskBatteryProof $watchdogName
 
 # 8. Tray status indicator (per-user). The service runs as SYSTEM in
 #    session 0 and cannot draw UI, so a tiny PowerShell helper runs in each
@@ -249,12 +263,14 @@ cmd.exe /c "schtasks /Delete /TN $trayTask /F >nul 2>&1"
 # /RU Users + ONLOGON: runs in whichever user logs on, in their session.
 schtasks.exe /Create /TN $trayTask /TR $trayCmd /SC ONLOGON /RU Users /RL LIMITED /F | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Warning "Tray logon task not created (schtasks exit $LASTEXITCODE)." }
+Set-PioTaskBatteryProof $trayTask
 # Keeper: every 5 minutes, relaunch the tray if someone closed it. The
 # mutex inside pio-tray.ps1 makes this a no-op while the tray is running.
 $keeperTask = 'PioDeployAgentTrayKeeper'
 cmd.exe /c "schtasks /Delete /TN $keeperTask /F >nul 2>&1"
 schtasks.exe /Create /TN $keeperTask /TR $trayCmd /SC MINUTE /MO 5 /RU Users /RL LIMITED /F | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Warning "Tray keeper task not created (schtasks exit $LASTEXITCODE)." }
+Set-PioTaskBatteryProof $keeperTask
 # Start it now for the user running the installer, without waiting for a re-login.
 cmd.exe /c "schtasks /Run /TN $trayTask >nul 2>&1"
 
