@@ -238,8 +238,17 @@ $ni.ContextMenuStrip = $menu
 
 $timer = New-Object System.Windows.Forms.Timer
 $timer.Interval = 30000
+$script:expPid = (Get-Process explorer -ErrorAction SilentlyContinue | Select-Object -First 1).Id
 $refresh = {
     try {
+        # Explorer restart wipes tray icons of running apps; re-register ours
+        # by toggling visibility whenever explorer's PID changes.
+        $exp = (Get-Process explorer -ErrorAction SilentlyContinue | Select-Object -First 1).Id
+        if ($exp -and $exp -ne $script:expPid) {
+            $script:expPid = $exp
+            $ni.Visible = $false
+            $ni.Visible = $true
+        }
         $svcRunning = (Get-Service PioDeployAgent -ErrorAction SilentlyContinue).Status -eq 'Running'
         $online = $false
         $ver = ''
