@@ -83,6 +83,9 @@ enum BrowserPolicyType: string
     // ── Browser Lockdown ─────────────────────────────────────────────────
     case DisableBrowsingHistory = 'disable_browsing_history';
     case DisableBookmarkEditing = 'disable_bookmark_editing';
+    // The escape hatch for browsers that ignore enterprise policy (Opera):
+    // an IFEO Debugger entry stops the exe from launching at all.
+    case BlockBrowser = 'block_browser';
 
     // ── AI Features ──────────────────────────────────────────────────────
     case DisableAiAssistants = 'disable_ai_assistants';
@@ -158,7 +161,7 @@ enum BrowserPolicyType: string
             self::DisablePrinting => 'Printing',
             self::ForceHomepage, self::ForceNewTabUrl => 'Homepage & Startup',
             self::BlockExtensionInstalls, self::ForceInstallExtensions => 'Extensions',
-            self::DisableBrowsingHistory, self::DisableBookmarkEditing => 'Browser Lockdown',
+            self::DisableBrowsingHistory, self::DisableBookmarkEditing, self::BlockBrowser => 'Browser Lockdown',
             self::DisableAiAssistants => 'AI Features',
             self::DisableShoppingAssistant, self::DisableNewTabFeed,
             self::DisableMicrosoftRewards, self::DisableBrowserGames => 'Sidebar & Feeds',
@@ -200,6 +203,7 @@ enum BrowserPolicyType: string
             self::ForceInstallExtensions => 'Force-installed extensions',
             self::DisableBrowsingHistory => 'Browsing history',
             self::DisableBookmarkEditing => 'Bookmark editing',
+            self::BlockBrowser => 'Block browser (prevent launch)',
             self::DisableAiAssistants => 'AI assistants (Gemini / Copilot / Leo)',
             self::DisableShoppingAssistant => 'Shopping assistant',
             self::DisableNewTabFeed => 'New-tab news feed',
@@ -250,6 +254,7 @@ enum BrowserPolicyType: string
             self::ForceInstallExtensions => 'Silently installs and pins the extensions you list (users cannot remove them).',
             self::DisableBrowsingHistory => 'Stops the browser from saving any browsing history.',
             self::DisableBookmarkEditing => 'Prevents users from adding, editing or removing bookmarks.',
+            self::BlockBrowser => 'Prevents the selected browsers from launching at all. Built for browsers that ignore enterprise policies (like Opera) so they cannot be used to sidestep your other rules. Windows already open keep running until closed; new launches are blocked.',
             self::DisableAiAssistants => 'Disables built-in AI assistants: Gemini (Chrome), the Copilot sidebar (Edge) and Leo (Brave).',
             self::DisableShoppingAssistant => 'Turns off shopping suggestions and price-comparison features.',
             self::DisableNewTabFeed => 'Removes the news/content feed from the Edge new-tab page.',
@@ -273,7 +278,9 @@ enum BrowserPolicyType: string
     /** Browser policies are read at launch, so a relaunch applies them. */
     public function requiresRestart(): bool
     {
-        return true;
+        // Launch-blocking is the exception: it acts on the NEXT launch by
+        // definition, so there is nothing a restart would change.
+        return $this !== self::BlockBrowser;
     }
 
     /**
@@ -459,6 +466,19 @@ enum BrowserPolicyType: string
             self::DisableBrowsingHistory => self::chromiumOnly($browser, 'SavingBrowserHistoryDisabled', $disable ? 1 : 0),
             self::DisableBookmarkEditing => self::chromiumOnly($browser, 'EditBookmarksEnabled', $disable ? 0 : 1),
 
+            // Launch-blocking via an IFEO Debugger entry - the one control
+            // that works on EVERY browser, because it never needs the
+            // browser's cooperation. systray.exe is a benign Windows stub
+            // that exits immediately, so the "debugger" swallows the launch.
+            // Removal is the normal manifest rollback (the value is deleted).
+            self::BlockBrowser => match ($browser) {
+                Browser::Chrome => self::blockExe('chrome.exe'),
+                Browser::Edge => self::blockExe('msedge.exe'),
+                Browser::Brave => self::blockExe('brave.exe'),
+                Browser::Firefox => self::blockExe('firefox.exe'),
+                Browser::Opera => self::blockExe('opera.exe'),
+            },
+
             // Each vendor names its assistant policy differently. Edge's
             // Copilot lives in the Hubs sidebar, so that switch carries it.
             self::DisableAiAssistants => match ($browser) {
@@ -523,6 +543,16 @@ enum BrowserPolicyType: string
     private static function registrySz(string $path, string $name, string $value): array
     {
         return ['kind' => 'registry_sz', 'path' => $path, 'name' => $name, 'value' => $value];
+    }
+
+    /** IFEO launch-block: Windows runs the "debugger" instead of the exe. */
+    private static function blockExe(string $exe): array
+    {
+        return self::registrySz(
+            'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\'.$exe,
+            'Debugger',
+            'C:\\Windows\\System32\\systray.exe',
+        );
     }
 
     /** @param list<string> $values */
