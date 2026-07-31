@@ -199,23 +199,29 @@ Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $ErrorActionPreference = 'SilentlyContinue'
 $statusPath = Join-Path $env:ProgramData 'PioDeploy\status.json'
 
+# Compose at the EXACT size the tray renders (DPI-aware SmallIconSize):
+# building at 32px and letting the shell downscale produced a garbled mess.
+$iconSize = [System.Windows.Forms.SystemInformation]::SmallIconSize
+$w = $iconSize.Width; $h = $iconSize.Height
+
 # Brand icon: pio.ico ships in the agent bundle; fall back to a stock shield.
 $baseIcon = [System.Drawing.SystemIcons]::Shield
 foreach ($cand in @(
     (Join-Path $env:ProgramFiles 'PioDeploy\Agent\pio.ico'),
     (Join-Path $env:ProgramData  'PioDeploy\pio.ico'))) {
-    if (Test-Path $cand) { try { $baseIcon = New-Object System.Drawing.Icon($cand, 32, 32); break } catch {} }
+    if (Test-Path $cand) { try { $baseIcon = New-Object System.Drawing.Icon($cand, $w, $h); break } catch {} }
 }
 
 # Status dot composed onto the brand icon: GREEN = agent healthy (service
 # running and checking in), RED = service stopped/disabled or not reporting.
 function New-StatusIcon($base, $color) {
-    $bmp = New-Object System.Drawing.Bitmap 32, 32
+    $bmp = New-Object System.Drawing.Bitmap $w, $h
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-    $g.DrawIcon($base, (New-Object System.Drawing.Rectangle 0, 0, 32, 32))
-    $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)), 16, 16, 16, 16)
-    $g.FillEllipse((New-Object System.Drawing.SolidBrush $color), 18, 18, 12, 12)
+    $g.DrawIcon($base, (New-Object System.Drawing.Rectangle 0, 0, $w, $h))
+    $d = [int][math]::Floor($w / 2)
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)), ($w - $d), ($h - $d), $d, $d)
+    $g.FillEllipse((New-Object System.Drawing.SolidBrush $color), ($w - $d + 1), ($h - $d + 1), ($d - 2), ($d - 2))
     $g.Dispose()
     [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
 }
