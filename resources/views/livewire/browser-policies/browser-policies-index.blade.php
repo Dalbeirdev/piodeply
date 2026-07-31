@@ -112,7 +112,9 @@
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
                                     @can('update', $policy)
-                                        <x-icon-button icon="power" variant="amber"
+                                        {{-- Colour telegraphs the action: green = will re-enable an
+                                             inactive policy, amber = will deactivate an active one. --}}
+                                        <x-icon-button icon="power" variant="{{ $policy->isActive() ? 'amber' : 'success' }}"
                                                        label="{{ $policy->isActive() ? 'Deactivate' : 'Activate' }}"
                                                        wire:click="toggle({{ $policy->id }})" />
                                         <x-icon-button icon="edit" label="Edit"

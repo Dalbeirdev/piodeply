@@ -4,6 +4,7 @@
     $variantClass = match ($variant) {
         'danger' => 'pd-icon-btn-danger',
         'amber' => 'pd-icon-btn-amber',
+        'success' => 'pd-icon-btn-success',
         default => '',
     };
 

@@ -107,12 +107,31 @@
         @apply text-teal-700 bg-teal-50;
     }
 
+    /* State variants are always coloured, not only on hover: the colour is
+       the signal (green = will enable, amber = will deactivate, red =
+       destructive) and must read at a glance. */
+    .pd-icon-btn-danger {
+        @apply text-red-500;
+    }
+
     .pd-icon-btn-danger:hover {
         @apply text-red-600 bg-red-50;
     }
 
+    .pd-icon-btn-amber {
+        @apply text-amber-500;
+    }
+
     .pd-icon-btn-amber:hover {
         @apply text-amber-600 bg-amber-50;
+    }
+
+    .pd-icon-btn-success {
+        @apply text-emerald-600;
+    }
+
+    .pd-icon-btn-success:hover {
+        @apply text-emerald-700 bg-emerald-50;
     }
 
     .pd-tooltip {
