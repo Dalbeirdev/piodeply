@@ -477,9 +477,33 @@ public sealed class Worker : BackgroundService
 
     private static async Task SafeDelay(TimeSpan delay, CancellationToken ct)
     {
+        // "Sync now" support: the user-session tray requests an immediate
+        // check-in by dropping this flag file; the wait ends early and the
+        // next cycle runs at once. Polled every 2s rather than watched - a
+        // FileSystemWatcher from a service is more moving parts for a
+        // latency nobody can perceive.
+        var flag = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+            "PioDeploy", "force-checkin.flag");
+
+        var end = DateTime.UtcNow + delay;
         try
         {
-            await Task.Delay(delay, ct);
+            while (DateTime.UtcNow < end)
+            {
+                if (File.Exists(flag))
+                {
+                    try { File.Delete(flag); } catch { /* stale flag clears next cycle */ }
+                    return;
+                }
+
+                var remaining = end - DateTime.UtcNow;
+                var step = remaining < TimeSpan.FromSeconds(2) ? remaining : TimeSpan.FromSeconds(2);
+                if (step > TimeSpan.Zero)
+                {
+                    await Task.Delay(step, ct);
+                }
+            }
         }
         catch (OperationCanceledException)
         {

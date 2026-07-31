@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PioDeploy.Agent</RootNamespace>
     <AssemblyName>PioDeployAgent</AssemblyName>
-    <Version>1.4.20</Version>
+    <Version>1.4.21</Version>
     <!-- Brand icon: shows on the exe in Explorer, and ships in the bundle
          (Content below) so the tray helper can use it for the tray icon. -->
     <ApplicationIcon>pio.ico</ApplicationIcon>
@@ -18,6 +18,10 @@
 
   <ItemGroup>
     <Content Include="pio.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Pre-built tray status icons (green/red health dot). The tray helper
+         loads these; composing them at runtime via GDI mangled the mascot. -->
+    <Content Include="pio-green.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="pio-red.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -225,8 +225,27 @@ function New-StatusIcon($base, $color) {
     $g.Dispose()
     [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
 }
-$icoGreen = New-StatusIcon $baseIcon ([System.Drawing.Color]::FromArgb(34, 197, 94))
-$icoRed   = New-StatusIcon $baseIcon ([System.Drawing.Color]::FromArgb(239, 68, 68))
+# Prefer the pre-built status icons shipped in the agent bundle (crisp,
+# hand-packed frames); the runtime composition above is only a fallback -
+# GDI icon conversion mangles PNG-frame icons on some systems.
+$icoGreen = $null; $icoRed = $null
+foreach ($root in @(
+    (Join-Path $env:ProgramFiles 'PioDeploy\Agent'),
+    (Join-Path $env:ProgramData  'PioDeploy'))) {
+    $gp = Join-Path $root 'pio-green.ico'
+    $rp = Join-Path $root 'pio-red.ico'
+    if ((Test-Path $gp) -and (Test-Path $rp)) {
+        try {
+            $icoGreen = New-Object System.Drawing.Icon($gp, $w, $h)
+            $icoRed   = New-Object System.Drawing.Icon($rp, $w, $h)
+            break
+        } catch { $icoGreen = $null; $icoRed = $null }
+    }
+}
+if (-not $icoGreen -or -not $icoRed) {
+    $icoGreen = New-StatusIcon $baseIcon ([System.Drawing.Color]::FromArgb(34, 197, 94))
+    $icoRed   = New-StatusIcon $baseIcon ([System.Drawing.Color]::FromArgb(239, 68, 68))
+}
 
 $ni = New-Object System.Windows.Forms.NotifyIcon
 $ni.Icon = $icoGreen
@@ -238,6 +257,16 @@ $miVersion = $menu.Items.Add('');            $miVersion.Enabled = $false
 $miSeen    = $menu.Items.Add('');            $miSeen.Enabled = $false
 $miPending = $menu.Items.Add('');            $miPending.Enabled = $false
 $menu.Items.Add('-') | Out-Null
+# Sync now: drops a flag file the agent polls during its wait, forcing an
+# immediate check-in - pending policies and deployments apply right away
+# instead of at the next cycle. Requires agent 1.4.21+.
+$miSync = $menu.Items.Add('Sync now')
+$miSync.add_Click({
+    try {
+        New-Item -ItemType File -Force -Path (Join-Path $env:ProgramData 'PioDeploy\force-checkin.flag') | Out-Null
+        $miStatus.Text = 'Status: sync requested...'
+    } catch { $miStatus.Text = 'Status: sync request failed' }
+})
 $miLogs = $menu.Items.Add('Open logs folder')
 $miLogs.add_Click({ Start-Process (Join-Path $env:ProgramData 'PioDeploy\logs') })
 $ni.ContextMenuStrip = $menu
