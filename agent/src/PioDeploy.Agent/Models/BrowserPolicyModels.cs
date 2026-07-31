@@ -35,6 +35,10 @@ public sealed class BrowserOperation
     // firefox_json
     [JsonPropertyName("key")] public string? Key { get; set; }
 
+    // Apply even when the target browser is not detected. Launch-block
+    // policies are prevention: they must land BEFORE the browser exists.
+    [JsonPropertyName("always")] public bool Always { get; set; }
+
     public int RegistryValue() => Value?.GetInt32() ?? 0;
 
     public bool BoolValue() => Value?.GetBoolean() ?? false;

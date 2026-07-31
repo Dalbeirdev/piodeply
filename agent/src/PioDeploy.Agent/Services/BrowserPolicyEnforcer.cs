@@ -112,7 +112,7 @@ public sealed class BrowserPolicyEnforcer : IBrowserPolicyEnforcer
         {
             manifest.RegistryValues.Add(new ManagedRegistryValue { Path = operation.Path!, Name = operation.Name! });
 
-            if (!IsBrowserInstalled(browser))
+            if (!operation.Always && !IsBrowserInstalled(browser))
             {
                 report.Status = "not_installed";
                 report.Detail = "Browser not detected on this machine.";
@@ -171,7 +171,7 @@ public sealed class BrowserPolicyEnforcer : IBrowserPolicyEnforcer
         {
             manifest.RegistryValues.Add(new ManagedRegistryValue { Path = operation.Path!, Name = operation.Name! });
 
-            if (!IsBrowserInstalled(browser))
+            if (!operation.Always && !IsBrowserInstalled(browser))
             {
                 report.Status = "not_installed";
                 report.Detail = "Browser not detected on this machine.";
@@ -237,7 +237,7 @@ public sealed class BrowserPolicyEnforcer : IBrowserPolicyEnforcer
                 manifest.RegistryValues.Add(new ManagedRegistryValue { Path = operation.Path!, Name = i.ToString() });
             }
 
-            if (!IsBrowserInstalled(browser))
+            if (!operation.Always && !IsBrowserInstalled(browser))
             {
                 report.Status = "not_installed";
                 report.Detail = "Browser not detected on this machine.";

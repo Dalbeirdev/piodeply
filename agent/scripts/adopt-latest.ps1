@@ -1,5 +1,5 @@
 #requires -RunAsAdministrator
-# Recovery + one-time hop onto the CURRENT agent build (1.4.22: all four
+# Recovery + one-time hop onto the CURRENT agent build (1.4.23: all four
 # self-update fixes - script encoding, detached pipes, cmd.exe /c schtasks,
 # retry latch - plus the brand icon).
 # NORMAL machines never need this: they self-update from the server. Use it
@@ -10,7 +10,7 @@
 # Preserves appsettings.json (the machine's real config) - only code changes.
 # KEEP THIS FILE PURE ASCII - PowerShell 5.1 misparses fancy punctuation.
 $ErrorActionPreference = 'Stop'
-$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.22'
+$src = 'C:\xampp\htdocs\piodeploy-platform\agent\publish-1.4.23'
 $dst = 'C:\Program Files\PioDeploy\Agent'
 
 if (-not (Test-Path "$src\PioDeployAgent.dll")) { throw "Build not found at $src - run dotnet publish first." }

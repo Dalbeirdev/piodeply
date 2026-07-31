@@ -545,14 +545,16 @@ enum BrowserPolicyType: string
         return ['kind' => 'registry_sz', 'path' => $path, 'name' => $name, 'value' => $value];
     }
 
-    /** IFEO launch-block: Windows runs the "debugger" instead of the exe. */
+    /** IFEO launch-block: Windows runs the "debugger" instead of the exe.
+     * 'always' bypasses the agent's browser-detection gate - a block is
+     * PREVENTION, so it must land before the browser is ever installed. */
     private static function blockExe(string $exe): array
     {
         return self::registrySz(
             'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\'.$exe,
             'Debugger',
             'C:\\Windows\\System32\\systray.exe',
-        );
+        ) + ['always' => true];
     }
 
     /** @param list<string> $values */
