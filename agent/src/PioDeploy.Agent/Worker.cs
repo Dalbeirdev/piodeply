@@ -31,6 +31,10 @@ public sealed class Worker : BackgroundService
     private readonly int _inventoryEveryBeats = 60;      // full refresh ~hourly
     private readonly int _browserPolicyEveryBeats = 15;  // policy sync ~every 15 min
 
+    /** Set when a tray "Sync now" cut the wait short: the next cycle runs
+        everything, including policy enforcement, not just the heartbeat. */
+    private bool _syncForced;
+
     public Worker(
         IApiClient api,
         IAgentIdentity identity,
@@ -119,11 +123,15 @@ public sealed class Worker : BackgroundService
                     await SendInventoryAsync(stoppingToken);
                 }
 
-                // First beat after start, then on the regular cadence.
-                if (beats == 1 || beats % _browserPolicyEveryBeats == 0)
+                // First beat after start, on the regular cadence - and on a
+                // user-requested "Sync now", whose whole promise is that
+                // pending POLICY changes apply immediately, not just jobs.
+                if (beats == 1 || _syncForced || beats % _browserPolicyEveryBeats == 0)
                 {
                     await EnforceBrowserPoliciesAsync(stoppingToken);
                 }
+
+                _syncForced = false;
             }
             catch (AgentNotRegisteredException)
             {
@@ -139,7 +147,7 @@ public sealed class Worker : BackgroundService
                 backoff = Grow(backoff);
             }
 
-            await SafeDelay(backoff, stoppingToken);
+            _syncForced = await SafeDelay(backoff, stoppingToken);
         }
 
         _logger.LogInformation("PioDeploy agent stopping.");
@@ -475,7 +483,9 @@ public sealed class Worker : BackgroundService
     private static TimeSpan Grow(TimeSpan current)
         => TimeSpan.FromSeconds(Math.Min(current.TotalSeconds * 2, 900)); // cap 15 min
 
-    private static async Task SafeDelay(TimeSpan delay, CancellationToken ct)
+    /// <returns>True when the wait was cut short by a "Sync now" request,
+    /// so the caller runs a FULL cycle (policies included) immediately.</returns>
+    private static async Task<bool> SafeDelay(TimeSpan delay, CancellationToken ct)
     {
         // "Sync now" support: the user-session tray requests an immediate
         // check-in by dropping this flag file; the wait ends early and the
@@ -494,7 +504,7 @@ public sealed class Worker : BackgroundService
                 if (File.Exists(flag))
                 {
                     try { File.Delete(flag); } catch { /* stale flag clears next cycle */ }
-                    return;
+                    return true;
                 }
 
                 var remaining = end - DateTime.UtcNow;
@@ -508,5 +518,7 @@ public sealed class Worker : BackgroundService
         catch (OperationCanceledException)
         {
         }
+
+        return false;
     }
 }
