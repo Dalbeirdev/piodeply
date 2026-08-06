@@ -303,8 +303,10 @@ class DeploymentService
                     ...$observed,
                 ]);
                 $this->releaseDependents($job);
-            } elseif ($job->canRetry()) {
-                // Back into the queue for another agent pass.
+            } elseif ($job->canRetry() && ! DeploymentJob::isPermanentExitCode($exitCode)) {
+                // Back into the queue for another agent pass. Permanent exit
+                // codes skip this: re-running "no installer for this machine"
+                // fails identically and just delays the operator finding out.
                 $job->update([
                     'status'         => JobStatus::Pending,
                     'exit_code'      => $exitCode,

@@ -79,7 +79,7 @@ final class PolicyBatchContext
         $context->jobs = DeploymentJob::query()
             ->whereIn('computer_id', $ids)
             ->where('package_id', $package->id)
-            ->get(['computer_id', 'action', 'status', 'finished_at'])
+            ->get(['computer_id', 'action', 'status', 'finished_at', 'exit_code'])
             ->groupBy('computer_id')
             ->all();
 
@@ -131,8 +131,10 @@ final class PolicyBatchContext
         $cutoff = now()->subHours($backoffHours);
 
         return $this->jobsFor($computer)->contains(fn (object $job) => in_array($job->status, [JobStatus::Failed, JobStatus::Cancelled], true)
-            && $job->finished_at !== null
-            && $job->finished_at->gte($cutoff));
+            && ($job->finished_at !== null && $job->finished_at->gte($cutoff)
+                // Permanent failures never age out of the backoff — mirrors
+                // PolicyService::hasRelevantJob's live query exactly.
+                || DeploymentJob::isPermanentExitCode($job->exit_code)));
     }
 
     private function everInstalled(Computer $computer): bool

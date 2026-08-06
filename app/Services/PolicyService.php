@@ -544,7 +544,11 @@ class PolicyService
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
             ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
-            ->where('finished_at', '>=', now()->subHours($this->failureBackoffHours()))
+            // A permanent failure never re-queues — only an operator's manual
+            // retry (which resets the job) can restart enforcement here.
+            ->where(fn ($q) => $q
+                ->where('finished_at', '>=', now()->subHours($this->failureBackoffHours()))
+                ->orWhereIn('exit_code', DeploymentJob::PERMANENT_EXIT_CODES))
             ->exists();
     }
 
@@ -571,7 +575,9 @@ class PolicyService
         return DeploymentJob::where('computer_id', $computer->id)
             ->where('package_id', $policy->package_id)
             ->whereIn('status', [JobStatus::Failed, JobStatus::Cancelled])
-            ->where('finished_at', '>=', now()->subHours($this->failureBackoffHours()))
+            ->where(fn ($q) => $q
+                ->where('finished_at', '>=', now()->subHours($this->failureBackoffHours()))
+                ->orWhereIn('exit_code', DeploymentJob::PERMANENT_EXIT_CODES))
             ->exists();
     }
 }

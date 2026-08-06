@@ -93,6 +93,26 @@ class DeploymentJob extends Model
     }
 
     /**
+     * Exit codes a retry can never fix on this machine: the package has no
+     * installer the machine can use, or an organisation policy forbids the
+     * install. Jobs fail immediately instead of burning attempts, and policy
+     * remediation stops re-queueing (a machine once retried an impossible
+     * install 23 times). A manual operator retry still works — deliberate
+     * clicks outrank the classification, e.g. after fixing the package.
+     */
+    public const PERMANENT_EXIT_CODES = [
+        -1978335216, // 0x8A150010 no applicable installer (per-user-only package, or wrong architecture)
+        -1978335146, // 0x8A150056 no machine-wide installer for --scope machine
+        1625,        // MSI: install forbidden by system policy
+        1643,        // MSI: patch forbidden by system policy
+    ];
+
+    public static function isPermanentExitCode(?int $code): bool
+    {
+        return $code !== null && in_array($code, self::PERMANENT_EXIT_CODES, true);
+    }
+
+    /**
      * A failure explained in plain terms and, where possible, what to do about
      * it. The raw "winget exited with -1073741515" is exact and useless unless
      * you already read Windows status codes; this sits above it, never instead.
@@ -132,8 +152,11 @@ class DeploymentJob extends Model
                 . 'per-user copy alongside the machine-wide one. Agents from 1.4.7 uninstall every copy '
                 . '(--all-versions), so retrying on an updated agent clears this. Older agents need the machine '
                 . 'updated first.',
-            -1978335216 => 'winget has no installer for this machine’s architecture (0x8A150010) — e.g. an x64-only '
-                         . 'package on an Arm device.',
+            -1978335216 => 'winget has no installer this machine can use (0x8A150010). Most often the package only '
+                         . 'publishes a per-user installer (Spotify is the classic case) which the agent’s '
+                         . 'machine-wide install cannot use; or it does not match the machine’s architecture — '
+                         . 'e.g. an x64-only package on an Arm device. Retrying cannot fix either; package it as '
+                         . 'an EXE/MSI with machine-wide silent switches, or exclude this machine.',
             -1978334975 => 'The downloaded installer’s hash did not match (0x8A150041) — a corrupt or tampered '
                          . 'download. Retry; if it repeats, the package version needs checking.',
 

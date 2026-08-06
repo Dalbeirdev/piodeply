@@ -100,6 +100,20 @@ class DeploymentEngineTest extends TestCase
         $this->assertNotNull($result->finished_at);
     }
 
+    public function test_permanent_exit_code_fails_immediately_despite_remaining_attempts(): void
+    {
+        // 0x8A150010 "no applicable installer" cannot succeed by retrying —
+        // a machine once burned 23 attempts on a per-user-only package. The
+        // job must go terminal on the first report, attempts notwithstanding.
+        $job = DeploymentJob::factory()->running()->create(['max_attempts' => 3, 'attempts' => 1]);
+
+        $result = $this->service()->reportResult(
+            $job, success: false, exitCode: -1978335216, log: 'no applicable installer', failureReason: 'winget exited with -1978335216.');
+
+        $this->assertSame(JobStatus::Failed, $result->status);
+        $this->assertNotNull($result->finished_at);
+    }
+
     public function test_success_records_exit_code_and_log(): void
     {
         $job = DeploymentJob::factory()->running()->create();
