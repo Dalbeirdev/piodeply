@@ -61,6 +61,17 @@
                             <x-label for="winget_id" value="winget ID" />
                             <x-input id="winget_id" type="text" class="mt-1 block w-full font-mono" wire:model="winget_id" placeholder="e.g. Google.Chrome" />
                             <x-input-error for="winget_id" class="mt-1" />
+                            <label class="mt-3 flex items-start gap-2 text-sm text-slate-600">
+                                <x-checkbox wire:model="winget_scopeless" class="mt-0.5" />
+                                <span>
+                                    Install without <code class="font-mono text-xs">--scope machine</code>
+                                    — for installers that are machine-wide but whose winget manifest
+                                    declares no scope (the .NET runtimes are the classic case; forcing
+                                    machine scope fails with "no applicable installer"). Leave off for
+                                    normal packages: it protects against per-user installers vanishing
+                                    into the SYSTEM profile.
+                                </span>
+                            </label>
                         </div>
                     @elseif ($installer_type === 'choco')
                         <div class="md:col-span-2">

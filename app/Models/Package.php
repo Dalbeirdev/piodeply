@@ -26,15 +26,16 @@ class Package extends Model
     protected $fillable = [
         'package_category_id', 'client_id', 'name', 'slug', 'vendor', 'homepage',
         'description', 'license', 'installer_type', 'architecture',
-        'winget_id', 'choco_id', 'is_active',
+        'winget_id', 'winget_scopeless', 'choco_id', 'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'installer_type' => InstallerType::class,
-            'architecture'   => Architecture::class,
-            'is_active'      => 'boolean',
+            'installer_type'   => InstallerType::class,
+            'architecture'     => Architecture::class,
+            'is_active'        => 'boolean',
+            'winget_scopeless' => 'boolean',
         ];
     }
 

@@ -94,6 +94,21 @@ public class InstallerEngineTests
     }
 
     [Fact]
+    public void Winget_Scopeless_Flag_Omits_Machine_Scope()
+    {
+        // .NET runtimes: machine-wide installers whose manifest declares no
+        // scope, so --scope machine finds no applicable installer. The
+        // operator-set flag drops the argument; everything else is unchanged.
+        var install = WingetInstaller.BuildArguments("install", "Microsoft.DotNet.DesktopRuntime.8", null, scopeless: true)!;
+        var rollback = WingetInstaller.BuildArguments("rollback", "X.Y", "1.0", scopeless: true)!;
+
+        Assert.DoesNotContain("--scope", install);
+        Assert.DoesNotContain("--scope", rollback);
+        Assert.Contains("--no-upgrade", install); // the rest of the shape is untouched
+        Assert.Contains("--exact", install);
+    }
+
+    [Fact]
     public void Winget_Update_Does_Not_Use_No_Upgrade()
     {
         var args = WingetInstaller.BuildArguments("update", "X.Y", null)!;

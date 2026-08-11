@@ -45,7 +45,7 @@ public sealed class WingetInstaller : IInstaller
             return InstallResult.Fail("Job has no winget id.");
         }
 
-        var arguments = BuildArguments(job.Action, job.WingetId, job.Version);
+        var arguments = BuildArguments(job.Action, job.WingetId, job.Version, job.WingetScopeless);
         if (arguments is null)
         {
             // Rollback is supported; it just cannot be done without a target.
@@ -84,7 +84,7 @@ public sealed class WingetInstaller : IInstaller
     }
 
     /// <summary>Argument construction is pure so it can be unit tested.</summary>
-    public static IReadOnlyList<string>? BuildArguments(string action, string wingetId, string? version)
+    public static IReadOnlyList<string>? BuildArguments(string action, string wingetId, string? version, bool scopeless = false)
     {
         var common = new[]
         {
@@ -99,14 +99,23 @@ public sealed class WingetInstaller : IInstaller
         // any real user. --scope machine forces a machine-wide install; a
         // package that publishes no machine installer now fails loudly
         // instead of pretending, which is what an RMM must do.
+        //
+        // scopeless: an operator-set package flag for installers that ARE
+        // machine-wide but whose winget manifest declares no scope at all
+        // (the .NET runtimes are the classic case) — --scope machine finds
+        // no matching installer (0x8A150010) even though the payload would
+        // land in Program Files. Only the flag can tell these apart from
+        // true per-user packages, so it is explicit, never guessed.
+        string[] scope = scopeless ? [] : ["--scope", "machine"];
+
         List<string>? arguments = action switch
         {
             // install means "ensure present": --no-upgrade stops winget from
             // attempting an in-place upgrade of an existing install (that is
             // what the separate 'update' action is for).
-            "install" or "repair" => ["install", .. common, "--scope", "machine", "--no-upgrade"],
+            "install" or "repair" => ["install", .. common, .. scope, "--no-upgrade"],
             "update" => ["upgrade", .. common],
-            "rollback" => version is null ? null : ["install", .. common, "--scope", "machine", "--version", version, "--force"],
+            "rollback" => version is null ? null : ["install", .. common, .. scope, "--version", version, "--force"],
             // --all-versions: a machine often carries the SAME app twice —
             // a per-user copy (pre-1.4.1 agents installed those invisibly)
             // plus the machine-wide one. Without this winget refuses the

@@ -23,6 +23,7 @@ class PackageForm extends Component
     public string $installer_type = 'winget';
     public string $architecture = 'x64';
     public ?string $winget_id = null;
+    public bool $winget_scopeless = false;
     public ?string $choco_id = null;
 
     public function mount(?Package $package = null): void
@@ -32,7 +33,7 @@ class PackageForm extends Component
             $this->package = $package;
             $this->fill($package->only([
                 'package_category_id', 'name', 'vendor', 'homepage',
-                'description', 'license', 'winget_id', 'choco_id',
+                'description', 'license', 'winget_id', 'winget_scopeless', 'choco_id',
             ]));
             $this->installer_type = $package->installer_type->value;
             $this->architecture = $package->architecture->value;
@@ -58,6 +59,7 @@ class PackageForm extends Component
             'architecture'        => ['required', Rule::in(Architecture::values())],
             'winget_id'           => ['nullable', 'string', 'max:255', $idRule,
                 Rule::requiredIf($this->installer_type === 'winget')],
+            'winget_scopeless'    => ['boolean'],
             'choco_id'            => ['nullable', 'string', 'max:255', $idRule,
                 Rule::requiredIf($this->installer_type === 'choco')],
         ], [

@@ -10,6 +10,11 @@ public sealed class JobPayload
     [JsonPropertyName("package")] public string? Package { get; set; }
     [JsonPropertyName("installer_type")] public string InstallerType { get; set; } = string.Empty;
     [JsonPropertyName("winget_id")] public string? WingetId { get; set; }
+
+    /// <summary>Install without --scope machine: the package's installer is
+    /// machine-wide but its winget manifest declares no scope, so forcing
+    /// machine scope finds no applicable installer (.NET runtimes).</summary>
+    [JsonPropertyName("winget_scopeless")] public bool WingetScopeless { get; set; }
     [JsonPropertyName("choco_id")] public string? ChocoId { get; set; }
     [JsonPropertyName("version")] public string? Version { get; set; }
     [JsonPropertyName("installer_url")] public string? InstallerUrl { get; set; }

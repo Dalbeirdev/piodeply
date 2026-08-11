@@ -73,6 +73,9 @@ class AgentJobController extends Controller
             'package'        => $package?->name,
             'installer_type' => $package?->installer_type->value,
             'winget_id'      => $package?->winget_id,
+            // Machine-wide installer whose manifest declares no scope: the
+            // agent omits --scope machine (else 0x8A150010, .NET runtimes).
+            'winget_scopeless' => (bool) $package?->winget_scopeless,
             'choco_id'       => $package?->choco_id,
             // Policy-pinned version wins over the catalogue binary version.
             'version'        => $job->target_version ?? $version?->version,
