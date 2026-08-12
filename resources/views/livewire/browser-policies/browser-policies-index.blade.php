@@ -39,11 +39,11 @@
 
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
-                       placeholder="Search policy or project…" aria-label="Search browser policies"
+                       placeholder="Search policy or {{ project_term_lower() }}…" aria-label="Search browser policies"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-72">
-                <select wire:model.live="projectFilter" aria-label="Filter by project"
+                <select wire:model.live="projectFilter" aria-label="Filter by {{ project_term_lower() }}"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
-                    <option value="">All projects</option>
+                    <option value="">All {{ project_terms_lower() }}</option>
                     @foreach ($projects as $project)
                         <option value="{{ $project->id }}">{{ $project->name }}</option>
                     @endforeach
@@ -55,7 +55,7 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="pd-th">Policy</th>
-                            <th class="pd-th">Project</th>
+                            <th class="pd-th">{{ project_term() }}</th>
                             <th class="pd-th">Browsers</th>
                             <th class="pd-th">Compliance</th>
                             <th class="pd-th">Status</th>
@@ -130,7 +130,7 @@
                         @empty
                             <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">
                                 No browser policies yet. Create one — e.g. “Disable Incognito Mode” — and every
-                                machine in the project locks it down on the next agent check-in.
+                                machine in the {{ project_term_lower() }} locks it down on the next agent check-in.
                             </td></tr>
                         @endforelse
                     </tbody>

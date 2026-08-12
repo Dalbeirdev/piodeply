@@ -15,7 +15,7 @@
             @endif
 
             <p class="text-sm text-slate-500">
-                A template is a ready-made set of software policies. Pick a project, click Apply, and every
+                A template is a ready-made set of software policies. Pick a {{ project_term_lower() }}, click Apply, and every
                 policy in the kit is created at once — apps already covered are skipped, never duplicated.
                 Missing catalogue packages are created automatically from their winget identity.
             </p>
@@ -53,7 +53,7 @@
                         <div class="flex items-center gap-2 pt-1">
                             <select wire:model="applyProject.{{ $template->id }}"
                                     class="block w-64 text-sm border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
-                                <option value="">Choose a project…</option>
+                                <option value="">Choose a {{ project_term_lower() }}…</option>
                                 @foreach ($projects as $project)
                                     <option value="{{ $project->id }}">{{ $project->name }}</option>
                                 @endforeach
@@ -69,7 +69,7 @@
 
             @if ($isStaff && $canManage)
                 <div class="pd-card p-5 space-y-3">
-                    <h3 class="text-sm font-semibold text-slate-800">Save a project's policies as a template</h3>
+                    <h3 class="text-sm font-semibold text-slate-800">Save a {{ project_term_lower() }}'s policies as a template</h3>
                     <p class="text-xs text-slate-500">
                         Snapshot an existing project's winget policies into a reusable kit (policies on
                         non-winget packages are skipped — only the portable winget identity travels).

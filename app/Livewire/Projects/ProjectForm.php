@@ -64,10 +64,10 @@ class ProjectForm extends Component
 
         if ($this->project) {
             $service->update($this->project, $data);
-            session()->flash('status', 'Project saved.');
+            session()->flash('status', project_term().' saved.');
         } else {
             $result = $service->create($data);
-            session()->flash('status', 'Project created.');
+            session()->flash('status', project_term().' created.');
             // Shown exactly once — the hash is all that's stored.
             session()->flash('new_api_key', $result['plain_api_key']);
             session()->flash('new_api_key_project', $result['project']->name);

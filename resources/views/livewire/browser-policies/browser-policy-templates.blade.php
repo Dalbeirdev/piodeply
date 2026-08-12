@@ -19,7 +19,7 @@
 
             <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
                 A template bundles several browser policies. Applying one creates the individual policies
-                on the chosen project — types the project already has are skipped, never overwritten — and
+                on the chosen {{ project_term_lower() }} — types it already has are skipped, never overwritten — and
                 each created policy can then be edited or excluded per machine as usual.
             </div>
 
@@ -111,9 +111,9 @@
 
             {{-- Save a project's policies as a custom template --}}
             <div class="pd-card p-5">
-                <h3 class="font-semibold text-slate-800">Save a project as a template</h3>
-                <p class="text-sm text-slate-500 mt-1">Capture everything a project currently enforces and reuse it elsewhere —
-                    or <span class="text-slate-600 font-medium">export a project</span> straight to JSON with the button that appears once you pick one.</p>
+                <h3 class="font-semibold text-slate-800">Save a {{ project_term_lower() }} as a template</h3>
+                <p class="text-sm text-slate-500 mt-1">Capture everything a {{ project_term_lower() }} currently enforces and reuse it elsewhere —
+                    or <span class="text-slate-600 font-medium">export a {{ project_term_lower() }}</span> straight to JSON with the button that appears once you pick one.</p>
                 <form wire:submit="capture" class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
                     <div>
                         <select wire:model="captureProjectId" aria-label="Source project"

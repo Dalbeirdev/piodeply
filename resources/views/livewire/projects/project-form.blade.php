@@ -1,7 +1,7 @@
 <div>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-slate-800 leading-tight">
-            {{ $project ? 'Edit ' . $project->name : 'New Project' }}
+            {{ $project ? 'Edit ' . $project->name : 'New '.project_term() }}
         </h2>
     </x-slot>
 
@@ -21,7 +21,7 @@
                 </div>
 
                 <div>
-                    <x-label for="name" value="Project name" />
+                    <x-label for="name" :value="project_term() . ' name'" />
                     <x-input id="name" type="text" class="mt-1 block w-full" wire:model="name" required />
                     <x-input-error for="name" class="mt-1" />
                 </div>
@@ -54,7 +54,7 @@
                     </div>
                 @else
                     <div class="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
-                        An API key and download URL are generated when the project is created.
+                        An API key and download URL are generated when the {{ project_term_lower() }} is created.
                         The key is shown <strong>once</strong> — have somewhere safe ready to store it.
                     </div>
                 @endif

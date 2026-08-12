@@ -1,6 +1,6 @@
 <#
     PioDeploy agent - Intune / Entra platform script
-    Project: {!! $name !!} ({!! $company !!})
+    {{ project_term() }}: {!! $name !!} ({!! $company !!})
 
     HOW TO DEPLOY IT
       1. Intune admin centre -> Devices -> Scripts and remediations

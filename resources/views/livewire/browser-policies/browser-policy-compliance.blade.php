@@ -53,7 +53,7 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="pd-th">Policy</th>
-                            <th class="pd-th">Client / Project</th>
+                            <th class="pd-th">Client / {{ project_term() }}</th>
                             <th class="pd-th">Compliance</th>
                             <th class="pd-th text-right">Protected</th>
                             <th class="pd-th text-right">Failing</th>

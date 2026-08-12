@@ -130,7 +130,7 @@
                     $sections = [
                         'Assignment' => [
                             'Client' => $computer->project->client->company_name,
-                            'Project' => $computer->project->name,
+                            project_term() => $computer->project->name,
                             'Enrolled' => $computer->created_at->format('Y-m-d') . ' (' . $computer->created_at->diffForHumans() . ')',
                             'Agent version' => $computer->agent_version
                                 ? $computer->agent_version . ($computer->isAgentOutdated()

@@ -13,7 +13,7 @@
 
             <div class="pd-card p-6">
                 <p class="text-sm text-slate-500 mb-5">
-                    Queue one package across every machine in a project. Each machine goes through the
+                    Queue one package across every machine in a {{ project_term_lower() }}. Each machine goes through the
                     same checks as a single deploy — machines already up to date are skipped, and anything
                     already queued is not duplicated. For ongoing desired state, use a
                     <a href="{{ route('policies.index') }}" class="pd-link">policy</a> instead.
@@ -22,7 +22,7 @@
                 <form wire:submit="queue" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Project</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">{{ project_term() }}</label>
                             <select wire:model.live="projectId"
                                     class="block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm text-sm">
                                 <option value="">— select project —</option>
@@ -91,7 +91,7 @@
                             @if ($projectId)
                                 Targets <b class="text-slate-800">{{ $targetCount }}</b> {{ Str::plural('machine', $targetCount) }}{{ $ring !== '' ? ' in the '.$ring.' ring' : '' }}.
                             @else
-                                Select a project to see how many machines will be targeted.
+                                Select a {{ project_term_lower() }} to see how many machines will be targeted.
                             @endif
                         </p>
                         <x-button type="submit" :disabled="! $projectId || ! $packageId || $targetCount === 0"

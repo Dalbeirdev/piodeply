@@ -59,7 +59,7 @@ class ComplianceReport extends Component
 
         $rows = $this->build($service)['rows'];
 
-        $csv = implode(",", ['Policy', 'Client', 'Project', 'Action', 'Mode', 'Target', 'Compliant',
+        $csv = implode(",", ['Policy', 'Client', project_term(), 'Action', 'Mode', 'Target', 'Compliant',
             'Pending', 'Scheduled', 'Failed', 'Non-compliant', 'Excluded', 'Offline', 'Compliance %']) . "\n";
 
         foreach ($rows as $row) {

@@ -70,7 +70,7 @@
                             <th class="px-6 py-3">Name</th>
                             <th class="px-6 py-3">Email</th>
                             <th class="px-6 py-3">Role</th>
-                            <th class="px-6 py-3">Projects</th>
+                            <th class="px-6 py-3">{{ project_terms() }}</th>
                             <th class="px-6 py-3 text-right"></th>
                         </tr>
                     </thead>
@@ -90,7 +90,7 @@
                                 <td class="px-6 py-3">
                                     @php $isOwner = $member->isClientOwner(); @endphp
                                     @if ($isOwner)
-                                        <span class="text-xs text-slate-400">All projects (owner)</span>
+                                        <span class="text-xs text-slate-400">All {{ project_terms_lower() }} (owner)</span>
                                     @else
                                         <div class="flex flex-wrap items-center gap-1">
                                             @forelse ($member->assignedProjects as $project)
@@ -100,7 +100,7 @@
                                                             class="ml-0.5 text-slate-400 hover:text-rose-600" title="Remove assignment">×</button>
                                                 </span>
                                             @empty
-                                                <span class="text-xs text-slate-400" title="Assign a project to limit this person to it">All projects</span>
+                                                <span class="text-xs text-slate-400" title="Assign a {{ project_term_lower() }} to limit this person to it">All {{ project_terms_lower() }}</span>
                                             @endforelse
                                             @if ($projects->count() > $member->assignedProjects->count())
                                                 <select wire:model="assignProject.{{ $member->id }}" class="text-xs border-slate-300 rounded-md py-0.5">

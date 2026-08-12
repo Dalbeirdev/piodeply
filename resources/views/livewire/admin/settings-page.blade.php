@@ -20,6 +20,22 @@
                         <p class="mt-1 text-xs text-slate-500">Shown in the sidebar next to the PioDeploy logo.</p>
                         <x-input-error for="company_name" class="mt-1" />
                     </div>
+                    <div>
+                        <x-label for="project_term" value="What to call machine groups" />
+                        <select id="project_term" wire:model="project_term"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500">
+                            <option value="Site">Site (MSP standard)</option>
+                            <option value="Project">Project</option>
+                            <option value="Department">Department</option>
+                            <option value="Location">Location</option>
+                            <option value="Team">Team</option>
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">
+                            The client &rarr; machines grouping, everywhere in the UI: menus, pages,
+                            buttons. Display only &mdash; nothing changes for enrolled agents.
+                        </p>
+                        <x-input-error for="project_term" class="mt-1" />
+                    </div>
                 </div>
 
                 <div class="border-t pt-5">

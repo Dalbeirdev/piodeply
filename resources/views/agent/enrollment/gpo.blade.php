@@ -3,7 +3,7 @@
         value safe for the syntax it lands in. */ @endphp
 <#
     PioDeploy agent - Group Policy computer startup script
-    Project: {!! $name !!} ({!! $company !!})
+    {{ project_term() }}: {!! $name !!} ({!! $company !!})
 
     WHAT THIS DOES
       Installs the PioDeploy agent on every computer the GPO is linked to,

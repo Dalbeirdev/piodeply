@@ -151,7 +151,7 @@ class TeamIndex extends Component
         $target = User::where('client_id', auth()->user()->tenantClientId())->findOrFail($userId);
 
         if ($target->isClientOwner()) {
-            session()->flash('error', 'Owners always have access to every project.');
+            session()->flash('error', 'Owners always have access to every '.project_term_lower().'.');
 
             return;
         }
@@ -165,7 +165,7 @@ class TeamIndex extends Component
             ->withProperties(['email' => $target->email, 'project' => $project->name])
             ->log('team_member_assigned_project');
 
-        session()->flash('status', "{$target->name} is now limited to their assigned projects.");
+        session()->flash('status', "{$target->name} is now limited to their assigned ".project_terms_lower().'.');
     }
 
     public function unassignFromProject(int $userId, int $projectId): void

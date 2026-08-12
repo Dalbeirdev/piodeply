@@ -169,7 +169,7 @@ class ProjectEnrollmentTest extends TestCase
         // a key is — a looser rule in the browser would reopen the injection.
         $this->page()
             ->assertViewHas('keyPattern', EnrollmentScriptService::KEY_PATTERN)
-            ->assertSee('does not look like a project key');
+            ->assertSee('does not look like a '.project_term_lower().' key');
 
         $this->assertTrue(EnrollmentScriptService::looksLikeAKey('pio_abcdefgh12345678'));
         $this->assertFalse(EnrollmentScriptService::looksLikeAKey("pio_abcdefgh\u{2019}; calc"));

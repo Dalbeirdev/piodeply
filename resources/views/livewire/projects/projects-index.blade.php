@@ -1,11 +1,11 @@
 <div>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Projects') }}</h2>
+            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ project_terms() }}</h2>
             @can('create', \App\Models\Project::class)
                 <a href="{{ route('projects.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
-                    + New Project
+                    + New {{ project_term() }}
                 </a>
             @endcan
         </div>
@@ -45,7 +45,7 @@
 
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
-                       placeholder="Search project or client…" aria-label="Search projects"
+                       placeholder="Search {{ project_term_lower() }} or client…" aria-label="Search {{ project_terms_lower() }}"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-72">
                 @unless ($isTenant ?? false)
 <select wire:model.live="clientId" aria-label="Filter by client"
@@ -150,7 +150,7 @@
                         @endunless
                     </div>
                 @empty
-                    <div class="pd-card p-10 text-center text-slate-500">No projects found.</div>
+                    <div class="pd-card p-10 text-center text-slate-500">No {{ project_terms_lower() }} found.</div>
                 @endforelse
             </div>
 

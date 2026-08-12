@@ -25,6 +25,9 @@ class SettingsPage extends Component
     /** Fleet auto-update: agents self-update to the published version. */
     public bool $agent_auto_update = true;
 
+    /** What the client→machines grouping is called across the UI. */
+    public string $project_term = 'Site';
+
     public function mount(SettingsService $settings): void
     {
         $this->authorizeManage();
@@ -37,6 +40,7 @@ class SettingsPage extends Component
         $this->activity_retention_days = (int) $settings->get('retention.activity_days');
         $this->require_two_factor = (string) $settings->get('security.require_two_factor');
         $this->agent_auto_update = (bool) $settings->get('agent.auto_update', '1');
+        $this->project_term = (string) $settings->get('branding.project_term');
     }
 
     public function save(SettingsService $settings): void
@@ -52,6 +56,8 @@ class SettingsPage extends Component
             'activity_retention_days'  => ['required', 'integer', 'between:7,3650'],
             'require_two_factor'       => ['required', 'in:off,staff,all'],
             'agent_auto_update'        => ['boolean'],
+            // A word, not a sentence: it lands inside headings and buttons.
+            'project_term'             => ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z ]*$/'],
         ]);
 
         $map = [
@@ -63,6 +69,7 @@ class SettingsPage extends Component
             'retention.activity_days'              => (int) $validated['activity_retention_days'],
             'security.require_two_factor'          => $validated['require_two_factor'],
             'agent.auto_update'                    => $validated['agent_auto_update'] ? '1' : '0',
+            'branding.project_term'                => ucfirst(trim($validated['project_term'])),
         ];
 
         foreach ($map as $key => $value) {

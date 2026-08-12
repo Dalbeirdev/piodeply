@@ -140,7 +140,7 @@
                             </tr>
                         @empty
                             <tr><td colspan="{{ count($browsers) + 4 }}" class="px-6 py-8 text-center text-slate-500">
-                                {{ $statusFilter === '' ? 'No computers in this project yet.' : 'No machines match this filter.' }}
+                                {{ $statusFilter === '' ? 'No computers in this '.project_term_lower().' yet.' : 'No machines match this filter.' }}
                             </td></tr>
                         @endforelse
                     </tbody>

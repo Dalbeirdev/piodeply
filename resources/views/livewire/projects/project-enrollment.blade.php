@@ -95,7 +95,7 @@
             @endcan
 
             <div class="pd-card p-6">
-                <label for="apiKey" class="block text-sm font-medium text-slate-700">Project API key</label>
+                <label for="apiKey" class="block text-sm font-medium text-slate-700">{{ project_term() }} API key</label>
                 <p class="text-xs text-slate-500 mt-1">
                     Paste a key for <strong>{{ $project->name }}</strong> and it drops into the scripts below.
                     Keys are shown once at creation — PioDeploy stores only a hash and cannot show them
@@ -107,7 +107,7 @@
 
                 <p x-cloak x-show="entered && ! valid"
                    class="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
-                    That does not look like a project key. A key is 8–128 characters of letters, numbers,
+                    That does not look like a {{ project_term_lower() }} key. A key is 8–128 characters of letters, numbers,
                     <code>-</code> and <code>_</code> — nothing else. The script below keeps the placeholder rather
                     than embed something unexpected in a script that runs as SYSTEM on every machine it reaches.
                     If this came from an email or a message, check where it came from.

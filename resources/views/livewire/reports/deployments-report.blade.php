@@ -26,9 +26,9 @@
                         <option value="{{ $s->value }}">{{ $s->label() }}</option>
                     @endforeach
                 </select>
-                <select wire:model.live="projectFilter" aria-label="Filter by project"
+                <select wire:model.live="projectFilter" aria-label="Filter by {{ project_term_lower() }}"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
-                    <option value="">All projects</option>
+                    <option value="">All {{ project_terms_lower() }}</option>
                     @foreach ($projects as $project)
                         <option value="{{ $project->id }}">{{ $project->name }}</option>
                     @endforeach

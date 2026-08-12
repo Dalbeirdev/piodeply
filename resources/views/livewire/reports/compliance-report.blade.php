@@ -27,9 +27,9 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
-                <select wire:model.live="projectFilter" aria-label="Filter by project"
+                <select wire:model.live="projectFilter" aria-label="Filter by {{ project_term_lower() }}"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
-                    <option value="">All projects</option>
+                    <option value="">All {{ project_terms_lower() }}</option>
                     @foreach ($projects as $project)
                         <option value="{{ $project->id }}">{{ $project->name }}</option>
                     @endforeach
@@ -41,7 +41,7 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="pd-th">Policy</th>
-                            <th class="pd-th">Client / Project</th>
+                            <th class="pd-th">Client / {{ project_term() }}</th>
                             <th class="pd-th">Mode</th>
                             <th class="pd-th text-right">Target</th>
                             <th class="pd-th text-right">Compliant</th>

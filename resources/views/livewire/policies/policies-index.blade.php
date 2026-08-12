@@ -30,11 +30,11 @@
 
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
-                       placeholder="Search package or project…" aria-label="Search policies"
+                       placeholder="Search package or {{ project_term_lower() }}…" aria-label="Search policies"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-72">
-                <select wire:model.live="projectFilter" aria-label="Filter by project"
+                <select wire:model.live="projectFilter" aria-label="Filter by {{ project_term_lower() }}"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
-                    <option value="">All projects</option>
+                    <option value="">All {{ project_terms_lower() }}</option>
                     @foreach ($projects as $project)
                         <option value="{{ $project->id }}">{{ $project->name }}</option>
                     @endforeach
@@ -46,7 +46,7 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="pd-th">Policy</th>
-                            <th class="pd-th">Project</th>
+                            <th class="pd-th">{{ project_term() }}</th>
                             <th class="pd-th">Action</th>
                             <th class="pd-th">Priority</th>
                             <th class="pd-th">Compliance</th>
@@ -148,7 +148,7 @@
                         @empty
                             <tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">
                                 No policies yet. Create one — e.g. “Auto Update Chrome”, “7-Zip 24.09 exactly” or
-                                “Block AnyDesk” — and it applies to every machine in the project.
+                                “Block AnyDesk” — and it applies to every machine in the {{ project_term_lower() }}.
                             </td></tr>
                         @endforelse
                     </tbody>

@@ -47,7 +47,7 @@
         @else
             <table>
                 <thead><tr>
-                    <th>Policy</th><th>Project</th>
+                    <th>Policy</th><th>{{ project_term() }}</th>
                     <th class="num">Targeted</th><th class="num">Compliant</th>
                     <th class="num">Pending</th><th class="num">Failed</th><th class="num">%</th>
                 </tr></thead>
@@ -94,7 +94,7 @@
         <h2>Machines</h2>
         <table>
             <thead><tr>
-                <th>Hostname</th><th>Project</th><th>OS</th><th>Agent</th><th>Last seen</th>
+                <th>Hostname</th><th>{{ project_term() }}</th><th>OS</th><th>Agent</th><th>Last seen</th>
             </tr></thead>
             <tbody>
             @foreach ($computers as $computer)

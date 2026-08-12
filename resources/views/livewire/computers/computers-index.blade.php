@@ -29,9 +29,9 @@
                     @endforeach
                 </select>
 @endunless
-                <select wire:model.live="projectId" aria-label="Filter by project"
+                <select wire:model.live="projectId" aria-label="Filter by {{ project_term_lower() }}"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
-                    <option value="">All projects</option>
+                    <option value="">All {{ project_terms_lower() }}</option>
                     @foreach ($projects as $project)
                         <option value="{{ $project->id }}">{{ $project->name }}</option>
                     @endforeach
@@ -61,7 +61,7 @@
                     <thead class="bg-slate-50">
                         <tr>
                             <th class="pd-th">Hostname</th>
-                            <th class="pd-th">Client / Project</th>
+                            <th class="pd-th">Client / {{ project_term() }}</th>
                             <th class="pd-th">OS</th>
                             <th class="pd-th">Private IP</th>
                             <th class="pd-th">Agent</th>

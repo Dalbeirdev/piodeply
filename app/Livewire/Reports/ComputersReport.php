@@ -50,7 +50,7 @@ class ComputersReport extends Component
     {
         abort_unless(auth()->user()->can(Permission::ReportsExport->value), 403);
 
-        $csv = "Hostname,Client,Project,Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Serial\n";
+        $csv = "Hostname,Client,".project_term().",Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Serial\n";
         foreach ($this->query()->get() as $computer) {
             $diskPct = ($computer->disk_total_bytes && $computer->disk_free_bytes !== null)
                 ? round($computer->disk_free_bytes / $computer->disk_total_bytes * 100)

@@ -98,7 +98,7 @@
                 </a>
                 <a href="{{ route('projects.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
                     <p class="text-xl font-bold text-slate-700">{{ $stats['projects'] }}</p>
-                    <p class="text-xs font-semibold text-slate-600">Projects</p>
+                    <p class="text-xs font-semibold text-slate-600">{{ project_terms() }}</p>
                 </a>
                 <a href="{{ route('packages.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
                     <p class="text-xl font-bold text-slate-700">{{ $stats['packages'] }}</p>

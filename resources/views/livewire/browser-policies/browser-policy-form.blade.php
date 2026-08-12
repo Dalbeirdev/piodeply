@@ -22,7 +22,7 @@
                                 class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                             <option value="all">All machines (whole instance)</option>
                             <option value="client">Client — every project it has</option>
-                            <option value="project">Project</option>
+                            <option value="project">{{ project_term() }}</option>
                             <option value="group">Device group</option>
                             <option value="computer">Single computer</option>
                         </select>
@@ -47,7 +47,7 @@
                 </div>
                 <p class="-mt-2 text-xs text-slate-500">
                     When policies of the same type overlap, the most specific wins:
-                    <b>Computer&nbsp;›&nbsp;Group&nbsp;›&nbsp;Project&nbsp;›&nbsp;Client&nbsp;›&nbsp;All</b>.
+                    <b>Computer&nbsp;›&nbsp;Group&nbsp;›&nbsp;{{ project_term() }}&nbsp;›&nbsp;Client&nbsp;›&nbsp;All</b>.
                     Individual machines can still be excluded from the policy page after creating.
                 </p>
 

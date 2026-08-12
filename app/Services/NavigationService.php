@@ -36,7 +36,7 @@ class NavigationService
             // Who we manage: a client owns projects, a project holds machines.
             ['label' => 'Clients', 'route' => 'clients.index', 'active' => 'clients.*', 'permission' => Permission::ClientsView, 'group' => self::FLEET,
                 'icon' => '<path d="M3 21h18M5 21V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14M9 9h1M9 13h1M14 9h1M14 13h1M10 21v-4h4v4"/>'],
-            ['label' => 'Projects', 'route' => 'projects.index', 'active' => 'projects.*', 'permission' => Permission::ProjectsView, 'group' => self::FLEET,
+            ['label' => project_terms(), 'route' => 'projects.index', 'active' => 'projects.*', 'permission' => Permission::ProjectsView, 'group' => self::FLEET,
                 'icon' => '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'],
             ['label' => 'Computers', 'route' => 'computers.index', 'active' => 'computers.*', 'permission' => Permission::ComputersView, 'group' => self::FLEET,
                 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],

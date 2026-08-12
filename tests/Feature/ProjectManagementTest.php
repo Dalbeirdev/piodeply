@@ -284,6 +284,6 @@ class ProjectManagementTest extends TestCase
 
     public function test_menu_shows_projects_for_permitted_users(): void
     {
-        $this->actingAs($this->admin())->get('/dashboard')->assertSee('Projects');
+        $this->actingAs($this->admin())->get('/dashboard')->assertSee(project_terms());
     }
 }

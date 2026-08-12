@@ -19,6 +19,11 @@ class SettingsService
     {
         return [
             'branding.company_name'             => config('app.name', 'PioDeploy'),
+            // What the client→machines grouping is CALLED in the UI. The
+            // industry-standard MSP term is "Site"; internal-IT shops may
+            // prefer Department/Location/Team. Display only — the API, DB
+            // and agent keep the word "project" internally.
+            'branding.project_term'             => 'Site',
             'agent.online_threshold_seconds'    => (int) config('piodeploy.agent.online_threshold_seconds', 300),
             'notifications.offline_after_minutes' => (int) config('piodeploy.notifications.offline_after_minutes', 60),
             'deployments.default_max_attempts'  => 3,

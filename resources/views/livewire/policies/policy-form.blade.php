@@ -9,7 +9,7 @@
         <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
             <form wire:submit="save" class="pd-card p-6 space-y-5">
                 <div>
-                    <x-label for="project_id" value="Project" />
+                    <x-label for="project_id" :value="project_term()" />
                     <select id="project_id" wire:model="project_id"
                             class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
                         <option value="">— select project —</option>

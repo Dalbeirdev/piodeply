@@ -13,7 +13,7 @@ Sign in to PioDeploy
 **Your first steps:**
 
 1. **Add your team** — invite technicians from the Team page.
-2. **Create a project** — a project groups the machines of one site or department.
+2. **Create a {{ project_term_lower() }}** — it groups the machines you manage for one client.
 3. **Enrol machines** — the Enrolment page generates a ready-to-run script (GPO, Intune, RMM or single machine); your fleet appears in the portal within minutes.
 
 If anything is unclear, just reply to this email — a real person reads it.
