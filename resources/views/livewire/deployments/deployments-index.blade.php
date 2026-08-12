@@ -5,8 +5,10 @@
             <div class="flex items-center gap-3">
                 @can('create', \App\Models\DeploymentJob::class)
                     @if ($failedCount > 0)
-                        <button type="button" wire:click="retryAllFailed"
-                                wire:confirm="Retry all {{ $failedCount }} failed {{ \Illuminate\Support\Str::plural('deployment', $failedCount) }}? Agents pick them up at their next check-in."
+                        {{-- Header slot = outside the Livewire DOM: wire:click
+                             never fires here, hence the JS confirm + dispatch. --}}
+                        <button type="button"
+                                onclick="if (confirm('Retry all {{ $failedCount }} failed {{ \Illuminate\Support\Str::plural('deployment', $failedCount) }}? Agents pick them up at their next check-in.')) Livewire.dispatch('deployments-retry-all-failed')"
                                 class="inline-flex items-center gap-1.5 text-sm font-semibold rounded-md px-3 py-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors">
                             Retry all failed ({{ $failedCount }})
                         </button>

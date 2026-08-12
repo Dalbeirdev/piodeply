@@ -62,6 +62,18 @@ class TeamIndex extends Component
         $this->assertTenantManager();
     }
 
+    /**
+     * The header's "Add team member" button lives in the layout slot -
+     * outside this component's DOM - so it cannot wire:click. It dispatches
+     * this global event instead.
+     */
+    #[\Livewire\Attributes\On('team-toggle-create')]
+    public function toggleCreate(): void
+    {
+        $this->assertTenantManager();
+        $this->showCreate = ! $this->showCreate;
+    }
+
     private function assertTenantManager(): void
     {
         abort_if(auth()->user()->tenantClientId() === null, 403, 'The Team page is for client accounts.');

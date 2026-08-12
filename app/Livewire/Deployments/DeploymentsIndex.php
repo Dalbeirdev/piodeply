@@ -53,7 +53,11 @@ class DeploymentsIndex extends Component
      * fleet's red rows are one decision, not fifty clicks. Jobs whose
      * failure is in the job itself (a rollback with no target version) are
      * skipped and counted rather than sent round the same loop again.
+     *
+     * Dispatched from the header slot, which renders outside this
+     * component's DOM — wire:click there is never heard.
      */
+    #[\Livewire\Attributes\On('deployments-retry-all-failed')]
     public function retryAllFailed(DeploymentService $service): void
     {
         $this->authorize('create', DeploymentJob::class);

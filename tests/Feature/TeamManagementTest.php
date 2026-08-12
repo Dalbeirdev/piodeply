@@ -34,6 +34,19 @@ class TeamManagementTest extends TestCase
         $this->owner->assignRole(RoleEnum::ClientOwner->value);
     }
 
+    public function test_the_header_button_event_opens_the_create_form(): void
+    {
+        // The "Add team member" button lives in the layout's header slot -
+        // OUTSIDE the component's DOM - so it must reach the component via a
+        // dispatched event, not wire:click (which silently did nothing).
+        Livewire::actingAs($this->owner)
+            ->test(TeamIndex::class)
+            ->assertSet('showCreate', false)
+            ->dispatch('team-toggle-create')
+            ->assertSet('showCreate', true)
+            ->assertSee('New team member');
+    }
+
     public function test_an_owner_can_add_a_technician_bound_to_their_own_client(): void
     {
         Livewire::actingAs($this->owner)

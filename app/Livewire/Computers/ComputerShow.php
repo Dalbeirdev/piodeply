@@ -111,7 +111,11 @@ class ComputerShow extends Component
      * re-downloads the current bundle and swaps itself, whatever state its
      * install is in. This is the remote fix for a broken agent that is
      * still checking in — no one touches the machine by hand.
+     *
+     * Dispatched from the header slot, which renders outside this
+     * component's DOM — wire:click there is never heard.
      */
+    #[\Livewire\Attributes\On('computer-request-reinstall')]
     public function requestReinstall(): void
     {
         $this->authorize('update', $this->computer);
@@ -126,6 +130,7 @@ class ComputerShow extends Component
      * heartbeat: service deleted, files removed. The computer record stays
      * (with its history) until someone deletes it here.
      */
+    #[\Livewire\Attributes\On('computer-request-uninstall')]
     public function requestUninstall(): void
     {
         $this->authorize('delete', $this->computer);
@@ -136,6 +141,7 @@ class ComputerShow extends Component
     }
 
     /** Withdraws a queued command the agent has not collected yet. */
+    #[\Livewire\Attributes\On('computer-cancel-agent-command')]
     public function cancelAgentCommand(): void
     {
         $this->authorize('update', $this->computer);

@@ -2,7 +2,10 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-slate-900 leading-tight">Team</h2>
-            <button type="button" wire:click="$toggle('showCreate')"
+            {{-- The header slot renders OUTSIDE the Livewire component's DOM,
+                 so wire:click here is never heard. A global dispatch reaches
+                 the component from anywhere on the page. --}}
+            <button type="button" onclick="Livewire.dispatch('team-toggle-create')"
                     class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
                 Add team member
             </button>
