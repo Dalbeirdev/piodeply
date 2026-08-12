@@ -47,6 +47,19 @@ class DeploymentService
             );
         }
 
+        // Custom client-role overlay, enforced at the same funnel: when the
+        // signed-in user carries one, both the action capability and the
+        // machine scope must allow this job. System-originated queueing
+        // (policy engine, agent callbacks) has no signed-in user and is
+        // governed by the policies themselves.
+        $actor = auth()->user();
+        if ($actor !== null && ! $actor->mayDeploy($action->value, $computer)) {
+            throw new \DomainException(
+                "Your role \"{$actor->clientRole?->name}\" does not allow "
+                ."{$action->value} on {$computer->hostname}."
+            );
+        }
+
         $status = $dependsOn !== null && ! $dependsOn->status->isTerminal()
             ? JobStatus::Blocked
             : JobStatus::Pending;

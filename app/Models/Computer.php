@@ -148,6 +148,7 @@ class Computer extends Model
     {
         $tenantId = $user->tenantClientId();
         $allowed = $user->visibleProjectIds();
+        $machines = $user->grantedComputerIds();
 
         return $query
             ->when($tenantId !== null || $allowed !== null, fn (Builder $q) => $q->whereHas(
@@ -155,7 +156,10 @@ class Computer extends Model
                 fn ($p) => $p
                     ->when($tenantId !== null, fn ($pp) => $pp->where('client_id', $tenantId))
                     ->when($allowed !== null, fn ($pp) => $pp->whereIn('projects.id', $allowed))
-            ));
+            ))
+            // A custom client role with an explicit machine list narrows
+            // further: the holder sees exactly those machines, nothing else.
+            ->when($machines !== null, fn (Builder $q) => $q->whereIn('computers.id', $machines));
     }
 
     public function scopeSearch(Builder $query, string $term): Builder

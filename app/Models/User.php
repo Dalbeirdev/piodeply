@@ -123,6 +123,43 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * The owner-defined custom role overlay, if any: narrows which
+     * deployment ACTIONS this user may take and on which MACHINES.
+     * Null = the ladder role alone decides (the pre-overlay behaviour).
+     */
+    public function clientRole(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ClientRole::class);
+    }
+
+    /**
+     * May this user queue $action on $computer? Users without an overlay
+     * pass — their ladder role and the policies already decided. With an
+     * overlay, both the capability AND the machine scope must allow it.
+     */
+    public function mayDeploy(string $action, Computer $computer): bool
+    {
+        $overlay = $this->clientRole;
+
+        return $overlay === null || $overlay->allows($action, $computer);
+    }
+
+    /**
+     * Machine confinement for lists: null = unrestricted, otherwise the
+     * only computer ids this user may see. Mirrors visibleProjectIds().
+     */
+    public function grantedComputerIds(): ?array
+    {
+        $overlay = $this->clientRole;
+
+        if ($overlay === null || $overlay->all_computers) {
+            return null;
+        }
+
+        return once(fn () => $overlay->computers()->pluck('computers.id')->all());
+    }
+
+    /**
      * Local initials avatar (inline SVG) — the Jetstream default uses an
      * external avatar service, which breaks on offline/locked-down networks.
      */

@@ -2,13 +2,16 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-slate-900 leading-tight">Team</h2>
-            {{-- The header slot renders OUTSIDE the Livewire component's DOM,
-                 so wire:click here is never heard. A global dispatch reaches
-                 the component from anywhere on the page. --}}
-            <button type="button" onclick="Livewire.dispatch('team-toggle-create')"
-                    class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
-                Add team member
-            </button>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('team.roles') }}" class="text-sm pd-action">Manage roles</a>
+                {{-- The header slot renders OUTSIDE the Livewire component's DOM,
+                     so wire:click here is never heard. A global dispatch reaches
+                     the component from anywhere on the page. --}}
+                <button type="button" onclick="Livewire.dispatch('team-toggle-create')"
+                        class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
+                    Add team member
+                </button>
+            </div>
         </div>
     </x-slot>
 
@@ -48,11 +51,28 @@
                         <div>
                             <label class="block text-xs font-medium text-slate-600">Role</label>
                             <select wire:model.live="newRole" class="mt-1 block w-full text-sm border-slate-300 rounded-md">
-                                @foreach ($grantable as $role)
-                                    <option value="{{ $role }}">{{ $role === 'Client Owner' ? 'Administrator' : $role }}</option>
-                                @endforeach
+                                <optgroup label="Standard roles">
+                                    @foreach ($grantable as $role)
+                                        <option value="{{ $role }}">{{ $role === 'Client Owner' ? 'Administrator' : $role }}</option>
+                                    @endforeach
+                                </optgroup>
+                                @if ($customRoles->isNotEmpty())
+                                    <optgroup label="Custom roles">
+                                        @foreach ($customRoles as $custom)
+                                            <option value="custom:{{ $custom->id }}">{{ $custom->name }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endif
                             </select>
-                            <p class="text-xs text-slate-500 mt-1">{{ $roleHelp[$newRole] ?? '' }}</p>
+                            <p class="text-xs text-slate-500 mt-1">
+                                @if (str_starts_with($newRole, 'custom:'))
+                                    {{ $customRoles->firstWhere('id', (int) substr($newRole, 7))?->summary() }}
+                                @else
+                                    {{ $roleHelp[$newRole] ?? '' }}
+                                @endif
+                                — or <a href="{{ route('team.roles') }}" class="pd-link">create a custom role</a>
+                                with machine-level permissions.
+                            </p>
                             @error('newRole')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
                         </div>
                     </div>
@@ -87,8 +107,14 @@
                                 <td class="px-6 py-3">{{ $member->email }}</td>
                                 <td class="px-6 py-3">
                                     @php $memberRole = $member->getRoleNames()->first(); @endphp
-                                    <span class="pd-badge pd-badge-slate"
-                                          title="{{ $roleHelp[$memberRole] ?? '' }}">{{ $memberRole === 'Client Owner' ? 'Administrator' : ($memberRole ?? '—') }}</span>
+                                    @if ($member->clientRole !== null)
+                                        <span class="pd-badge pd-badge-slate" title="{{ $member->clientRole->summary() }}">
+                                            {{ $member->clientRole->name }}
+                                        </span>
+                                    @else
+                                        <span class="pd-badge pd-badge-slate"
+                                              title="{{ $roleHelp[$memberRole] ?? '' }}">{{ $memberRole === 'Client Owner' ? 'Administrator' : ($memberRole ?? '—') }}</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3">
                                     @php $isOwner = $member->isClientOwner(); @endphp

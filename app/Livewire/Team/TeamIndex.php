@@ -86,11 +86,21 @@ class TeamIndex extends Component
     {
         $this->assertTenantManager();
 
+        // A custom role arrives as "custom:{id}" and must belong to this
+        // owner's own client. Its holders get the Technician ladder role as
+        // their page-access baseline; the overlay then narrows actions and
+        // machines at the deployment funnel.
+        $customRole = null;
+        if (str_starts_with($this->newRole, 'custom:')) {
+            $customRole = \App\Models\ClientRole::where('client_id', auth()->user()->tenantClientId())
+                ->findOrFail((int) substr($this->newRole, 7));
+        }
+
         $validated = $this->validate([
             'newName'     => ['required', 'string', 'max:255'],
             'newEmail'    => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'newPassword' => ['required', 'string', \Illuminate\Validation\Rules\Password::default()],
-            'newRole'     => ['required', Rule::in(self::GRANTABLE)],
+            'newRole'     => ['required', $customRole !== null ? 'string' : Rule::in(self::GRANTABLE)],
         ], [], [
             'newName' => 'name', 'newEmail' => 'email', 'newPassword' => 'password', 'newRole' => 'role',
         ]);
@@ -102,15 +112,16 @@ class TeamIndex extends Component
         ]);
         $user->forceFill([
             'client_id'         => auth()->user()->tenantClientId(),
+            'client_role_id'    => $customRole?->id,
             'email_verified_at' => now(),
         ])->save();
 
-        $user->assignRole($validated['newRole']);
+        $user->assignRole($customRole !== null ? RoleEnum::Technician->value : $validated['newRole']);
 
         activity('team')
             ->causedBy(auth()->user())
             ->performedOn($user)
-            ->withProperties(['role' => $validated['newRole']])
+            ->withProperties(['role' => $customRole?->name ?? $validated['newRole']])
             ->log('team_member_created');
 
         $this->reset(['showCreate', 'newName', 'newEmail', 'newPassword']);
@@ -197,11 +208,13 @@ class TeamIndex extends Component
         $this->assertTenantManager();
 
         return view('livewire.team.team-index', [
-            'members' => User::with('assignedProjects')
+            'members' => User::with(['assignedProjects', 'clientRole'])
                 ->where('client_id', auth()->user()->tenantClientId())
                 ->orderBy('name')->get(),
-            'grantable' => self::GRANTABLE,
-            'roleHelp'  => self::ROLE_HELP,
+            'grantable'   => self::GRANTABLE,
+            'roleHelp'    => self::ROLE_HELP,
+            'customRoles' => \App\Models\ClientRole::where('client_id', auth()->user()->tenantClientId())
+                ->orderBy('name')->get(),
             'projects'  => \App\Models\Project::where('client_id', auth()->user()->tenantClientId())
                 ->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app');
