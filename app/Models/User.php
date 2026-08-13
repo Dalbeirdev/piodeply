@@ -140,15 +140,16 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * May this user queue $action on $computer? Users without an overlay
-     * pass — their ladder role and the policies already decided. With an
-     * overlay, both the capability AND the machine scope must allow it.
+     * May this user queue $action with $package on $computer? Users without
+     * an overlay pass — their ladder role and the policies already decided.
+     * With an overlay, the capability, the machine scope AND the package
+     * scope must all allow it.
      */
-    public function mayDeploy(string $action, Computer $computer): bool
+    public function mayDeploy(string $action, Computer $computer, ?Package $package = null): bool
     {
         $overlay = $this->clientRole;
 
-        return $overlay === null || $overlay->allows($action, $computer);
+        return $overlay === null || $overlay->allows($action, $computer, $package);
     }
 
     /**

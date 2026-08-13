@@ -53,10 +53,10 @@ class DeploymentService
         // (policy engine, agent callbacks) has no signed-in user and is
         // governed by the policies themselves.
         $actor = auth()->user();
-        if ($actor !== null && ! $actor->mayDeploy($action->value, $computer)) {
+        if ($actor !== null && ! $actor->mayDeploy($action->value, $computer, $package)) {
             throw new \DomainException(
                 "Your role \"{$actor->clientRole?->name}\" does not allow "
-                ."{$action->value} on {$computer->hostname}."
+                ."{$action->value} of \"{$package->name}\" on {$computer->hostname}."
             );
         }
 

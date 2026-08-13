@@ -90,6 +90,24 @@ class Package extends Model
             ->where(fn (Builder $w) => $w->whereNull('client_id')->orWhere('client_id', $tenantId)));
     }
 
+    /**
+     * visibleTo, further narrowed by the user's custom-role package scope:
+     * deploy pickers show only the software the role allows. The funnel in
+     * DeploymentService::queue re-checks, so this is convenience, not the
+     * security boundary.
+     */
+    public function scopeDeployableBy(Builder $query, User $user): Builder
+    {
+        $query = $query->visibleTo($user);
+        $overlay = $user->clientRole;
+
+        return match ($overlay?->package_scope) {
+            'packages'   => $query->whereIn('packages.id', $overlay->packages()->pluck('packages.id')),
+            'categories' => $query->whereIn('package_category_id', $overlay->packageCategories()->pluck('package_categories.id')),
+            default      => $query,
+        };
+    }
+
     /** Packages deployable to a given project: the catalogue + its client's. */
     public function scopeUsableFor(Builder $query, Project $project): Builder
     {

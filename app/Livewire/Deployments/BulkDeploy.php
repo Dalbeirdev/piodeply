@@ -101,7 +101,7 @@ class BulkDeploy extends Component
 
         return view('livewire.deployments.bulk-deploy', [
             'projects'    => $this->scopedProjects()->orderBy('name')->get(['id', 'name', 'client_id']),
-            'packages'    => Package::active()->visibleTo(auth()->user())->orderBy('name')->get(['id', 'name', 'installer_type']),
+            'packages'    => Package::active()->deployableBy(auth()->user())->orderBy('name')->get(['id', 'name', 'installer_type']),
             'rings'       => DeploymentRing::cases(),
             // Bulk covers install/update/repair/remove — rollback stays a
             // per-machine action (each machine's previous version differs).

@@ -105,6 +105,45 @@
                         @endif
                     </div>
 
+                    <div>
+                        <p class="text-xs font-medium text-slate-600 mb-2">Software it may touch</p>
+                        <div class="flex flex-wrap gap-5">
+                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="radio" wire:model.live="packageScope" value="all" class="border-slate-300"> All software
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="radio" wire:model.live="packageScope" value="categories" class="border-slate-300"> Specific categories
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="radio" wire:model.live="packageScope" value="packages" class="border-slate-300"> Specific packages
+                            </label>
+                        </div>
+
+                        @if ($packageScope === 'categories')
+                            <div class="mt-2 max-h-56 overflow-y-auto border border-slate-200 rounded-md p-3 grid sm:grid-cols-3 gap-1.5">
+                                @foreach ($allCategories as $category)
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input type="checkbox" wire:model="categoryIds" value="{{ $category->id }}"
+                                               class="rounded border-slate-300">
+                                        {{ $category->name }}
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('categoryIds')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                        @elseif ($packageScope === 'packages')
+                            <div class="mt-2 max-h-56 overflow-y-auto border border-slate-200 rounded-md p-3 grid sm:grid-cols-3 gap-1.5">
+                                @foreach ($allPackages as $pkg)
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input type="checkbox" wire:model="packageIds" value="{{ $pkg->id }}"
+                                               class="rounded border-slate-300">
+                                        {{ $pkg->name }}
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('packageIds')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                        @endif
+                    </div>
+
                     <div class="flex gap-2">
                         <button type="button" wire:click="save"
                                 class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">

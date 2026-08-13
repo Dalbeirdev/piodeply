@@ -264,6 +264,68 @@ class ClientRolesTest extends TestCase
         $this->assertTrue($this->owner->isClientOwner());
     }
 
+    public function test_package_scope_limits_which_software_a_role_may_deploy(): void
+    {
+        $allowed = Package::factory()->create(['name' => 'Allowed App']);
+        $forbidden = Package::factory()->create(['name' => 'Forbidden App']);
+
+        $role = ClientRole::factory()->create([
+            'client_id'     => $this->client->id,
+            'name'          => 'App-limited updater',
+            'can_install'   => true,
+            'scope'         => 'all',
+            'package_scope' => 'packages',
+        ]);
+        $role->packages()->attach($allowed);
+
+        $holder = $this->holderOf($role);
+        $service = app(DeploymentService::class);
+        $this->actingAs($holder);
+
+        $this->assertNotNull($service->queue($this->granted, $allowed, JobAction::Install)->id);
+
+        try {
+            $service->queue($this->granted, $forbidden, JobAction::Install);
+            $this->fail('a package outside the role list must be denied');
+        } catch (\DomainException $e) {
+            $this->assertStringContainsString('Forbidden App', $e->getMessage());
+        }
+
+        // The deploy picker narrows to the allowed software.
+        $visible = Package::deployableBy($holder)->pluck('packages.id')->all();
+        $this->assertContains($allowed->id, $visible);
+        $this->assertNotContains($forbidden->id, $visible);
+    }
+
+    public function test_category_scope_covers_every_package_in_the_category(): void
+    {
+        $category = \App\Models\PackageCategory::factory()->create(['name' => 'Browsers']);
+        $inCategory = Package::factory()->create(['package_category_id' => $category->id]);
+        $outside = Package::factory()->create();
+
+        $role = ClientRole::factory()->create([
+            'client_id'     => $this->client->id,
+            'name'          => 'Browser updater',
+            'can_update'    => true,
+            'scope'         => 'all',
+            'package_scope' => 'categories',
+        ]);
+        $role->packageCategories()->attach($category);
+
+        $holder = $this->holderOf($role);
+        $service = app(DeploymentService::class);
+        $this->actingAs($holder);
+
+        $this->assertNotNull($service->queue($this->granted, $inCategory, JobAction::Update)->id);
+
+        try {
+            $service->queue($this->granted, $outside, JobAction::Update);
+            $this->fail('a package outside the category must be denied');
+        } catch (\DomainException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
     public function test_a_role_in_use_cannot_be_deleted(): void
     {
         $role = $this->updaterOfOneMachine();

@@ -4,6 +4,7 @@ namespace App\Livewire\Team;
 
 use App\Models\ClientRole;
 use App\Models\Computer;
+use App\Models\Package;
 use App\Models\Project;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -40,6 +41,15 @@ class ClientRoles extends Component
     /** @var list<int> */
     public array $projectIds = [];
 
+    /** 'all' | 'categories' | 'packages' */
+    public string $packageScope = 'all';
+
+    /** @var list<int> */
+    public array $packageIds = [];
+
+    /** @var list<int> */
+    public array $categoryIds = [];
+
     public bool $showForm = false;
 
     public function mount(): void
@@ -57,7 +67,7 @@ class ClientRoles extends Component
     public function startCreate(): void
     {
         $this->assertOwner();
-        $this->reset(['editingId', 'name', 'description', 'can_install', 'can_update', 'can_uninstall', 'scope', 'computerIds', 'projectIds']);
+        $this->reset(['editingId', 'name', 'description', 'can_install', 'can_update', 'can_uninstall', 'scope', 'computerIds', 'projectIds', 'packageScope', 'packageIds', 'categoryIds']);
         $this->showForm = true;
     }
 
@@ -75,6 +85,9 @@ class ClientRoles extends Component
         $this->scope = $role->scope;
         $this->computerIds = $role->computers()->pluck('computers.id')->all();
         $this->projectIds = $role->projects()->pluck('projects.id')->all();
+        $this->packageScope = $role->package_scope;
+        $this->packageIds = $role->packages()->pluck('packages.id')->all();
+        $this->categoryIds = $role->packageCategories()->pluck('package_categories.id')->all();
         $this->showForm = true;
     }
 
@@ -93,6 +106,11 @@ class ClientRoles extends Component
             'computerIds.*' => ['integer'],
             'projectIds'    => ['array'],
             'projectIds.*'  => ['integer'],
+            'packageScope'  => ['required', Rule::in(ClientRole::PACKAGE_SCOPES)],
+            'packageIds'    => ['array'],
+            'packageIds.*'  => ['integer'],
+            'categoryIds'   => ['array'],
+            'categoryIds.*' => ['integer'],
         ]);
 
         if (! $validated['can_install'] && ! $validated['can_update'] && ! $validated['can_uninstall']) {
@@ -113,6 +131,18 @@ class ClientRoles extends Component
             return;
         }
 
+        if ($validated['packageScope'] === 'packages' && $validated['packageIds'] === []) {
+            $this->addError('packageIds', 'Select at least one package, or allow all software.');
+
+            return;
+        }
+
+        if ($validated['packageScope'] === 'categories' && $validated['categoryIds'] === []) {
+            $this->addError('categoryIds', 'Select at least one category, or allow all software.');
+
+            return;
+        }
+
         // Machines and sites are validated against the owner's OWN tenant —
         // ids from another client are silently impossible.
         $machineIds = $validated['scope'] !== 'computers' ? [] : Computer::visibleTo(auth()->user())
@@ -120,6 +150,13 @@ class ClientRoles extends Component
             ->pluck('computers.id')->all();
         $siteIds = $validated['scope'] !== 'sites' ? [] : Project::where('client_id', auth()->user()->tenantClientId())
             ->whereIn('id', $validated['projectIds'])
+            ->pluck('id')->all();
+        // Packages against the owner's catalogue view (global + their own);
+        // categories are catalogue-wide and safe by construction.
+        $allowedPackageIds = $validated['packageScope'] !== 'packages' ? [] : Package::visibleTo(auth()->user())
+            ->whereIn('packages.id', $validated['packageIds'])
+            ->pluck('packages.id')->all();
+        $allowedCategoryIds = $validated['packageScope'] !== 'categories' ? [] : \App\Models\PackageCategory::whereIn('id', $validated['categoryIds'])
             ->pluck('id')->all();
 
         $attributes = [
@@ -129,6 +166,7 @@ class ClientRoles extends Component
             'can_update'    => $validated['can_update'],
             'can_uninstall' => $validated['can_uninstall'],
             'scope'         => $validated['scope'],
+            'package_scope' => $validated['packageScope'],
         ];
 
         $role = $this->editingId !== null
@@ -137,6 +175,8 @@ class ClientRoles extends Component
 
         $role->computers()->sync($machineIds);
         $role->projects()->sync($siteIds);
+        $role->packages()->sync($allowedPackageIds);
+        $role->packageCategories()->sync($allowedCategoryIds);
 
         activity('team')
             ->causedBy(auth()->user())
@@ -181,6 +221,9 @@ class ClientRoles extends Component
                 ->orderBy('hostname')->get(['computers.id', 'hostname']),
             'sites'    => Project::where('client_id', auth()->user()->tenantClientId())
                 ->orderBy('name')->get(['id', 'name']),
+            'allPackages'   => Package::active()->visibleTo(auth()->user())
+                ->orderBy('name')->get(['id', 'name']),
+            'allCategories' => \App\Models\PackageCategory::orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app');
     }
 }

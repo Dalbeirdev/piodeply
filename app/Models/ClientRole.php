@@ -25,9 +25,11 @@ class ClientRole extends Model
 
     public const SCOPES = ['all', 'sites', 'computers'];
 
+    public const PACKAGE_SCOPES = ['all', 'categories', 'packages'];
+
     protected $fillable = [
         'client_id', 'name', 'description',
-        'can_install', 'can_update', 'can_uninstall', 'scope',
+        'can_install', 'can_update', 'can_uninstall', 'scope', 'package_scope',
     ];
 
     protected function casts(): array
@@ -59,8 +61,18 @@ class ClientRole extends Model
         return $this->hasMany(User::class);
     }
 
-    /** May a holder of this role perform $action on $computer? */
-    public function allows(string $action, Computer $computer): bool
+    public function packages(): BelongsToMany
+    {
+        return $this->belongsToMany(Package::class);
+    }
+
+    public function packageCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(PackageCategory::class, 'client_role_package_category');
+    }
+
+    /** May a holder of this role perform $action with $package on $computer? */
+    public function allows(string $action, Computer $computer, ?Package $package = null): bool
     {
         $capability = match ($action) {
             'install', 'repair', 'rollback' => $this->can_install,
@@ -73,10 +85,23 @@ class ClientRole extends Model
             return false;
         }
 
-        return match ($this->scope) {
+        $machineOk = match ($this->scope) {
             'sites'     => $this->projects()->whereKey($computer->project_id)->exists(),
             'computers' => $this->computers()->whereKey($computer->id)->exists(),
             default     => true, // 'all'
+        };
+
+        return $machineOk && ($package === null || $this->allowsPackage($package));
+    }
+
+    /** The software dimension: is this package inside the role's list? */
+    public function allowsPackage(Package $package): bool
+    {
+        return match ($this->package_scope) {
+            'packages'   => $this->packages()->whereKey($package->id)->exists(),
+            'categories' => $package->package_category_id !== null
+                && $this->packageCategories()->whereKey($package->package_category_id)->exists(),
+            default      => true, // 'all'
         };
     }
 
@@ -95,6 +120,12 @@ class ClientRole extends Model
             default => 'all machines',
         };
 
-        return ($caps === [] ? 'No actions' : implode(', ', $caps)).' · '.$where;
+        $what = match ($this->package_scope) {
+            'packages'   => $this->packages()->count().' allowed '.str('package')->plural($this->packages()->count()),
+            'categories' => $this->packageCategories()->count().' '.str('category')->plural($this->packageCategories()->count()),
+            default      => null,
+        };
+
+        return ($caps === [] ? 'No actions' : implode(', ', $caps)).' · '.$where.($what !== null ? ' · '.$what : '');
     }
 }
