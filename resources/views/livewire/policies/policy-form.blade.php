@@ -207,25 +207,9 @@
                                 <x-input-error for="window_end" class="mt-1" />
                             </div>
 
-                            <div>
-                                <x-label value="Staged rollout (deployment rings)" />
-                                <p class="text-xs text-slate-500 mb-2">
-                                    Pilot machines get changes immediately. Test and Production wait the days below.
-                                    Emergency machines ignore delays and windows. Set both to 0 to roll out everywhere at once.
-                                </p>
-                                <div class="flex items-center gap-4">
-                                    <div>
-                                        <x-label for="test_delay_days" value="Test after (days)" class="text-xs" />
-                                        <x-input id="test_delay_days" type="number" min="0" max="365" class="mt-1 block w-24" wire:model="test_delay_days" />
-                                    </div>
-                                    <div>
-                                        <x-label for="production_delay_days" value="Production after (days)" class="text-xs" />
-                                        <x-input id="production_delay_days" type="number" min="0" max="365" class="mt-1 block w-24" wire:model="production_delay_days" />
-                                    </div>
-                                </div>
-                                <x-input-error for="test_delay_days" class="mt-1" />
-                                <x-input-error for="production_delay_days" class="mt-1" />
-                            </div>
+                            {{-- Staged-rollout ring delays exist in the engine but are
+                                 hidden here by request: both default to 0 (everywhere at
+                                 once). Policies that already carry delays keep them. --}}
                         </div>
 
                         <div class="rounded-md bg-blue-50 border border-blue-200 p-3 text-sm text-blue-700">
