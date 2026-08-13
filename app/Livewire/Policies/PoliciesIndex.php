@@ -57,7 +57,7 @@ class PoliciesIndex extends Component
         $policy = SoftwarePolicy::findOrFail($policyId);
         $this->authorize('delete', $policy);
         $policy->delete();
-        session()->flash('status', 'Policy deleted.');
+        session()->flash('status', policy_term().' deleted.');
     }
 
     public function render(PolicyService $service)

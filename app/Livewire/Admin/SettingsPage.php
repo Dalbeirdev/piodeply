@@ -28,6 +28,10 @@ class SettingsPage extends Component
     /** What the client→machines grouping is called across the UI. */
     public string $project_term = 'Site';
 
+    public string $policy_term = 'Automation';
+
+    public string $browser_policy_term = 'Browser Control';
+
     public function mount(SettingsService $settings): void
     {
         $this->authorizeManage();
@@ -41,6 +45,8 @@ class SettingsPage extends Component
         $this->require_two_factor = (string) $settings->get('security.require_two_factor');
         $this->agent_auto_update = (bool) $settings->get('agent.auto_update', '1');
         $this->project_term = (string) $settings->get('branding.project_term');
+        $this->policy_term = (string) $settings->get('branding.policy_term');
+        $this->browser_policy_term = (string) $settings->get('branding.browser_policy_term');
     }
 
     public function save(SettingsService $settings): void
@@ -58,6 +64,8 @@ class SettingsPage extends Component
             'agent_auto_update'        => ['boolean'],
             // A word, not a sentence: it lands inside headings and buttons.
             'project_term'             => ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z ]*$/'],
+            'policy_term'              => ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z ]*$/'],
+            'browser_policy_term'      => ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z ]*$/'],
         ]);
 
         $map = [
@@ -70,6 +78,8 @@ class SettingsPage extends Component
             'security.require_two_factor'          => $validated['require_two_factor'],
             'agent.auto_update'                    => $validated['agent_auto_update'] ? '1' : '0',
             'branding.project_term'                => ucfirst(trim($validated['project_term'])),
+            'branding.policy_term'                 => ucfirst(trim($validated['policy_term'])),
+            'branding.browser_policy_term'         => ucwords(trim($validated['browser_policy_term'])),
         ];
 
         foreach ($map as $key => $value) {

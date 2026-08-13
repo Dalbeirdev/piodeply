@@ -36,6 +36,33 @@
                         </p>
                         <x-input-error for="project_term" class="mt-1" />
                     </div>
+                    <div>
+                        <x-label for="policy_term" value="What to call software rules" />
+                        <select id="policy_term" wire:model="policy_term"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500">
+                            <option value="Automation">Automation (recommended)</option>
+                            <option value="Policy">Policy (RMM standard)</option>
+                            <option value="Software Rule">Software Rule</option>
+                            <option value="Desired State">Desired State</option>
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">
+                            The keep-software-in-state rules. Display only.
+                        </p>
+                        <x-input-error for="policy_term" class="mt-1" />
+                    </div>
+                    <div>
+                        <x-label for="browser_policy_term" value="What to call browser rules" />
+                        <select id="browser_policy_term" wire:model="browser_policy_term"
+                                class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500">
+                            <option value="Browser Control">Browser Control (recommended)</option>
+                            <option value="Browser Policy">Browser Policy</option>
+                            <option value="Browser Rule">Browser Rule</option>
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">
+                            The browser-restriction rules. Display only.
+                        </p>
+                        <x-input-error for="browser_policy_term" class="mt-1" />
+                    </div>
                 </div>
 
                 <div class="border-t pt-5">

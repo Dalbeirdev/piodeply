@@ -43,3 +43,59 @@ if (! function_exists('project_terms_lower')) {
         return Str::lower(project_terms());
     }
 }
+
+/*
+ * Same contract for the two rule types. Code, routes and DB keep "policy";
+ * what users read is branding.policy_term / branding.browser_policy_term.
+ */
+
+if (! function_exists('policy_term')) {
+    /** Singular display term for a software rule, e.g. "Automation". */
+    function policy_term(): string
+    {
+        return (string) app(SettingsService::class)->get('branding.policy_term');
+    }
+}
+
+if (! function_exists('policy_terms')) {
+    function policy_terms(): string
+    {
+        return Str::plural(policy_term());
+    }
+}
+
+if (! function_exists('policy_term_lower')) {
+    function policy_term_lower(): string
+    {
+        return Str::lower(policy_term());
+    }
+}
+
+if (! function_exists('policy_terms_lower')) {
+    function policy_terms_lower(): string
+    {
+        return Str::lower(policy_terms());
+    }
+}
+
+if (! function_exists('browser_policy_term')) {
+    /** Singular display term for a browser rule, e.g. "Browser Control". */
+    function browser_policy_term(): string
+    {
+        return (string) app(SettingsService::class)->get('branding.browser_policy_term');
+    }
+}
+
+if (! function_exists('browser_policy_terms')) {
+    function browser_policy_terms(): string
+    {
+        return Str::plural(browser_policy_term());
+    }
+}
+
+if (! function_exists('browser_policy_term_lower')) {
+    function browser_policy_term_lower(): string
+    {
+        return Str::lower(browser_policy_term());
+    }
+}

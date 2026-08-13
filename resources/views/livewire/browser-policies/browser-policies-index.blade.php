@@ -1,7 +1,7 @@
 <div>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Browser Policies') }}</h2>
+            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ browser_policy_terms() }}</h2>
             <div class="flex items-center gap-2">
                 <a href="{{ route('browser-policies.compliance') }}"
                    class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">
@@ -14,7 +14,7 @@
                     </a>
                     <a href="{{ route('browser-policies.create') }}"
                        class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
-                        New policy
+                        New {{ browser_policy_term_lower() }}
                     </a>
                 @endcan
             </div>
@@ -54,7 +54,7 @@
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="pd-th">Policy</th>
+                            <th class="pd-th">{{ browser_policy_term() }}</th>
                             <th class="pd-th">{{ project_term() }}</th>
                             <th class="pd-th">Browsers</th>
                             <th class="pd-th">Compliance</th>

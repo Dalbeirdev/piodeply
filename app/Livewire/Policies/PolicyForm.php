@@ -218,7 +218,7 @@ class PolicyForm extends Component
                 $validated['rollout_started_at'] = now();
             }
             $this->policy->update([...$validated, 'package_id' => $this->policy->package_id]);
-            session()->flash('status', 'Policy saved.');
+            session()->flash('status', policy_term().' saved.');
 
             return $this->redirectRoute('policies.index');
         }
@@ -256,7 +256,7 @@ class PolicyForm extends Component
             return null;
         }
 
-        $message = $created === 1 ? 'Policy created.' : "{$created} policies created.";
+        $message = $created === 1 ? policy_term().' created.' : "{$created} ".policy_terms_lower().' created.';
         if ($skipped !== []) {
             $message .= ' Skipped (already exist): '.implode(', ', $skipped).'.';
         }

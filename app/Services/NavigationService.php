@@ -61,9 +61,9 @@ class NavigationService
                 'icon' => '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>'],
             ['label' => 'Licenses', 'route' => 'licenses.index', 'active' => 'licenses.*', 'permission' => Permission::LicensesView, 'group' => self::SOFTWARE,
                 'icon' => '<path d="M15 7a4 4 0 1 0-8 0c0 1.5.8 2.8 2 3.5V21l2-2 2 2v-10.5c1.2-.7 2-2 2-3.5z"/>'],
-            ['label' => 'Policies', 'route' => 'policies.index', 'active' => 'policies.*', 'permission' => Permission::PoliciesView, 'group' => self::SOFTWARE,
+            ['label' => policy_terms(), 'route' => 'policies.index', 'active' => 'policies.*', 'permission' => Permission::PoliciesView, 'group' => self::SOFTWARE,
                 'icon' => '<path d="M12 22s8-3.6 8-9V5l-8-3-8 3v8c0 5.4 8 9 8 9z"/><path d="m9 12 2 2 4-4"/>'],
-            ['label' => 'Browser Policies', 'route' => 'browser-policies.index', 'active' => 'browser-policies.*', 'permission' => Permission::PoliciesView, 'group' => self::SOFTWARE,
+            ['label' => browser_policy_terms(), 'route' => 'browser-policies.index', 'active' => 'browser-policies.*', 'permission' => Permission::PoliciesView, 'group' => self::SOFTWARE,
                 'icon' => '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/>'],
 
             // How it is going.

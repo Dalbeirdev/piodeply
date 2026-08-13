@@ -24,6 +24,12 @@ class SettingsService
             // prefer Department/Location/Team. Display only — the API, DB
             // and agent keep the word "project" internally.
             'branding.project_term'             => 'Site',
+            // What a software desired-state rule is called. "Automation"
+            // sells what it does; RMM veterans may prefer "Policy".
+            // Display only — code and DB keep "policy".
+            'branding.policy_term'              => 'Automation',
+            // And the browser-restriction rule. Display only, as above.
+            'branding.browser_policy_term'      => 'Browser Control',
             'agent.online_threshold_seconds'    => (int) config('piodeploy.agent.online_threshold_seconds', 300),
             'notifications.offline_after_minutes' => (int) config('piodeploy.notifications.offline_after_minutes', 60),
             'deployments.default_max_attempts'  => 3,

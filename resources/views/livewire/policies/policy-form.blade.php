@@ -1,7 +1,7 @@
 <div>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-slate-800 leading-tight">
-            {{ $policy ? 'Edit policy' : 'New Policy' }}
+            {{ $policy ? 'Edit '.policy_term_lower() : 'New '.policy_term() }}
         </h2>
     </x-slot>
 

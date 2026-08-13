@@ -1,13 +1,13 @@
 <div>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Policies') }}</h2>
+            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ policy_terms() }}</h2>
             <div class="flex items-center gap-3">
                 <a href="{{ route('policies.templates') }}" class="text-sm pd-action">Templates</a>
                 @can('create', \App\Models\SoftwarePolicy::class)
                     <a href="{{ route('policies.create') }}"
                        class="inline-flex items-center px-4 py-2 bg-teal-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-500">
-                        New policy
+                        New {{ policy_term_lower() }}
                     </a>
                 @endcan
             </div>
@@ -23,7 +23,7 @@
             @endif
 
             <div class="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
-                Policies keep the fleet in a desired state — install, keep updated, pin or freeze versions,
+                {{ policy_terms() }} keep the fleet in a desired state — install, keep updated, pin or freeze versions,
                 remove or block software. <strong>Enforce</strong> queues remediation jobs automatically as agents
                 report in; <strong>Audit only</strong> reports compliance without changing machines.
             </div>
@@ -45,7 +45,7 @@
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th class="pd-th">Policy</th>
+                            <th class="pd-th">{{ policy_term() }}</th>
                             <th class="pd-th">{{ project_term() }}</th>
                             <th class="pd-th">Action</th>
                             <th class="pd-th">Priority</th>

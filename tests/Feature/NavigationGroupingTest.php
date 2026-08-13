@@ -54,7 +54,7 @@ class NavigationGroupingTest extends TestCase
         $this->assertSame(['Dashboard'], $byGroup['']);
         $this->assertSame(['Clients', project_terms(), 'Computers', 'Device Groups'], $byGroup[NavigationService::FLEET]);
         $this->assertSame(
-            ['Packages', 'Deployments', 'Licenses', 'Policies', 'Browser Policies'],
+            ['Packages', 'Deployments', 'Licenses', policy_terms(), browser_policy_terms()],
             $byGroup[NavigationService::SOFTWARE]
         );
         $this->assertSame(['Reports', 'Activity'], $byGroup[NavigationService::INSIGHTS]);
