@@ -30,14 +30,16 @@ class ClientRole extends Model
     protected $fillable = [
         'client_id', 'name', 'description',
         'can_install', 'can_update', 'can_uninstall', 'scope', 'package_scope',
+        'requires_approval',
     ];
 
     protected function casts(): array
     {
         return [
-            'can_install'   => 'boolean',
-            'can_update'    => 'boolean',
-            'can_uninstall' => 'boolean',
+            'can_install'       => 'boolean',
+            'can_update'        => 'boolean',
+            'can_uninstall'     => 'boolean',
+            'requires_approval' => 'boolean',
         ];
     }
 
@@ -126,6 +128,8 @@ class ClientRole extends Model
             default      => null,
         };
 
-        return ($caps === [] ? 'No actions' : implode(', ', $caps)).' · '.$where.($what !== null ? ' · '.$what : '');
+        return ($caps === [] ? 'No actions' : implode(', ', $caps)).' · '.$where
+            .($what !== null ? ' · '.$what : '')
+            .($this->requires_approval ? ' · needs approval' : '');
     }
 }

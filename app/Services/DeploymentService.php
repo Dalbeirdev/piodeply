@@ -60,6 +60,40 @@ class DeploymentService
             );
         }
 
+        // Approval gate: the action is ALLOWED by the role (checked above),
+        // but this role routes it through the account owner. File a request
+        // instead of a job — once, not per click.
+        if ($actor !== null && ($actor->clientRole?->requires_approval ?? false)) {
+            $pending = \App\Models\DeploymentRequest::firstOrCreate([
+                'client_id'    => $actor->tenantClientId(),
+                'requester_id' => $actor->id,
+                'computer_id'  => $computer->id,
+                'package_id'   => $package->id,
+                'action'       => $action->value,
+                'status'       => 'pending',
+            ], [
+                'target_version' => $targetVersion,
+            ]);
+
+            if ($pending->wasRecentlyCreated) {
+                app(NotificationService::class)->notify(
+                    'deployment.approval_requested',
+                    "Approval needed: {$actor->name} wants to {$action->value} {$package->name} on {$computer->hostname}",
+                    [
+                        'requester' => $actor->name,
+                        'package'   => $package->name,
+                        'computer'  => $computer->hostname,
+                        'action'    => $action->value,
+                    ],
+                );
+            }
+
+            throw new \App\Exceptions\ApprovalRequiredException(
+                "Sent for approval: {$action->value} {$package->name} on {$computer->hostname}. "
+                .'Your administrator will approve or reject it.'
+            );
+        }
+
         $status = $dependsOn !== null && ! $dependsOn->status->isTerminal()
             ? JobStatus::Blocked
             : JobStatus::Pending;
@@ -150,14 +184,20 @@ class DeploymentService
             );
         }
 
-        $job = $this->queue(
-            computer: $computer,
-            package: $package,
-            action: $action,
-            priority: $priority,
-            createdBy: $createdBy,
-            targetVersion: $targetVersion,
-        );
+        try {
+            $job = $this->queue(
+                computer: $computer,
+                package: $package,
+                action: $action,
+                priority: $priority,
+                createdBy: $createdBy,
+                targetVersion: $targetVersion,
+            );
+        } catch (\App\Exceptions\ApprovalRequiredException $e) {
+            // Not a failure: the request is filed; the outcome says so, and
+            // bulk fans keep going so every machine gets its own request.
+            return new QueueResult(QueueOutcome::ApprovalRequested, null, $e->getMessage());
+        }
 
         return new QueueResult(QueueOutcome::Queued, $job, "{$package->name} queued on {$computer->hostname}.");
     }
@@ -218,20 +258,21 @@ class DeploymentService
         ?string $targetVersion = null,
         bool $force = false,
     ): BulkQueueResult {
-        $queued = $skipped = $refused = $total = 0;
+        $queued = $skipped = $refused = $requested = $total = 0;
 
         foreach ($computers as $computer) {
             $total++;
             $result = $this->queueIfNeeded($computer, $package, $action, $priority, $createdBy, $targetVersion, $force);
 
             match ($result->outcome) {
-                QueueOutcome::Queued  => $queued++,
-                QueueOutcome::Invalid => $refused++,
-                default               => $skipped++, // AlreadyQueued / AlreadySatisfied
+                QueueOutcome::Queued            => $queued++,
+                QueueOutcome::Invalid           => $refused++,
+                QueueOutcome::ApprovalRequested => $requested++,
+                default                         => $skipped++, // AlreadyQueued / AlreadySatisfied
             };
         }
 
-        return new BulkQueueResult($queued, $skipped, $refused, $total);
+        return new BulkQueueResult($queued, $skipped, $refused, $total, $requested);
     }
 
     public function pendingCountFor(Computer $computer): int

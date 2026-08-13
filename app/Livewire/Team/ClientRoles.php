@@ -32,6 +32,8 @@ class ClientRoles extends Component
 
     public bool $can_uninstall = false;
 
+    public bool $requires_approval = false;
+
     /** 'all' | 'sites' | 'computers' */
     public string $scope = 'all';
 
@@ -67,7 +69,7 @@ class ClientRoles extends Component
     public function startCreate(): void
     {
         $this->assertOwner();
-        $this->reset(['editingId', 'name', 'description', 'can_install', 'can_update', 'can_uninstall', 'scope', 'computerIds', 'projectIds', 'packageScope', 'packageIds', 'categoryIds']);
+        $this->reset(['editingId', 'name', 'description', 'can_install', 'can_update', 'can_uninstall', 'requires_approval', 'scope', 'computerIds', 'projectIds', 'packageScope', 'packageIds', 'categoryIds']);
         $this->showForm = true;
     }
 
@@ -82,6 +84,7 @@ class ClientRoles extends Component
         $this->can_install = $role->can_install;
         $this->can_update = $role->can_update;
         $this->can_uninstall = $role->can_uninstall;
+        $this->requires_approval = $role->requires_approval;
         $this->scope = $role->scope;
         $this->computerIds = $role->computers()->pluck('computers.id')->all();
         $this->projectIds = $role->projects()->pluck('projects.id')->all();
@@ -101,6 +104,7 @@ class ClientRoles extends Component
             'can_install'   => ['boolean'],
             'can_update'    => ['boolean'],
             'can_uninstall' => ['boolean'],
+            'requires_approval' => ['boolean'],
             'scope'         => ['required', Rule::in(ClientRole::SCOPES)],
             'computerIds'   => ['array'],
             'computerIds.*' => ['integer'],
@@ -165,6 +169,7 @@ class ClientRoles extends Component
             'can_install'   => $validated['can_install'],
             'can_update'    => $validated['can_update'],
             'can_uninstall' => $validated['can_uninstall'],
+            'requires_approval' => $validated['requires_approval'],
             'scope'         => $validated['scope'],
             'package_scope' => $validated['packageScope'],
         ];

@@ -9,6 +9,10 @@ enum QueueOutcome: string
     case AlreadyQueued = 'already_queued';
     case AlreadySatisfied = 'already_satisfied';
 
+    /** Filed as an approval request instead of a job — the actor's role
+     * routes deployments through the account owner. */
+    case ApprovalRequested = 'approval_requested';
+
     /** The request cannot be carried out as asked — not "nothing to do". */
     case Invalid = 'invalid';
 

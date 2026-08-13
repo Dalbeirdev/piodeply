@@ -57,6 +57,14 @@
                             </label>
                         </div>
                         @error('can_update')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                        <label class="mt-3 flex items-start gap-2 text-sm text-slate-700">
+                            <input type="checkbox" wire:model="requires_approval" class="mt-0.5 rounded border-slate-300">
+                            <span>
+                                <b>Require approval</b> — holders never deploy directly: their actions
+                                become requests you approve or reject on the
+                                <a href="{{ route('approvals.index') }}" class="pd-link">Approvals page</a>.
+                            </span>
+                        </label>
                     </div>
 
                     <div>

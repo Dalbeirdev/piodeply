@@ -147,6 +147,7 @@ Route::middleware([
     // A client owner's own staff. Tenancy enforced inside the component.
     Route::get('/team', \App\Livewire\Team\TeamIndex::class)->name('team.index');
     Route::get('/team/roles', \App\Livewire\Team\ClientRoles::class)->name('team.roles');
+    Route::get('/approvals', \App\Livewire\Team\Approvals::class)->name('approvals.index');
 
     // A client owner's own subscription (tenant-only, resolved from their
     // binding; card actions happen on Stripe's hosted portal).
