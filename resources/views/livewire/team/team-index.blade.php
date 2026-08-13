@@ -1,7 +1,7 @@
 <div>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-900 leading-tight">Team</h2>
+            <h2 class="font-semibold text-xl text-slate-900 leading-tight">Users</h2>
             <div class="flex items-center gap-3">
                 <a href="{{ route('team.roles') }}" class="text-sm pd-action">Manage roles</a>
                 {{-- The header slot renders OUTSIDE the Livewire component's DOM,
@@ -9,7 +9,7 @@
                      the component from anywhere on the page. --}}
                 <button type="button" onclick="Livewire.dispatch('team-toggle-create')"
                         class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
-                    Add team member
+                    Add user
                 </button>
             </div>
         </div>
@@ -26,7 +26,7 @@
 
             @if ($showCreate)
                 <div class="pd-card p-6 space-y-3">
-                    <h3 class="text-sm font-semibold text-slate-800">New team member</h3>
+                    <h3 class="text-sm font-semibold text-slate-800">New user</h3>
                     <p class="text-xs text-slate-500">
                         Everyone you add here belongs to your organisation and can only ever see your
                         projects, machines and data. Pick the level of access below — they sign in at this

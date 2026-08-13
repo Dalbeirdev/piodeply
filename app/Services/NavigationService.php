@@ -42,7 +42,7 @@ class NavigationService
                 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],
             // A client owner's own staff — invisible to platform staff, who
             // use Administration -> Users instead.
-            ['label' => 'Team', 'route' => 'team.index', 'active' => 'team.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
+            ['label' => 'Users', 'route' => 'team.index', 'active' => 'team.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/>'],
             // Deployment requests from approval-gated roles await the owner.
             ['label' => 'Approvals', 'route' => 'approvals.index', 'active' => 'approvals.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,

@@ -44,7 +44,7 @@ class TeamManagementTest extends TestCase
             ->assertSet('showCreate', false)
             ->dispatch('team-toggle-create')
             ->assertSet('showCreate', true)
-            ->assertSee('New team member');
+            ->assertSee('New user');
     }
 
     public function test_an_owner_can_add_a_technician_bound_to_their_own_client(): void
