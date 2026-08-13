@@ -83,85 +83,85 @@
                 @endcan
             @endif
 
-            <div class="pd-card">
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="pd-th">Name</th>
-                            <th class="pd-th">Email</th>
-                            <th class="pd-th">Role</th>
-                            <th class="pd-th">Client binding</th>
-                            <th class="pd-th">2FA</th>
-                            <th class="pd-th">Joined</th>
-                            <th class="px-6 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-slate-100">
-                        @foreach ($users as $user)
-                            <tr>
-                                <td class="px-6 py-3 whitespace-nowrap font-medium text-slate-900">{{ $user->name }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $user->email }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    @if (! $user->is(auth()->user()) && auth()->user()->can('assignRole', $user))
-                                        <select class="border-slate-300 rounded-md shadow-sm text-sm"
-                                                aria-label="Role for {{ $user->name }}"
-                                                wire:change="setRole({{ $user->id }}, $event.target.value)">
-                                            <option value="" @selected($user->roles->isEmpty())>— none —</option>
-                                            @foreach ($roles as $role)
-                                                <option value="{{ $role }}" @selected($user->hasRole($role))>{{ $role }}</option>
-                                            @endforeach
-                                        </select>
-                                    @else
-                                        <span class="text-sm text-slate-600">{{ $user->getRoleNames()->join(', ') ?: '—' }}</span>
+            {{-- Rows, not a 7-column table: identity on the left, the two
+                 editable controls on the right. Everything wraps on narrow
+                 screens — no horizontal scrollbar, ever. --}}
+            <div class="pd-card divide-y divide-slate-100">
+                @foreach ($users as $user)
+                    <div class="px-6 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+                        {{-- Identity --}}
+                        <div class="flex items-center gap-3 min-w-[16rem] flex-1">
+                            <div class="h-10 w-10 shrink-0 grid place-content-center rounded-full bg-teal-50 border border-teal-100 text-teal-700 font-semibold">
+                                {{ mb_strtoupper(mb_substr(trim($user->name), 0, 1)) }}
+                            </div>
+                            <div class="min-w-0">
+                                <p class="font-medium text-slate-900 truncate">
+                                    {{ $user->name }}
+                                    @if ($user->is(auth()->user()))
+                                        <span class="text-xs font-normal text-slate-400">(you)</span>
                                     @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    @if (! $user->is(auth()->user()) && auth()->user()->can('assignRole', $user))
-                                        <select class="border-slate-300 rounded-md shadow-sm text-sm"
-                                                aria-label="Client binding for {{ $user->name }}"
-                                                wire:change="setClient({{ $user->id }}, $event.target.value)">
-                                            <option value="" @selected($user->client_id === null)>— staff (all clients) —</option>
-                                            @foreach ($clients as $client)
-                                                <option value="{{ $client->id }}" @selected($user->client_id === $client->id)>{{ $client->company_name }}</option>
-                                            @endforeach
-                                        </select>
-                                    @else
-                                        <span class="text-sm text-slate-600">{{ $user->client?->company_name ?? '—' }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap">
                                     @if ($user->two_factor_confirmed_at !== null)
-                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-0.5 border bg-green-50 text-green-700 border-green-200"
-                                              title="Enabled {{ $user->two_factor_confirmed_at->format('Y-m-d') }}">
-                                            Enabled
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center text-xs font-semibold rounded-full px-2 py-0.5 border bg-slate-100 text-slate-500 border-slate-200">
-                                            Off
-                                        </span>
+                                        <span class="ml-1 align-middle inline-flex items-center text-[10px] font-semibold rounded-full px-1.5 py-0.5 border bg-green-50 text-green-700 border-green-200"
+                                              title="Two-factor enabled {{ $user->two_factor_confirmed_at->format('Y-m-d') }}">2FA</span>
                                     @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-500">{{ $user->created_at->format('Y-m-d') }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right">
-                                    @if (auth()->user()->hasRole(\App\Enums\Role::SuperAdmin->value)
-                                        && ! $user->is(auth()->user())
-                                        && ! $user->hasRole(\App\Enums\Role::SuperAdmin->value)
-                                        && ! session()->has(\App\Http\Controllers\ImpersonationController::SESSION_KEY))
-                                        <form method="POST" action="{{ route('impersonate.start', $user) }}" target="_blank" class="inline">
-                                            @csrf
-                                            <button type="submit" class="pd-icon-btn pd-icon-btn-amber"
-                                                    aria-label="Login as {{ $user->name }}" title="Login as {{ $user->name }}">
-                                                <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-                                                <span class="pd-tooltip" role="tooltip">Login as {{ $user->name }}</span>
-                                            </button>
-                                        </form>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table></div>
+                                </p>
+                                <p class="text-sm text-slate-500 truncate">{{ $user->email }}
+                                    <span class="text-xs text-slate-400">· joined {{ $user->created_at->format('M j, Y') }}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Controls --}}
+                        <div class="flex items-end gap-3 flex-wrap">
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Role</p>
+                                @if (! $user->is(auth()->user()) && auth()->user()->can('assignRole', $user))
+                                    <select class="border-slate-300 rounded-md shadow-sm text-sm py-1.5 w-40"
+                                            aria-label="Role for {{ $user->name }}"
+                                            wire:change="setRole({{ $user->id }}, $event.target.value)">
+                                        <option value="" @selected($user->roles->isEmpty())>— none —</option>
+                                        @foreach ($roles as $role)
+                                            <option value="{{ $role }}" @selected($user->hasRole($role))>{{ $role }}</option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <p class="text-sm text-slate-600 py-1.5">{{ $user->getRoleNames()->join(', ') ?: '—' }}</p>
+                                @endif
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">Client</p>
+                                @if (! $user->is(auth()->user()) && auth()->user()->can('assignRole', $user))
+                                    <select class="border-slate-300 rounded-md shadow-sm text-sm py-1.5 w-52"
+                                            aria-label="Client binding for {{ $user->name }}"
+                                            wire:change="setClient({{ $user->id }}, $event.target.value)">
+                                        <option value="" @selected($user->client_id === null)>— staff (all clients) —</option>
+                                        @foreach ($clients as $client)
+                                            <option value="{{ $client->id }}" @selected($user->client_id === $client->id)>{{ $client->company_name }}</option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <p class="text-sm text-slate-600 py-1.5">{{ $user->client?->company_name ?? '—' }}</p>
+                                @endif
+                            </div>
+                            <div class="pb-0.5">
+                                @if (auth()->user()->hasRole(\App\Enums\Role::SuperAdmin->value)
+                                    && ! $user->is(auth()->user())
+                                    && ! $user->hasRole(\App\Enums\Role::SuperAdmin->value)
+                                    && ! session()->has(\App\Http\Controllers\ImpersonationController::SESSION_KEY))
+                                    <form method="POST" action="{{ route('impersonate.start', $user) }}" target="_blank" class="inline">
+                                        @csrf
+                                        <button type="submit" class="pd-icon-btn pd-icon-btn-amber"
+                                                aria-label="Login as {{ $user->name }}" title="Login as {{ $user->name }}">
+                                            <svg class="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                 stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
+                                            <span class="pd-tooltip" role="tooltip">Login as {{ $user->name }}</span>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
 
             {{ $users->links() }}

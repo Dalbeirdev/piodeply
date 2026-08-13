@@ -96,12 +96,13 @@ class TwoFactorEnforcementTest extends TestCase
         ]);
         User::factory()->create(['name' => 'Unenrolled Person']);
 
+        // The redesigned list marks enrolment with a compact 2FA badge on
+        // the user's name; no badge means not enrolled.
         Livewire::actingAs($this->admin(withTwoFactor: true))
             ->test(\App\Livewire\Admin\ManageUsers::class)
             ->assertSee('Enrolled Person')
-            ->assertSee('Enabled')
-            ->assertSee('Unenrolled Person')
-            ->assertSee('Off');
+            ->assertSee('Two-factor enabled')
+            ->assertSee('Unenrolled Person');
     }
 
     public function test_settings_page_persists_the_enforcement_mode(): void
