@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
   PioDeploy agent installer - {{ $project->name }} ({{ $project->client->company_name }})
   Generated {{ now()->toDateString() }} by {{ config('app.name') }}.
@@ -287,6 +287,8 @@ $refresh = {
         $svcRunning = (Get-Service PioDeployAgent -ErrorAction SilentlyContinue).Status -eq 'Running'
         $online = $false
         $ver = ''
+        $brand = 'PioDeploy Agent'
+        $trayOn = $true
         if (Test-Path $statusPath) {
             $s = Get-Content $statusPath -Raw | ConvertFrom-Json
             $seen = [datetime]::Parse($s.checked_in_utc).ToUniversalTime()
@@ -296,13 +298,18 @@ $refresh = {
             $miVersion.Text = "Version: $($s.version)" + $(if ($s.latest -and $s.latest -ne $s.version) { " (updating to $($s.latest))" } else { '' })
             $miSeen.Text    = "Last check-in: $mins min ago"
             $miPending.Text = "Pending updates: $($s.pending_jobs)"
+            if ($s.PSObject.Properties['tray_name'] -and $s.tray_name) { $brand = [string]$s.tray_name }
+            if ($s.PSObject.Properties['tray_enabled']) { $trayOn = [bool]$s.tray_enabled }
         }
         $healthy = $svcRunning -and $online
         $ni.Icon = if ($healthy) { $icoGreen } else { $icoRed }
         $miStatus.Text = if (-not $svcRunning) { 'Status: agent service STOPPED' }
                          elseif ($online)      { 'Status: Online' }
                          else                  { 'Status: Offline (not reporting)' }
-        $ni.Text = 'PioDeploy Agent - ' + $(if (-not $svcRunning) { 'service stopped' } elseif ($online) { "online, v$ver" } else { 'offline' })
+        # Per-client branding: name from the portal, visibility switch too.
+        $text = "$brand - " + $(if (-not $svcRunning) { 'service stopped' } elseif ($online) { "online, v$ver" } else { 'offline' })
+        $ni.Text = $(if ($text.Length -gt 63) { $text.Substring(0, 63) } else { $text })
+        $ni.Visible = $trayOn
     } catch { $miStatus.Text = 'Status: unknown' }
 }
 & $refresh

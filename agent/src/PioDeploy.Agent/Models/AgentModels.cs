@@ -62,6 +62,12 @@ public sealed class HeartbeatResponse
     /// fails is re-queued by a human, not retried blindly.</summary>
     [JsonPropertyName("reinstall")] public bool Reinstall { get; set; }
     [JsonPropertyName("uninstall")] public bool Uninstall { get; set; }
+
+    /// <summary>Per-client tray branding: whether the tray icon shows on
+    /// this machine, and the name it presents. Relayed to the tray helper
+    /// through status.json.</summary>
+    [JsonPropertyName("tray_enabled")] public bool TrayEnabled { get; set; } = true;
+    [JsonPropertyName("tray_name")] public string? TrayName { get; set; }
 }
 
 public sealed class InventoryRequest

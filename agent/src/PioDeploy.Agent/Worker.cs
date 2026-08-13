@@ -111,7 +111,8 @@ public sealed class Worker : BackgroundService
                     // Leave a status crumb the user-session tray helper reads.
                     // The service runs in session 0 and cannot draw UI itself;
                     // this file is the whole contract between it and the tray.
-                    WriteStatus(response.PendingJobs, latest: response.LatestAgentVersion);
+                    WriteStatus(response.PendingJobs, latest: response.LatestAgentVersion,
+                        trayEnabled: response.TrayEnabled, trayName: response.TrayName);
                 }
                 else
                 {
@@ -454,7 +455,7 @@ public sealed class Worker : BackgroundService
 
     /// <summary>Writes the status file the tray helper reads. Best-effort:
     /// a failure here must never disturb the heartbeat loop.</summary>
-    private void WriteStatus(int pendingJobs, string? latest)
+    private void WriteStatus(int pendingJobs, string? latest, bool trayEnabled = true, string? trayName = null)
     {
         try
         {
@@ -462,13 +463,18 @@ public sealed class Worker : BackgroundService
                 Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "PioDeploy");
             Directory.CreateDirectory(dir);
 
+            // Escape the one server-supplied string that lands in JSON.
+            var safeName = (trayName ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+
             // Hand-rolled JSON (no serializer dependency, no reflection under
-            // trimming): four flat fields the tray reads by name.
+            // trimming): flat fields the tray reads by name.
             var json =
                 "{\n" +
                 $"  \"version\": \"{AgentVersion}\",\n" +
                 $"  \"latest\": \"{latest ?? AgentVersion}\",\n" +
                 $"  \"pending_jobs\": {pendingJobs},\n" +
+                $"  \"tray_enabled\": {(trayEnabled ? "true" : "false")},\n" +
+                $"  \"tray_name\": \"{safeName}\",\n" +
                 $"  \"checked_in_utc\": \"{DateTime.UtcNow:o}\"\n" +
                 "}\n";
 

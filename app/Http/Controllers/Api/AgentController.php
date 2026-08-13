@@ -82,6 +82,11 @@ class AgentController extends Controller
             'uninstall'         => $this->computers->pullAgentCommand($computer, 'uninstall_requested_at'),
             'heartbeat_seconds' => (int) config('piodeploy.agent.heartbeat_seconds'),
             'server_time'       => now()->toIso8601String(),
+            // Per-client tray branding: whether the tray icon shows on this
+            // client's machines, and what it calls itself. The agent passes
+            // both to the tray helper via status.json.
+            'tray_enabled'      => (bool) ($computer->project->client->show_tray_icon ?? true),
+            'tray_name'         => $computer->project->client->tray_name ?: null,
             // What the agent should be running, and where to get it. An agent
             // already on this version ignores both; an older one self-updates,
             // so a machine is upgraded once and never touched by hand again.

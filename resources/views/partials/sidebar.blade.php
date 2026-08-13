@@ -18,7 +18,10 @@
 
     {{-- Brand --}}
     @php
-        $brandCompany = app(\App\Services\SettingsService::class)->get('branding.company_name');
+        // A client's own portal name outranks the platform brand for their
+        // people; staff and unbranded clients see the platform name.
+        $brandCompany = Auth::user()?->client?->portal_name
+            ?: app(\App\Services\SettingsService::class)->get('branding.company_name');
         // Only show the company beside the product when it is actually a
         // different name — "PioDeploy · PioDeploy" says nothing twice.
         $brandHouse = $brandCompany !== config('app.name') ? $brandCompany : null;

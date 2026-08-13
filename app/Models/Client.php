@@ -25,6 +25,7 @@ class Client extends Model
         'timezone', 'logo_path', 'status', 'monthly_report',
         'billing_email', 'billing_address', 'billing_tax_id',
         'notes',
+        'portal_name', 'tray_name', 'show_tray_icon',
     ];
 
     protected function casts(): array

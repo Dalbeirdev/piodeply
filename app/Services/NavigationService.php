@@ -103,6 +103,9 @@ class NavigationService
             // billing from Administration, so this stays tenant-only.
             // (Defined last on purpose: groups render in first-appearance
             // order, and for a tenant this is the first Billing-group item.)
+            // What their users and machines see: portal name, tray identity.
+            ['label' => 'Branding', 'route' => 'branding.index', 'active' => 'branding.*', 'permission' => Permission::UsersView, 'group' => self::BILLING, 'tenantOnly' => true, 'ownerOnly' => true,
+                'icon' => '<path d="M12 2a10 10 0 1 0 0 20c1 0 1.7-.8 1.7-1.7 0-.5-.2-.8-.5-1.1-.2-.3-.4-.7-.4-1.2 0-.9.7-1.7 1.7-1.7h2c3 0 5.5-2.5 5.5-5.6C22 6 17.5 2 12 2z"/><circle cx="7" cy="12" r="1"/><circle cx="9" cy="8" r="1"/><circle cx="14" cy="7" r="1"/><circle cx="17.5" cy="10.5" r="1"/>'],
             ['label' => 'Billing', 'route' => 'tenant.billing', 'active' => 'tenant.billing', 'permission' => Permission::UsersView, 'group' => self::BILLING, 'tenantOnly' => true, 'ownerOnly' => true,
                 'icon' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'],
 
