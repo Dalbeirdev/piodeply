@@ -35,6 +35,11 @@ class ComputersReport extends Component
         return Computer::query()
             ->with(['project.client'])
             ->withCount('software')
+            // Preloaded so healthScore() computes without per-row queries.
+            ->withCount([
+                'software as updates_available_count' => fn ($q) => $q->whereNotNull('available_version'),
+                'deploymentJobs as failed_jobs_count' => fn ($q) => $q->where('status', \App\Enums\JobStatus::Failed),
+            ])
             ->when($tenantId !== null, fn ($q) => $q->whereHas(
                 'project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
@@ -50,11 +55,12 @@ class ComputersReport extends Component
     {
         abort_unless(auth()->user()->can(Permission::ReportsExport->value), 403);
 
-        $csv = "Hostname,Client,".project_term().",Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Serial\n";
+        $csv = "Hostname,Client,".project_term().",Health /100,Health notes,Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Serial\n";
         foreach ($this->query()->get() as $computer) {
             $diskPct = ($computer->disk_total_bytes && $computer->disk_free_bytes !== null)
                 ? round($computer->disk_free_bytes / $computer->disk_total_bytes * 100)
                 : '';
+            $health = $computer->healthScore();
 
             $csv .= implode(',', array_map(
                 fn ($value) => '"' . str_replace('"', '""', (string) $value) . '"',
@@ -62,6 +68,8 @@ class ComputersReport extends Component
                     $computer->hostname,
                     $computer->project->client->company_name,
                     $computer->project->name,
+                    $health['score'],
+                    implode('; ', $health['notes']),
                     $computer->ring->label(),
                     $computer->os_name,
                     $computer->windows_build,
@@ -80,6 +88,23 @@ class ComputersReport extends Component
             fn () => print($csv),
             'piodeploy-fleet-' . now()->format('Ymd-His') . '.csv',
             ['Content-Type' => 'text/csv']
+        );
+    }
+
+    public function exportPdf()
+    {
+        abort_unless(auth()->user()->can(Permission::ReportsExport->value), 403);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.fleet-health-pdf', [
+            'computers'   => $this->query()->get(),
+            'generatedAt' => now(),
+            'company'     => app(\App\Services\SettingsService::class)->get('branding.company_name'),
+        ])->setPaper('a4', 'landscape');
+
+        return response()->streamDownload(
+            fn () => print($pdf->output()),
+            'piodeploy-fleet-health-' . now()->format('Ymd-His') . '.pdf',
+            ['Content-Type' => 'application/pdf']
         );
     }
 

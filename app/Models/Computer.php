@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\JobStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -46,6 +47,11 @@ class Computer extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class)->withTrashed();
+    }
+
+    public function deploymentJobs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DeploymentJob::class);
     }
 
     public function software(): \Illuminate\Database\Eloquent\Relations\HasMany
@@ -105,6 +111,69 @@ class Computer extends Model
         return $query->where(fn (Builder $q) => $q
             ->whereNull('last_seen_at')
             ->orWhere('last_seen_at', '<=', now()->subSeconds(self::onlineThreshold())));
+    }
+
+    /**
+     * One number an owner can read at a glance: 100 minus a deduction for
+     * every unhealthy signal, with the reasons listed alongside so the
+     * score is explainable, never mysterious.
+     *
+     * Uses withCount-loaded attributes (updates_available_count,
+     * failed_jobs_count) when the caller preloaded them — report lists do —
+     * and falls back to queries for a single machine.
+     *
+     * @return array{score: int, notes: list<string>}
+     */
+    public function healthScore(): array
+    {
+        $score = 100;
+        $notes = [];
+        $take = function (int $points, string $reason) use (&$score, &$notes): void {
+            $score -= $points;
+            $notes[] = "{$reason} (−{$points})";
+        };
+
+        if ($this->last_seen_at === null) {
+            $take(40, 'Agent has never reported in');
+        } elseif ($this->last_seen_at->lt(now()->subDay())) {
+            $take(25, 'Offline for '.$this->last_seen_at->diffForHumans(null, true));
+        }
+
+        if ($this->disk_total_bytes && $this->disk_free_bytes !== null) {
+            $freePercent = $this->disk_free_bytes / $this->disk_total_bytes * 100;
+            if ($freePercent < 10) {
+                $take(20, 'Critically low disk: '.round($freePercent).'% free');
+            } elseif ($freePercent < 20) {
+                $take(10, 'Low disk: '.round($freePercent).'% free');
+            }
+        }
+
+        if ($this->isAgentOutdated()) {
+            $take(10, "Agent {$this->agent_version} behind ".self::latestAgentVersion());
+        }
+
+        if ($this->secure_boot === false) {
+            $take(10, 'Secure Boot disabled');
+        }
+        if ($this->tpm_enabled === false) {
+            $take(10, 'TPM disabled');
+        }
+
+        $updates = $this->updates_available_count
+            ?? $this->software()->whereNotNull('available_version')->count();
+        if ($updates >= 10) {
+            $take(15, "{$updates} software updates pending");
+        } elseif ($updates >= 1) {
+            $take(5, "{$updates} software ".str('update')->plural($updates).' pending');
+        }
+
+        $failed = $this->failed_jobs_count
+            ?? DeploymentJob::where('computer_id', $this->id)->where('status', JobStatus::Failed)->count();
+        if ($failed > 0) {
+            $take(10, "{$failed} failed deployment ".str('job')->plural($failed));
+        }
+
+        return ['score' => max(0, $score), 'notes' => $notes];
     }
 
     /* ---- Agent version ---- */

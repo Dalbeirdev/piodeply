@@ -6,7 +6,8 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
             @can(\App\Enums\Permission::ReportsExport->value)
-                <div class="flex justify-end">
+                <div class="flex justify-end gap-2">
+                    <x-secondary-button type="button" wire:click="exportPdf">Export PDF</x-secondary-button>
                     <x-secondary-button type="button" wire:click="export">Export CSV</x-secondary-button>
                 </div>
             @endcan
@@ -37,6 +38,7 @@
                 <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
                     <thead class="bg-slate-50">
                         <tr>
+                            <th class="pd-th">Health</th>
                             <th class="pd-th">Computer</th>
                             <th class="pd-th">Client / {{ project_term() }}</th>
                             <th class="pd-th">Ring</th>
@@ -49,6 +51,17 @@
                     <tbody class="bg-white divide-y divide-slate-100">
                         @forelse ($computers as $computer)
                             <tr>
+                                @php
+                                    $health = $computer->healthScore();
+                                    $healthClass = $health['score'] >= 90 ? 'text-green-600' : ($health['score'] >= 70 ? 'text-amber-600' : 'text-red-600');
+                                @endphp
+                                <td class="px-6 py-3 whitespace-nowrap"
+                                    title="{{ $health['notes'] === [] ? 'Healthy — nothing needs attention.' : implode(' · ', $health['notes']) }}">
+                                    <span class="text-lg font-bold {{ $healthClass }}">{{ $health['score'] }}</span><span class="text-xs text-slate-400">/100</span>
+                                    @if ($health['notes'] !== [])
+                                        <p class="text-[10px] text-slate-400 max-w-[10rem] truncate">{{ $health['notes'][0] }}@if(count($health['notes']) > 1) +{{ count($health['notes']) - 1 }} more @endif</p>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 whitespace-nowrap">
                                     <a href="{{ route('computers.show', $computer) }}" class="pd-link">{{ $computer->hostname }}</a>
                                     <p class="text-xs text-slate-400">{{ $computer->os_name }} {{ $computer->windows_build }}</p>
@@ -80,7 +93,7 @@
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-slate-600">{{ $computer->software_count }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">No computers match these filters.</td></tr>
+                            <tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">No computers match these filters.</td></tr>
                         @endforelse
                     </tbody>
                 </table></div>

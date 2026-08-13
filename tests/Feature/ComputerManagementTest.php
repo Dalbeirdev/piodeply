@@ -1,4 +1,5 @@
 <?php
+// Health score coverage lives at the bottom of this file.
 
 namespace Tests\Feature;
 
@@ -483,5 +484,63 @@ class ComputerManagementTest extends TestCase
     public function test_menu_shows_computers_for_permitted_users(): void
     {
         $this->actingAs($this->admin())->get('/dashboard')->assertSee('Computers');
+    }
+
+    public function test_health_score_is_100_for_a_clean_online_machine(): void
+    {
+        $computer = Computer::factory()->create([
+            'last_seen_at'     => now(),
+            'agent_version'    => Computer::latestAgentVersion(),
+            'disk_total_bytes' => 500_000_000_000,
+            'disk_free_bytes'  => 250_000_000_000,
+            'secure_boot'      => true,
+            'tpm_enabled'      => true,
+        ]);
+
+        $health = $computer->healthScore();
+
+        $this->assertSame(100, $health['score']);
+        $this->assertSame([], $health['notes']);
+    }
+
+    public function test_health_score_deducts_for_each_unhealthy_signal(): void
+    {
+        $computer = Computer::factory()->create([
+            'last_seen_at'     => now()->subDays(3),   // -25 offline
+            'agent_version'    => '1.0.0',             // -10 outdated agent
+            'disk_total_bytes' => 500_000_000_000,
+            'disk_free_bytes'  => 25_000_000_000,      // 5% free -> -20
+            'secure_boot'      => false,               // -10
+            'tpm_enabled'      => true,
+        ]);
+        \App\Models\DeploymentJob::factory()->create([  // -10 failed job
+            'computer_id' => $computer->id, 'status' => \App\Enums\JobStatus::Failed,
+        ]);
+
+        $health = $computer->healthScore();
+
+        $this->assertSame(25, $health['score']);
+        $this->assertCount(5, $health['notes']);
+        $this->assertStringContainsString('Offline', $health['notes'][0]);
+    }
+
+    public function test_health_score_never_goes_below_zero(): void
+    {
+        $computer = Computer::factory()->create([
+            'last_seen_at'     => null,                // -40 never reported
+            'agent_version'    => '1.0.0',             // -10
+            'disk_total_bytes' => 500_000_000_000,
+            'disk_free_bytes'  => 5_000_000_000,       // 1% -> -20
+            'secure_boot'      => false,               // -10
+            'tpm_enabled'      => false,               // -10
+        ]);
+        \App\Models\DeploymentJob::factory()->count(3)->create([
+            'computer_id' => $computer->id, 'status' => \App\Enums\JobStatus::Failed,
+        ]);
+        \App\Models\ComputerSoftware::factory()->count(12)->create([
+            'computer_id' => $computer->id, 'available_version' => '9.9',
+        ]);
+
+        $this->assertSame(0, $computer->healthScore()['score']);
     }
 }
