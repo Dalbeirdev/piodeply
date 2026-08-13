@@ -113,6 +113,7 @@ class Dashboard extends Component
             'projects'  => Project::count(),
             'packages'  => Package::active()->count(),
             'today'     => Activity::whereDate('created_at', Carbon::today())->count(),
+            'health'    => $this->averageHealth(),
         ];
 
         return view('livewire.dashboard', [
@@ -152,6 +153,7 @@ class Dashboard extends Component
                 ->whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])->count(),
             'failed'  => DeploymentJob::whereIn('computer_id', (clone $computers)->pluck('id'))
                 ->where('status', JobStatus::Failed)->count(),
+            'health'  => $this->averageHealth((clone $computers)->pluck('id')->all()),
         ];
 
         return view('livewire.client-dashboard', [
@@ -163,5 +165,42 @@ class Dashboard extends Component
                 ->whereIn('computer_id', (clone $computers)->pluck('id'))
                 ->orderByDesc('id')->limit(8)->get(),
         ])->layout('layouts.app');
+    }
+
+    /**
+     * The fleet's average healthScore() — one number for "how are we
+     * doing", with the weakest machine named so the number is actionable.
+     * Null when there are no machines yet. Counts are preloaded, so this
+     * is one query however large the fleet.
+     *
+     * @param  list<int>|null  $computerIds  confine to these machines (client portal)
+     * @return array{avg: int, count: int, worst: string, worst_score: int}|null
+     */
+    private function averageHealth(?array $computerIds = null): ?array
+    {
+        $computers = Computer::query()
+            ->when($computerIds !== null, fn ($q) => $q->whereIn('id', $computerIds))
+            ->withCount([
+                'software as updates_available_count' => fn ($q) => $q->whereNotNull('available_version'),
+                'deploymentJobs as failed_jobs_count' => fn ($q) => $q->where('status', JobStatus::Failed),
+            ])
+            ->get();
+
+        if ($computers->isEmpty()) {
+            return null;
+        }
+
+        $scored = $computers->map(fn (Computer $c) => [
+            'hostname' => $c->hostname,
+            'score'    => $c->healthScore()['score'],
+        ]);
+        $worst = $scored->sortBy('score')->first();
+
+        return [
+            'avg'         => (int) round($scored->avg('score')),
+            'count'       => $scored->count(),
+            'worst'       => $worst['hostname'],
+            'worst_score' => $worst['score'],
+        ];
     }
 }

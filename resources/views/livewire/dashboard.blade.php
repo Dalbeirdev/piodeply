@@ -13,7 +13,14 @@
                  counts up on load, and a lift on hover. The Failed tile draws
                  the eye in red only when something is actually wrong. --}}
             @php
+                $health = $stats['health'];
                 $tiles = [
+                    ['route' => 'reports.computers', 'value' => $health['avg'] ?? 0, 'label' => 'Fleet health',
+                     'sub' => $health === null ? 'no machines yet'
+                            : ($health['avg'] >= 90 ? 'average of '.$health['count'].' '.Str::plural('machine', $health['count'])
+                            : 'weakest: '.$health['worst'].' ('.$health['worst_score'].')'),
+                     'tone' => $health === null ? 'muted' : ($health['avg'] >= 90 ? 'emerald' : ($health['avg'] >= 70 ? 'amber' : 'red')),
+                     'icon' => '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'],
                     ['route' => 'computers.index', 'value' => $stats['online'], 'label' => 'Computers online',
                      'sub' => 'heartbeat within '.round(\App\Models\Computer::onlineThreshold() / 60).' min',
                      'tone' => 'emerald', 'icon' => '<rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>'],
@@ -29,13 +36,14 @@
                 ];
                 $tones = [
                     'emerald' => ['num' => 'text-emerald-600', 'ic' => 'text-emerald-600 bg-emerald-50'],
+                    'amber'   => ['num' => 'text-amber-600',   'ic' => 'text-amber-600 bg-amber-50'],
                     'slate'   => ['num' => 'text-slate-700',   'ic' => 'text-slate-500 bg-slate-100'],
                     'sky'     => ['num' => 'text-sky-600',     'ic' => 'text-sky-600 bg-sky-50'],
                     'red'     => ['num' => 'text-red-600',     'ic' => 'text-red-600 bg-red-50'],
                     'muted'   => ['num' => 'text-slate-300',   'ic' => 'text-slate-300 bg-slate-50'],
                 ];
             @endphp
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 @foreach ($tiles as $tile)
                     @php $t = $tones[$tile['tone']]; @endphp
                     <a href="{{ route($tile['route']) }}"

@@ -16,7 +16,15 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
 
             {{-- Tiles --}}
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                @php $health = $stats['health']; @endphp
+                <a href="{{ route('reports.computers') }}" class="pd-card p-4 hover:border-teal-300 transition-colors"
+                   @if ($health !== null && $health['avg'] < 90) title="Weakest machine: {{ $health['worst'] }} ({{ $health['worst_score'] }}/100)" @endif>
+                    <p class="text-2xl font-bold leading-tight {{ $health === null ? 'text-slate-300' : ($health['avg'] >= 90 ? 'text-emerald-600' : ($health['avg'] >= 70 ? 'text-amber-600' : 'text-red-600')) }}">
+                        {{ $health['avg'] ?? '—' }}<span class="text-sm font-normal text-slate-400">/100</span>
+                    </p>
+                    <p class="text-sm font-semibold text-slate-700">Fleet health</p>
+                </a>
                 <a href="{{ route('computers.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
                     <p class="text-2xl font-bold text-emerald-600 leading-tight">{{ $stats['online'] }}</p>
                     <p class="text-sm font-semibold text-slate-700">Computers online</p>
