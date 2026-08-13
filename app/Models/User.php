@@ -108,6 +108,13 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return once(function () {
+            // A site-scoped custom role is authoritative: the overlay's
+            // sites ARE this user's world — projects, computers, pickers.
+            $overlay = $this->clientRole;
+            if ($overlay !== null && $overlay->scope === 'sites') {
+                return $overlay->projects()->pluck('projects.id')->all() ?: null;
+            }
+
             $ids = $this->assignedProjects()->pluck('projects.id')->all();
 
             return $ids === [] ? null : $ids;
@@ -146,13 +153,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Machine confinement for lists: null = unrestricted, otherwise the
-     * only computer ids this user may see. Mirrors visibleProjectIds().
+     * only computer ids this user may see. Mirrors visibleProjectIds();
+     * the 'sites' scope confines through visibleProjectIds() instead.
      */
     public function grantedComputerIds(): ?array
     {
         $overlay = $this->clientRole;
 
-        if ($overlay === null || $overlay->all_computers) {
+        if ($overlay === null || $overlay->scope !== 'computers') {
             return null;
         }
 

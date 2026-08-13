@@ -16,7 +16,7 @@ class ClientRoleFactory extends Factory
             'can_install'   => false,
             'can_update'    => true,
             'can_uninstall' => false,
-            'all_computers' => true,
+            'scope'         => 'all',
         ];
     }
 }

@@ -10,17 +10,24 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A client-defined role: WHAT its holders may do (install/update/uninstall)
- * and WHERE (every machine, or an explicit list). An overlay on the ladder
- * role, enforced at the deployment chokepoint and in machine visibility —
- * never a replacement for the tenancy rules, always a further narrowing.
+ * and WHERE. Three scope levels:
+ *  - all:       every machine in the client's environment;
+ *  - sites:     every machine in the chosen sites — machines that enrol
+ *               into those sites later are covered automatically;
+ *  - computers: exactly the listed machines.
+ * An overlay on the ladder role, enforced at the deployment chokepoint and
+ * in machine visibility — never a replacement for the tenancy rules,
+ * always a further narrowing.
  */
 class ClientRole extends Model
 {
     use HasFactory;
 
+    public const SCOPES = ['all', 'sites', 'computers'];
+
     protected $fillable = [
         'client_id', 'name', 'description',
-        'can_install', 'can_update', 'can_uninstall', 'all_computers',
+        'can_install', 'can_update', 'can_uninstall', 'scope',
     ];
 
     protected function casts(): array
@@ -29,7 +36,6 @@ class ClientRole extends Model
             'can_install'   => 'boolean',
             'can_update'    => 'boolean',
             'can_uninstall' => 'boolean',
-            'all_computers' => 'boolean',
         ];
     }
 
@@ -41,6 +47,11 @@ class ClientRole extends Model
     public function computers(): BelongsToMany
     {
         return $this->belongsToMany(Computer::class);
+    }
+
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class);
     }
 
     public function users(): HasMany
@@ -62,11 +73,14 @@ class ClientRole extends Model
             return false;
         }
 
-        return $this->all_computers
-            || $this->computers()->whereKey($computer->id)->exists();
+        return match ($this->scope) {
+            'sites'     => $this->projects()->whereKey($computer->project_id)->exists(),
+            'computers' => $this->computers()->whereKey($computer->id)->exists(),
+            default     => true, // 'all'
+        };
     }
 
-    /** Human summary for lists: "Install, Update · 10 machines". */
+    /** Human summary for lists: "Install, Update · 2 sites". */
     public function summary(): string
     {
         $caps = array_keys(array_filter([
@@ -75,9 +89,11 @@ class ClientRole extends Model
             'Uninstall' => $this->can_uninstall,
         ]));
 
-        $where = $this->all_computers
-            ? 'all machines'
-            : $this->computers()->count().' selected '.str('machine')->plural($this->computers()->count());
+        $where = match ($this->scope) {
+            'sites' => $this->projects()->count().' '.str(project_term_lower())->plural($this->projects()->count()),
+            'computers' => $this->computers()->count().' selected '.str('machine')->plural($this->computers()->count()),
+            default => 'all machines',
+        };
 
         return ($caps === [] ? 'No actions' : implode(', ', $caps)).' · '.$where;
     }

@@ -129,6 +129,48 @@ class TeamIndex extends Component
         session()->flash('status', "{$user->name} can now sign in with the password you set.");
     }
 
+    /**
+     * Move an existing member to another role — ladder or custom — without
+     * recreating their account. Owners are protected: their role can only
+     * change by another owner removing/re-adding deliberately, never by a
+     * dropdown slip.
+     */
+    public function setMemberRole(int $userId, string $value): void
+    {
+        $this->assertTenantManager();
+
+        $target = User::where('client_id', auth()->user()->tenantClientId())->findOrFail($userId);
+
+        if ($target->isClientOwner()) {
+            session()->flash('error', 'Owners keep their role — remove and re-add deliberately if you must change it.');
+
+            return;
+        }
+
+        if (str_starts_with($value, 'custom:')) {
+            $customRole = \App\Models\ClientRole::where('client_id', auth()->user()->tenantClientId())
+                ->findOrFail((int) substr($value, 7));
+
+            $target->syncRoles([RoleEnum::Technician->value]);
+            $target->forceFill(['client_role_id' => $customRole->id])->save();
+            $label = $customRole->name;
+        } else {
+            abort_unless(in_array($value, self::GRANTABLE, true), 422, 'Unknown role.');
+
+            $target->syncRoles([$value]);
+            $target->forceFill(['client_role_id' => null])->save();
+            $label = $value;
+        }
+
+        activity('team')
+            ->causedBy(auth()->user())
+            ->performedOn($target)
+            ->withProperties(['role' => $label])
+            ->log('team_member_role_changed');
+
+        session()->flash('status', "{$target->name} is now \"{$label}\".");
+    }
+
     public function remove(int $userId): void
     {
         $this->assertTenantManager();

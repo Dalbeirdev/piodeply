@@ -4,6 +4,8 @@ namespace App\Livewire\Team;
 
 use App\Models\ClientRole;
 use App\Models\Computer;
+use App\Models\Project;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 /**
@@ -29,10 +31,14 @@ class ClientRoles extends Component
 
     public bool $can_uninstall = false;
 
-    public bool $all_computers = true;
+    /** 'all' | 'sites' | 'computers' */
+    public string $scope = 'all';
 
     /** @var list<int> */
     public array $computerIds = [];
+
+    /** @var list<int> */
+    public array $projectIds = [];
 
     public bool $showForm = false;
 
@@ -51,7 +57,7 @@ class ClientRoles extends Component
     public function startCreate(): void
     {
         $this->assertOwner();
-        $this->reset(['editingId', 'name', 'description', 'can_install', 'can_update', 'can_uninstall', 'all_computers', 'computerIds']);
+        $this->reset(['editingId', 'name', 'description', 'can_install', 'can_update', 'can_uninstall', 'scope', 'computerIds', 'projectIds']);
         $this->showForm = true;
     }
 
@@ -66,8 +72,9 @@ class ClientRoles extends Component
         $this->can_install = $role->can_install;
         $this->can_update = $role->can_update;
         $this->can_uninstall = $role->can_uninstall;
-        $this->all_computers = $role->all_computers;
+        $this->scope = $role->scope;
         $this->computerIds = $role->computers()->pluck('computers.id')->all();
+        $this->projectIds = $role->projects()->pluck('projects.id')->all();
         $this->showForm = true;
     }
 
@@ -81,9 +88,11 @@ class ClientRoles extends Component
             'can_install'   => ['boolean'],
             'can_update'    => ['boolean'],
             'can_uninstall' => ['boolean'],
-            'all_computers' => ['boolean'],
+            'scope'         => ['required', Rule::in(ClientRole::SCOPES)],
             'computerIds'   => ['array'],
             'computerIds.*' => ['integer'],
+            'projectIds'    => ['array'],
+            'projectIds.*'  => ['integer'],
         ]);
 
         if (! $validated['can_install'] && ! $validated['can_update'] && ! $validated['can_uninstall']) {
@@ -92,17 +101,26 @@ class ClientRoles extends Component
             return;
         }
 
-        if (! $validated['all_computers'] && $validated['computerIds'] === []) {
-            $this->addError('computerIds', 'Select at least one machine, or allow all machines.');
+        if ($validated['scope'] === 'computers' && $validated['computerIds'] === []) {
+            $this->addError('computerIds', 'Select at least one machine, or widen the scope.');
 
             return;
         }
 
-        // Machines are validated against the owner's OWN fleet — ids from
-        // another tenant are silently impossible.
-        $machineIds = $validated['all_computers'] ? [] : Computer::visibleTo(auth()->user())
+        if ($validated['scope'] === 'sites' && $validated['projectIds'] === []) {
+            $this->addError('projectIds', 'Select at least one '.project_term_lower().', or widen the scope.');
+
+            return;
+        }
+
+        // Machines and sites are validated against the owner's OWN tenant —
+        // ids from another client are silently impossible.
+        $machineIds = $validated['scope'] !== 'computers' ? [] : Computer::visibleTo(auth()->user())
             ->whereIn('computers.id', $validated['computerIds'])
             ->pluck('computers.id')->all();
+        $siteIds = $validated['scope'] !== 'sites' ? [] : Project::where('client_id', auth()->user()->tenantClientId())
+            ->whereIn('id', $validated['projectIds'])
+            ->pluck('id')->all();
 
         $attributes = [
             'name'          => $validated['name'],
@@ -110,7 +128,7 @@ class ClientRoles extends Component
             'can_install'   => $validated['can_install'],
             'can_update'    => $validated['can_update'],
             'can_uninstall' => $validated['can_uninstall'],
-            'all_computers' => $validated['all_computers'],
+            'scope'         => $validated['scope'],
         ];
 
         $role = $this->editingId !== null
@@ -118,11 +136,12 @@ class ClientRoles extends Component
             : ClientRole::create([...$attributes, 'client_id' => auth()->user()->tenantClientId()]);
 
         $role->computers()->sync($machineIds);
+        $role->projects()->sync($siteIds);
 
         activity('team')
             ->causedBy(auth()->user())
             ->performedOn($role)
-            ->withProperties($attributes + ['machines' => count($machineIds) ?: 'all'])
+            ->withProperties($attributes + ['machines' => count($machineIds), 'sites' => count($siteIds)])
             ->log($this->editingId !== null ? 'client_role_updated' : 'client_role_created');
 
         $this->reset(['showForm', 'editingId']);
@@ -160,6 +179,8 @@ class ClientRoles extends Component
                 ->orderBy('name')->get(),
             'machines' => Computer::visibleTo(auth()->user())
                 ->orderBy('hostname')->get(['computers.id', 'hostname']),
+            'sites'    => Project::where('client_id', auth()->user()->tenantClientId())
+                ->orderBy('name')->get(['id', 'name']),
         ])->layout('layouts.app');
     }
 }

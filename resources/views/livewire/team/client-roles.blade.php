@@ -60,12 +60,36 @@
                     </div>
 
                     <div>
-                        <p class="text-xs font-medium text-slate-600 mb-2">Machines</p>
-                        <label class="flex items-center gap-2 text-sm text-slate-700">
-                            <input type="checkbox" wire:model.live="all_computers" class="rounded border-slate-300">
-                            All machines in your environment
-                        </label>
-                        @unless ($all_computers)
+                        <p class="text-xs font-medium text-slate-600 mb-2">Where it applies</p>
+                        <div class="flex flex-wrap gap-5">
+                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="radio" wire:model.live="scope" value="all" class="border-slate-300"> All machines
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="radio" wire:model.live="scope" value="sites" class="border-slate-300"> Specific {{ project_terms_lower() }}
+                            </label>
+                            <label class="flex items-center gap-2 text-sm text-slate-700">
+                                <input type="radio" wire:model.live="scope" value="computers" class="border-slate-300"> Specific machines
+                            </label>
+                        </div>
+
+                        @if ($scope === 'sites')
+                            <p class="text-xs text-slate-500 mt-2">
+                                Machines that enrol into these {{ project_terms_lower() }} later are covered automatically.
+                            </p>
+                            <div class="mt-2 max-h-56 overflow-y-auto border border-slate-200 rounded-md p-3 grid sm:grid-cols-2 gap-1.5">
+                                @forelse ($sites as $site)
+                                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                                        <input type="checkbox" wire:model="projectIds" value="{{ $site->id }}"
+                                               class="rounded border-slate-300">
+                                        {{ $site->name }}
+                                    </label>
+                                @empty
+                                    <p class="text-sm text-slate-500">No {{ project_terms_lower() }} yet.</p>
+                                @endforelse
+                            </div>
+                            @error('projectIds')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                        @elseif ($scope === 'computers')
                             <div class="mt-2 max-h-56 overflow-y-auto border border-slate-200 rounded-md p-3 grid sm:grid-cols-2 gap-1.5">
                                 @forelse ($machines as $machine)
                                     <label class="flex items-center gap-2 text-sm text-slate-700">
@@ -77,8 +101,8 @@
                                     <p class="text-sm text-slate-500">No machines enrolled yet.</p>
                                 @endforelse
                             </div>
-                        @endunless
-                        @error('computerIds')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                            @error('computerIds')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                        @endif
                     </div>
 
                     <div class="flex gap-2">

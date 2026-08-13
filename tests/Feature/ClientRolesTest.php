@@ -61,7 +61,7 @@ class ClientRolesTest extends TestCase
             'can_install'   => false,
             'can_update'    => true,
             'can_uninstall' => false,
-            'all_computers' => false,
+            'scope'         => 'computers',
         ]);
         $role->computers()->attach($this->granted);
 
@@ -88,7 +88,7 @@ class ClientRolesTest extends TestCase
             ->set('name', 'Front desk updater')
             ->set('can_install', false)
             ->set('can_update', true)
-            ->set('all_computers', false)
+            ->set('scope', 'computers')
             ->set('computerIds', [$this->granted->id])
             ->call('save')
             ->assertHasNoErrors();
@@ -106,7 +106,7 @@ class ClientRolesTest extends TestCase
             ->test(ClientRoles::class)
             ->dispatch('client-roles-new')
             ->set('name', 'Sneaky')
-            ->set('all_computers', false)
+            ->set('scope', 'computers')
             ->set('computerIds', [$this->granted->id, $foreign->id])
             ->call('save');
 
@@ -187,6 +187,81 @@ class ClientRolesTest extends TestCase
         $this->assertNull($tech->grantedComputerIds());
         $this->assertTrue($tech->mayDeploy('install', $this->granted));
         $this->assertCount(2, Computer::visibleTo($tech)->get());
+    }
+
+    public function test_a_site_scoped_role_covers_machines_that_enrol_later(): void
+    {
+        $siteB = Project::factory()->create(['client_id' => $this->client->id]);
+        $machineInB = Computer::factory()->create(['project_id' => $siteB->id]);
+
+        $role = ClientRole::factory()->create([
+            'client_id' => $this->client->id,
+            'name'      => 'Site A updater',
+            'scope'     => 'sites',
+        ]);
+        $role->projects()->attach($this->project);
+
+        $holder = $this->holderOf($role);
+        $package = Package::factory()->create();
+        $service = app(DeploymentService::class);
+        $this->actingAs($holder);
+
+        // Covered: any machine in site A — including one enrolled AFTER the
+        // role was made. That is the whole point of the site scope.
+        $late = Computer::factory()->create(['project_id' => $this->project->id]);
+        $this->assertNotNull($service->queue($late, $package, JobAction::Update)->id);
+
+        // Denied: a machine in site B.
+        try {
+            $service->queue($machineInB, $package, JobAction::Update);
+            $this->fail('site B should be outside the role');
+        } catch (\DomainException) {
+            $this->addToAssertionCount(1);
+        }
+
+        // Visibility follows: only site A machines exist for the holder.
+        $visible = Computer::visibleTo($holder)->pluck('computers.id')->all();
+        sort($visible);
+        $this->assertSame([$this->granted->id, $this->other->id, $late->id], $visible);
+    }
+
+    public function test_an_existing_member_can_be_moved_between_roles(): void
+    {
+        $role = $this->updaterOfOneMachine();
+        $member = User::factory()->create();
+        $member->forceFill(['client_id' => $this->client->id])->save();
+        $member->assignRole(RoleEnum::Viewer->value);
+
+        // Ladder → custom.
+        Livewire::actingAs($this->owner)
+            ->test(TeamIndex::class)
+            ->call('setMemberRole', $member->id, 'custom:'.$role->id);
+
+        $member->refresh();
+        $this->assertSame($role->id, $member->client_role_id);
+        $this->assertTrue($member->hasRole(RoleEnum::Technician->value));
+
+        // Custom → ladder clears the overlay.
+        Livewire::actingAs($this->owner)
+            ->test(TeamIndex::class)
+            ->call('setMemberRole', $member->id, RoleEnum::Manager->value);
+
+        $member->refresh();
+        $this->assertNull($member->client_role_id);
+        $this->assertTrue($member->hasRole(RoleEnum::Manager->value));
+    }
+
+    public function test_an_owners_role_cannot_be_changed_from_the_dropdown(): void
+    {
+        $role = $this->updaterOfOneMachine();
+
+        Livewire::actingAs($this->owner)
+            ->test(TeamIndex::class)
+            ->call('setMemberRole', $this->owner->id, 'custom:'.$role->id);
+
+        $this->owner->refresh();
+        $this->assertNull($this->owner->client_role_id);
+        $this->assertTrue($this->owner->isClientOwner());
     }
 
     public function test_a_role_in_use_cannot_be_deleted(): void

@@ -107,13 +107,33 @@
                                 <td class="px-6 py-3">{{ $member->email }}</td>
                                 <td class="px-6 py-3">
                                     @php $memberRole = $member->getRoleNames()->first(); @endphp
-                                    @if ($member->clientRole !== null)
-                                        <span class="pd-badge pd-badge-slate" title="{{ $member->clientRole->summary() }}">
-                                            {{ $member->clientRole->name }}
-                                        </span>
-                                    @else
+                                    @if ($member->isClientOwner())
                                         <span class="pd-badge pd-badge-slate"
-                                              title="{{ $roleHelp[$memberRole] ?? '' }}">{{ $memberRole === 'Client Owner' ? 'Administrator' : ($memberRole ?? '—') }}</span>
+                                              title="{{ $roleHelp[$memberRole] ?? '' }}">Administrator</span>
+                                    @else
+                                        {{-- Editable in place: ladder or custom, changed on select. --}}
+                                        <select wire:change="setMemberRole({{ $member->id }}, $event.target.value)"
+                                                class="text-xs border-slate-300 rounded-md py-1"
+                                                title="{{ $member->clientRole?->summary() ?? ($roleHelp[$memberRole] ?? '') }}">
+                                            <optgroup label="Standard roles">
+                                                @foreach ($grantable as $role)
+                                                    <option value="{{ $role }}"
+                                                        @selected($member->clientRole === null && $memberRole === $role)>
+                                                        {{ $role === 'Client Owner' ? 'Administrator' : $role }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                            @if ($customRoles->isNotEmpty())
+                                                <optgroup label="Custom roles">
+                                                    @foreach ($customRoles as $custom)
+                                                        <option value="custom:{{ $custom->id }}"
+                                                            @selected($member->client_role_id === $custom->id)>
+                                                            {{ $custom->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </optgroup>
+                                            @endif
+                                        </select>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3">
