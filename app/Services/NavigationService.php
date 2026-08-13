@@ -47,10 +47,6 @@ class NavigationService
             // Deployment requests from approval-gated roles await the owner.
             ['label' => 'Approvals', 'route' => 'approvals.index', 'active' => 'approvals.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
                 'icon' => '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>'],
-            // A client owner's own subscription — staff manage billing from
-            // Administration instead, so this stays tenant-only.
-            ['label' => 'Billing', 'route' => 'tenant.billing', 'active' => 'tenant.billing', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
-                'icon' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'],
             ['label' => 'Device Groups', 'route' => 'computers.groups', 'active' => 'computers.groups', 'permission' => Permission::ComputersView, 'group' => self::FLEET, 'staffOnly' => true,
                 'icon' => '<path d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87"/><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/>'],
 
@@ -102,6 +98,14 @@ class NavigationService
                 'icon' => '<path d="M18 16.98h-5.99c-1.66 0-3.01-1.34-3.01-3S10.35 11 12 11h.01M6 8a4 4 0 1 0 4 4M15 16a4 4 0 1 0-4-4"/>'],
             ['label' => 'Billing settings', 'route' => 'admin.billing', 'active' => 'admin.billing', 'permission' => Permission::SettingsManage, 'group' => self::BILLING,
                 'icon' => '<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M5 12H3M21 12h-2"/>'],
+            // A client owner's own subscription — money, not fleet: it sits
+            // last in their menu, its own section at the bottom. Staff manage
+            // billing from Administration, so this stays tenant-only.
+            // (Defined last on purpose: groups render in first-appearance
+            // order, and for a tenant this is the first Billing-group item.)
+            ['label' => 'Billing', 'route' => 'tenant.billing', 'active' => 'tenant.billing', 'permission' => Permission::UsersView, 'group' => self::BILLING, 'tenantOnly' => true, 'ownerOnly' => true,
+                'icon' => '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'],
+
             ['label' => 'Settings', 'route' => 'admin.settings', 'active' => 'admin.settings*', 'permission' => Permission::SettingsManage, 'group' => self::ADMIN,
                 'icon' => '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'],
         ];
