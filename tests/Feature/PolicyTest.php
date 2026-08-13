@@ -476,4 +476,49 @@ class PolicyTest extends TestCase
         $this->assertSame('rollback', $job->action->value);
         $this->assertSame('24.09', $job->target_version);
     }
+
+    public function test_the_form_creates_one_policy_per_selected_package(): void
+    {
+        $project = Project::factory()->create();
+        $a = Package::factory()->create(['name' => 'App A']);
+        $b = Package::factory()->create(['name' => 'App B']);
+        $c = Package::factory()->create(['name' => 'App C']);
+
+        // B already has this rule — the multi-create skips it and says so,
+        // instead of failing the whole batch.
+        SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => $b->id, 'action' => 'install',
+        ]);
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(\App\Livewire\Policies\PolicyForm::class)
+            ->set('project_id', $project->id)
+            ->set('packageIds', [$a->id, $b->id, $c->id])
+            ->set('action', 'install')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertTrue(SoftwarePolicy::where('project_id', $project->id)->where('package_id', $a->id)->exists());
+        $this->assertTrue(SoftwarePolicy::where('project_id', $project->id)->where('package_id', $c->id)->exists());
+        $this->assertSame(1, SoftwarePolicy::where('project_id', $project->id)->where('package_id', $b->id)->count());
+    }
+
+    public function test_version_pinning_refuses_multiple_packages(): void
+    {
+        $project = Project::factory()->create();
+        $a = Package::factory()->create();
+        $b = Package::factory()->create();
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(\App\Livewire\Policies\PolicyForm::class)
+            ->set('project_id', $project->id)
+            ->set('packageIds', [$a->id, $b->id])
+            ->set('action', 'install')
+            ->set('version_mode', 'exact')
+            ->set('desired_version', '1.0')
+            ->call('save')
+            ->assertHasErrors('version_mode');
+
+        $this->assertSame(0, SoftwarePolicy::count());
+    }
 }
