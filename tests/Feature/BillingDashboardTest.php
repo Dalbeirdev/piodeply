@@ -106,7 +106,27 @@ class BillingDashboardTest extends TestCase
         Livewire::actingAs($this->admin())->test(BillingDashboard::class)
             ->assertOk()
             ->assertSee('MRR')
-            ->assertSee('Revenue — last 12 months');
+            ->assertSee('Revenue')
+            ->assertSee('Last 12 months');
+    }
+
+    /** The charted window is operator-selectable; the value comes from a select. */
+    public function test_the_revenue_window_can_be_changed(): void
+    {
+        Livewire::actingAs($this->admin())->test(BillingDashboard::class)
+            ->assertSet('months', 12)
+            ->set('months', 3)
+            ->assertSet('months', 3)
+            ->assertOk();
+    }
+
+    /** Bound from the browser, so an unexpected value must not reach the query. */
+    public function test_an_unsupported_window_falls_back_to_twelve_months(): void
+    {
+        Livewire::actingAs($this->admin())->test(BillingDashboard::class)
+            ->set('months', 999)
+            ->assertSet('months', 12)
+            ->assertOk();
     }
 
     public function test_payments_export_is_gated(): void

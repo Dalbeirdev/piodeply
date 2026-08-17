@@ -136,6 +136,36 @@ class BillingMetricsService
     }
 
     /**
+     * Revenue change against the preceding window of the same length, as a
+     * percentage. Null when there is no earlier period to compare with —
+     * showing "+100%" against nothing would be an invented number.
+     */
+    public function revenueTrendPercent(int $months = 12): ?int
+    {
+        $start = now()->copy()->startOfMonth()->subMonths($months - 1);
+        $previousStart = $start->copy()->subMonths($months);
+
+        $current = (int) Payment::where('status', 'paid')->where('created_at', '>=', $start)->sum('amount_total');
+        $previous = (int) Payment::where('status', 'paid')
+            ->whereBetween('created_at', [$previousStart, $start])
+            ->sum('amount_total');
+
+        if ($previous === 0) {
+            return null;
+        }
+
+        return (int) round(($current - $previous) / $previous * 100);
+    }
+
+    /** Revenue inside the charted window, which the headline figure labels. */
+    public function revenueInPeriodCents(int $months = 12): int
+    {
+        return (int) Payment::where('status', 'paid')
+            ->where('created_at', '>=', now()->copy()->startOfMonth()->subMonths($months - 1))
+            ->sum('amount_total');
+    }
+
+    /**
      * Who is due to be charged next, soonest first — money expected in, as
      * opposed to money already taken. Only clients with a live subscription
      * and a known renewal date can appear.
