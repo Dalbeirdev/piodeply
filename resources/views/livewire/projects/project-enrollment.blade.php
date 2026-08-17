@@ -14,6 +14,7 @@
     <div class="py-12"
          x-data="{
              key: '',
+             method: @js($selected),
              get entered() { return this.key.trim() !== '' },
              get valid() { return new RegExp(@js($keyPattern)).test(this.key.trim()) },
              fill(body) {
@@ -31,12 +32,18 @@
               * the one the page happened to load with. Reading the rendered
               * block instead cannot drift from what the operator sees.
               */
-             copy(el) {
+             copy(el, method) {
                  if (! this.entered || ! this.valid) {
                      return; // the button is disabled; nothing safe to copy
                  }
 
-                 navigator.clipboard.writeText(this.$refs.script.textContent);
+                 // Read the block for THIS method straight from the DOM, and
+                 // apply fill() again on the way out — so the clipboard holds
+                 // a runnable script even if the on-screen substitution has
+                 // not been applied for any reason.
+                 const body = document.getElementById('script-' + method).dataset.body;
+
+                 navigator.clipboard.writeText(this.fill(body));
                  el.textContent = 'Copied';
                  setTimeout(() => el.textContent = 'Copy', 1500);
              },
@@ -135,55 +142,71 @@
                 </p>
             </div>
 
-            <div class="pd-card p-6 space-y-4">
+            {{-- Every method is rendered once and switched in the browser.
+                 Tabs used to round-trip to the server, and that re-render
+                 disturbed the Alpine state holding the key: the script kept
+                 its placeholder and Copy stayed disabled even with a valid key
+                 typed in. A tab switch is presentation — it has no business
+                 touching the server, and now nothing can churn the key. --}}
+            <div class="pd-card p-6 space-y-4" wire:ignore>
                 <div class="flex flex-wrap gap-2" role="tablist" aria-label="Enrollment method">
                     @foreach ($methods as $key => $method)
-                        <button type="button" wire:click="select('{{ $key }}')" role="tab"
-                                aria-selected="{{ $selected === $key ? 'true' : 'false' }}"
-                                class="px-3 py-1.5 rounded-full text-sm border transition
-                                       {{ $selected === $key
-                                            ? 'bg-teal-700 border-teal-700 text-white'
-                                            : 'bg-white border-slate-300 text-slate-600 hover:border-teal-400' }}">
+                        <button type="button" role="tab"
+                                x-on:click="method = @js($key)"
+                                x-bind:aria-selected="method === @js($key) ? 'true' : 'false'"
+                                x-bind:class="method === @js($key)
+                                    ? 'bg-teal-700 border-teal-700 text-white'
+                                    : 'bg-white border-slate-300 text-slate-600 hover:border-teal-400'"
+                                class="px-3 py-1.5 rounded-full text-sm border transition">
                             {{ $method['label'] }}
                         </button>
                     @endforeach
                 </div>
 
-                @if ($selected === 'gpo')
-                    <div class="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-md p-3">
-                        <p class="font-medium text-slate-700">Runs as SYSTEM at boot — nobody has to log in.</p>
-                        <p class="mt-1">
-                            Save it to <code class="font-mono text-xs">\\yourdomain\NETLOGON\PioDeploy\</code>, then in
-                            <strong>gpmc.msc</strong>: create a GPO on the target OU → Edit → Computer Configuration →
-                            Policies → Windows Settings → Scripts (Startup/Shutdown) → <strong>Startup</strong> →
-                            PowerShell Scripts → Add. Then <code class="font-mono text-xs">gpupdate /force</code> and reboot.
-                        </p>
-                        <p class="mt-1 text-slate-500">
-                            Safe every boot: it exits immediately when the agent is already at
-                            {{ \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION }} or newer, and upgrades it when it is not.
-                        </p>
-                    </div>
-                @endif
+                @foreach ($methods as $key => $method)
+                    <div x-show="method === @js($key)" x-cloak class="space-y-4">
+                        @if ($key === 'gpo')
+                            <div class="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-md p-3">
+                                <p class="font-medium text-slate-700">Runs as SYSTEM at boot — nobody has to log in.</p>
+                                <p class="mt-1">
+                                    Save it to <code class="font-mono text-xs">\\yourdomain\NETLOGON\PioDeploy\</code>, then in
+                                    <strong>gpmc.msc</strong>: create a GPO on the target OU → Edit → Computer Configuration →
+                                    Policies → Windows Settings → Scripts (Startup/Shutdown) → <strong>Startup</strong> →
+                                    PowerShell Scripts → Add. Then <code class="font-mono text-xs">gpupdate /force</code> and reboot.
+                                </p>
+                                <p class="mt-1 text-slate-500">
+                                    Safe every boot: it exits immediately when the agent is already at
+                                    {{ \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION }} or newer, and upgrades it when it is not.
+                                </p>
+                            </div>
+                        @endif
 
-                <div>
-                    <div class="flex items-center justify-between mb-1 gap-3">
-                        <span class="text-xs font-mono text-slate-500">{{ $current['filename'] }}</span>
+                        <div>
+                            <div class="flex items-center justify-between mb-1 gap-3">
+                                <span class="text-xs font-mono text-slate-500">{{ $method['filename'] }}</span>
 
-                        {{-- Copying a script that still carries the placeholder
-                             hands the operator something that cannot run, and
-                             the failure only shows up on the target machine.
-                             Refuse at the button rather than at the console. --}}
-                        <button type="button"
-                                class="text-xs pd-link disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
-                                x-bind:disabled="! entered || ! valid"
-                                x-bind:title="entered ? (valid ? 'Copy this script' : 'That key does not look like a project key') : 'Paste your project API key above first'"
-                                x-on:click="copy($el)"
-                                x-text="(! entered || ! valid) ? 'Enter a key to copy' : 'Copy'">Copy</button>
+                                {{-- Copying a script that still carries the placeholder
+                                     hands the operator something that cannot run, and
+                                     the failure only shows up on the target machine.
+                                     Refuse at the button rather than at the console. --}}
+                                <button type="button"
+                                        class="text-xs pd-link disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
+                                        x-bind:disabled="! entered || ! valid"
+                                        x-bind:title="entered ? (valid ? 'Copy this script' : 'That key does not look like a project key') : 'Paste your project API key above first'"
+                                        x-on:click="copy($el, @js($key))"
+                                        x-text="(! entered || ! valid) ? 'Enter a key to copy' : 'Copy'">Copy</button>
+                            </div>
+
+                            {{-- The untouched script stays in data-body, so what is
+                                 shown and what is copied both derive from the DOM
+                                 rather than a value captured at page load. --}}
+                            <pre id="script-{{ $key }}"
+                                 data-body="{{ $method['body'] }}"
+                                 x-effect="$el.textContent = fill($el.dataset.body)"
+                                 class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-xs leading-relaxed">{{ $method['body'] }}</pre>
+                        </div>
                     </div>
-                    <pre x-ref="script"
-                         class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-xs leading-relaxed"
-                         x-text="fill(@js($current['body']))">{{ $current['body'] }}</pre>
-                </div>
+                @endforeach
             </div>
 
             {{-- Fresh VMs are the machines that used to fail: a clean Windows

@@ -292,13 +292,24 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertStringContainsString('NotifyIcon', $script);
     }
 
-    public function test_switching_method_changes_the_script_shown(): void
+    /**
+     * Every method is rendered once and the tabs switch in the browser.
+     * Round-tripping to the server for a presentational tab is what disturbed
+     * the Alpine state holding the API key — the script kept its placeholder
+     * and Copy stayed disabled with a valid key typed in.
+     */
+    public function test_every_method_is_rendered_so_tabs_need_no_server(): void
     {
-        $this->page()
-            ->assertSee('Group Policy computer startup script')
-            ->call('select', 'intune')
-            ->assertSee('Intune / Entra platform script')
-            ->assertDontSee('Group Policy computer startup script');
+        $html = $this->page()->html();
+
+        foreach (['Group Policy computer startup script', 'Intune / Entra platform script'] as $script) {
+            $this->assertStringContainsString($script, $html);
+        }
+
+        // Switching is client-side, and the block is left alone by Livewire.
+        $this->assertStringContainsString('wire:ignore', $html);
+        $this->assertStringContainsString('x-on:click="method =', $html);
+        $this->assertStringNotContainsString('wire:click="select(', $html);
     }
 
     /**
@@ -314,14 +325,22 @@ class ProjectEnrollmentTest extends TestCase
      */
     public function test_copy_reads_the_visible_script_rather_than_a_captured_one(): void
     {
-        $html = $this->page()->call('select', 'intune')->html();
+        $html = $this->page()->html();
 
-        // The block the operator sees is the copy source...
-        $this->assertStringContainsString('x-ref="script"', $html);
-        $this->assertStringContainsString('$refs.script.textContent', $html);
+        // Each method's script has its own addressable block...
+        foreach (array_keys(app(EnrollmentScriptService::class)->all($this->project, null)) as $method) {
+            $this->assertStringContainsString('id="script-'.$method.'"', $html);
+        }
+
+        // ...copy() looks the block up by method rather than using a captured
+        // body, and the untouched script is carried in the DOM.
+        $this->assertStringContainsString("document.getElementById('script-' + method)", $html);
+        $this->assertStringContainsString('data-body=', $html);
+        $this->assertStringContainsString('$el.dataset.body', $html);
 
         // ...and the handler holds no script of its own.
-        $handler = Str::between($html, 'copy(el) {', '},');
+        $handler = Str::between($html, 'copy(el, method) {', 'setTimeout');
+        $this->assertNotSame('', trim($handler), 'the copy handler should be findable');
         $this->assertStringNotContainsString('PioDeploy agent', $handler,
             'copy() must not carry a script body — that is what went stale');
     }
