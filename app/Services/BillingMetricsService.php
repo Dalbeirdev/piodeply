@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Account;
 use App\Models\Affiliate;
 use App\Models\AffiliateCommission;
+use App\Models\Client;
 use App\Models\Coupon;
 use App\Models\CouponRedemption;
 use App\Models\Payment;
@@ -16,20 +16,37 @@ use Illuminate\Support\Collection;
  * ARR, the subscription funnel, revenue, churn, LTV, and coupon / affiliate
  * totals. Everything is derived from our own data, so it is fully testable
  * without Stripe and never makes a network call.
+ *
+ * The customer here is the CLIENT. These figures used to be computed from the
+ * accounts table, which nothing in the codebase ever inserts into — one seeded
+ * row, so every tile read zero no matter how many people were paying. The
+ * subscription columns on clients are the ones webhooks actually maintain
+ * (see ClientSubscriptionService), so they are the honest source.
  */
 class BillingMetricsService
 {
     /** Statuses that represent recurring revenue in force. */
     private const REVENUE_STATUSES = ['active', 'past_due'];
 
-    /** Monthly recurring revenue, in cents, across all paying accounts. */
+    /** Stripe's vocabulary for "subscribed, in some form". */
+    private const LIVE_STATUSES = ['active', 'past_due', 'trialing'];
+
+    /** Charging is failing or was never completed. */
+    private const TROUBLE_STATUSES = ['past_due', 'unpaid', 'incomplete'];
+
+    /**
+     * Monthly recurring revenue, in cents, across all paying clients.
+     *
+     * subscription_cents is what the client is billed each period, written by
+     * the invoice/subscription webhooks. There is no interval column, and
+     * every plan sold through the portal is priced monthly, so it is taken as
+     * a monthly figure.
+     */
     public function mrrCents(): int
     {
-        return (int) Account::query()
-            ->whereIn('status', self::REVENUE_STATUSES)
-            ->with('plan')
-            ->get()
-            ->sum(fn (Account $a) => $this->monthlyEquivalentCents($a));
+        return (int) Client::query()
+            ->whereIn('subscription_status', self::REVENUE_STATUSES)
+            ->sum('subscription_cents');
     }
 
     public function arrCents(): int
@@ -37,51 +54,40 @@ class BillingMetricsService
         return $this->mrrCents() * 12;
     }
 
-    private function monthlyEquivalentCents(Account $account): int
-    {
-        $plan = $account->plan;
-        if ($plan === null) {
-            return 0;
-        }
-
-        return $account->billing_interval === 'year'
-            ? (int) round($plan->yearly_price_cents / 12)
-            : $plan->monthly_price_cents;
-    }
-
-    /** @return array<string,int> account counts keyed by billing status */
+    /** @return array<string,int> client counts keyed by subscription status */
     public function statusBreakdown(): array
     {
-        return Account::query()
-            ->selectRaw('status, count(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status')
+        return Client::query()
+            ->whereNotNull('subscription_status')
+            ->selectRaw('subscription_status, count(*) as total')
+            ->groupBy('subscription_status')
+            ->pluck('total', 'subscription_status')
             ->all();
     }
 
     public function activeTrials(): int
     {
-        return Account::where('status', 'trialing')->count();
+        return Client::where('subscription_status', 'trialing')->count();
     }
 
     /** Trials whose window has passed without converting to a paying status. */
     public function expiredTrials(): int
     {
-        return Account::whereNotNull('trial_ends_at')
-            ->where('trial_ends_at', '<', now())
-            ->whereIn('status', ['none', 'canceled', 'suspended'])
+        return Client::whereNotNull('subscription_period_end')
+            ->where('subscription_period_end', '<', now())
+            ->whereIn('subscription_status', ['canceled', 'unpaid', 'incomplete'])
             ->count();
     }
 
     public function cancelledCount(): int
     {
-        return Account::where('status', 'canceled')->count();
+        return Client::where('subscription_status', 'canceled')->count();
     }
 
-    /** Accounts currently failing payment (past-due or suspended). */
+    /** Clients whose charges are failing. */
     public function paymentIssues(): int
     {
-        return Account::whereIn('status', ['past_due', 'suspended'])->count();
+        return Client::whereIn('subscription_status', self::TROUBLE_STATUSES)->count();
     }
 
     public function refundCount(): int
@@ -129,20 +135,24 @@ class BillingMetricsService
             ->all();
     }
 
-    /** Lifetime value: total revenue divided by the paying-customer count. */
+    /**
+     * Lifetime value: total revenue divided by the number of clients that
+     * ever subscribed — including the ones who have since cancelled, or the
+     * figure would climb every time a customer left.
+     */
     public function lifetimeValueCents(): int
     {
-        $customers = max(1, Account::whereNotNull('plan_id')->count());
+        $customers = max(1, Client::whereNotNull('stripe_subscription_id')->count());
 
         return (int) round($this->totalRevenueCents() / $customers);
     }
 
-    /** Churn: cancelled ÷ (active + cancelled), as a percentage. */
+    /** Churn: cancelled ÷ (live + cancelled), as a percentage. */
     public function churnPercent(): int
     {
-        $active = Account::whereIn('status', ['active', 'past_due', 'trialing'])->count();
+        $live = Client::whereIn('subscription_status', self::LIVE_STATUSES)->count();
         $cancelled = $this->cancelledCount();
-        $denom = $active + $cancelled;
+        $denom = $live + $cancelled;
 
         return $denom === 0 ? 0 : (int) round($cancelled / $denom * 100);
     }

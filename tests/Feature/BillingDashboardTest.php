@@ -37,16 +37,20 @@ class BillingDashboardTest extends TestCase
         return tap(User::factory()->create(), fn (User $u) => $u->assignRole(\App\Enums\Role::Admin->value));
     }
 
-    public function test_mrr_sums_monthly_equivalents_across_active_accounts(): void
+    /** Clients, not accounts — see BillingMetricsService. */
+    private function payingClient(array $billing): void
     {
-        $monthly = Plan::factory()->create(['monthly_price_cents' => 4800, 'yearly_price_cents' => 48000]);
-        $yearly = Plan::factory()->create(['monthly_price_cents' => 6000, 'yearly_price_cents' => 48000]);
+        $client = \App\Models\Client::factory()->create();
+        $client->forceFill($billing)->save();
+    }
 
-        Account::factory()->create(['status' => 'active', 'plan_id' => $monthly->id, 'billing_interval' => 'month']);
-        Account::factory()->create(['status' => 'active', 'plan_id' => $yearly->id, 'billing_interval' => 'year']); // 48000/12 = 4000
-        Account::factory()->create(['status' => 'trialing', 'plan_id' => $monthly->id, 'billing_interval' => 'month']); // trial ≠ MRR
+    public function test_mrr_sums_the_recurring_charge_across_paying_clients(): void
+    {
+        $this->payingClient(['subscription_status' => 'active', 'subscription_cents' => 4800]);
+        $this->payingClient(['subscription_status' => 'active', 'subscription_cents' => 4000]);
+        $this->payingClient(['subscription_status' => 'trialing', 'subscription_cents' => 9900]); // trial ≠ MRR
 
-        $this->assertSame(8800, $this->metrics()->mrrCents());   // 4800 + 4000
+        $this->assertSame(8800, $this->metrics()->mrrCents());
         $this->assertSame(8800 * 12, $this->metrics()->arrCents());
     }
 
@@ -65,8 +69,8 @@ class BillingDashboardTest extends TestCase
 
     public function test_ltv_divides_revenue_by_paying_customers(): void
     {
-        $plan = Plan::factory()->create();
-        Account::factory()->count(2)->create(['plan_id' => $plan->id, 'status' => 'active']);
+        $this->payingClient(['subscription_status' => 'active', 'stripe_subscription_id' => 'sub_1']);
+        $this->payingClient(['subscription_status' => 'active', 'stripe_subscription_id' => 'sub_2']);
         Payment::create(['status' => 'paid', 'amount_total' => 10000, 'currency' => 'usd']);
 
         $this->assertSame(5000, $this->metrics()->lifetimeValueCents()); // 10000 / 2
@@ -87,8 +91,8 @@ class BillingDashboardTest extends TestCase
 
     public function test_churn_and_status_breakdown(): void
     {
-        Account::factory()->create(['status' => 'active']);
-        Account::factory()->create(['status' => 'canceled']);
+        $this->payingClient(['subscription_status' => 'active', 'stripe_subscription_id' => 'sub_1']);
+        $this->payingClient(['subscription_status' => 'canceled', 'stripe_subscription_id' => 'sub_2']);
 
         $this->assertSame(50, $this->metrics()->churnPercent()); // 1 cancelled of 2
         $this->assertSame(1, $this->metrics()->statusBreakdown()['active']);
