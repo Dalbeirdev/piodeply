@@ -56,11 +56,16 @@ class WebhookService
             ? Carbon::createFromTimestamp($object['trial_end'])
             : null;
 
+        // Stripe moved current_period_end onto the subscription item; reading
+        // the old top-level field returned null, which made a subscription
+        // scheduled to cancel look like one that never ends.
+        $periodEnd = ClientSubscriptionService::periodEnd($object);
+
         if ($deleted) {
             $subscription->ends_at = $subscription->ends_at
-                ?? Carbon::createFromTimestamp($object['ended_at'] ?? $object['current_period_end'] ?? time());
-        } elseif (! empty($object['cancel_at_period_end']) && ! empty($object['current_period_end'])) {
-            $subscription->ends_at = Carbon::createFromTimestamp($object['current_period_end']);
+                ?? Carbon::createFromTimestamp($object['ended_at'] ?? $periodEnd ?? time());
+        } elseif (! empty($object['cancel_at_period_end']) && $periodEnd !== null) {
+            $subscription->ends_at = Carbon::createFromTimestamp($periodEnd);
         } else {
             $subscription->ends_at = null; // active and not scheduled to cancel
         }

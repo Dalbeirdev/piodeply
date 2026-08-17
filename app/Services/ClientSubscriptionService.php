@@ -149,6 +149,23 @@ class ClientSubscriptionService
         }
     }
 
+    /**
+     * When the current billing period ends — i.e. the next payment date.
+     *
+     * Stripe moved this off the subscription and onto each subscription item,
+     * so the old top-level field now comes back null and every renewal date
+     * silently read "—". Item first, top level kept as a fallback so events
+     * from an older API version still resolve.
+     */
+    public static function periodEnd(array $subscription): ?int
+    {
+        $end = $subscription['items']['data'][0]['current_period_end']
+            ?? $subscription['current_period_end']
+            ?? null;
+
+        return $end !== null ? (int) $end : null;
+    }
+
     /** customer.subscription.updated — status or price changed at Stripe. */
     public function subscriptionUpdated(array $subscription): void
     {
@@ -157,12 +174,12 @@ class ClientSubscriptionService
             return;
         }
 
+        $periodEnd = self::periodEnd($subscription);
+
         $client->forceFill(array_filter([
             'subscription_status'     => $subscription['status'] ?? null,
             'subscription_cents'      => $subscription['items']['data'][0]['price']['unit_amount'] ?? null,
-            'subscription_period_end' => isset($subscription['current_period_end'])
-                ? date('Y-m-d H:i:s', (int) $subscription['current_period_end'])
-                : null,
+            'subscription_period_end' => $periodEnd !== null ? date('Y-m-d H:i:s', $periodEnd) : null,
         ]))->saveQuietly();
 
         if (in_array($subscription['status'] ?? '', ['active', 'trialing'], true)) {
