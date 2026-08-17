@@ -27,6 +27,42 @@ class BillingSettings extends Component
     /** Free days a new subscription gets before the first charge. */
     public int $trialDays = 14;
 
+    /**
+     * The currencies offered in the dropdown. Stripe supports 135+, so this
+     * is a shortlist for convenience, not a limit — whatever is already
+     * stored is added to it in currencyOptions() so an operator on an
+     * unlisted currency can still save the form without silently losing it.
+     */
+    public const COMMON_CURRENCIES = [
+        'usd' => 'US Dollar',
+        'eur' => 'Euro',
+        'gbp' => 'British Pound',
+        'cad' => 'Canadian Dollar',
+        'aud' => 'Australian Dollar',
+        'nzd' => 'New Zealand Dollar',
+        'inr' => 'Indian Rupee',
+        'sgd' => 'Singapore Dollar',
+        'aed' => 'UAE Dirham',
+        'chf' => 'Swiss Franc',
+        'sek' => 'Swedish Krona',
+        'zar' => 'South African Rand',
+        'jpy' => 'Japanese Yen',
+        'brl' => 'Brazilian Real',
+    ];
+
+    /** @return array<string, string> */
+    private function currencyOptions(): array
+    {
+        $options = self::COMMON_CURRENCIES;
+        $current = strtolower(trim($this->currency));
+
+        if ($current !== '' && ! isset($options[$current])) {
+            $options = [$current => strtoupper($current)] + $options;
+        }
+
+        return $options;
+    }
+
     public function mount(SettingsService $settings, StripeSettingsService $stripe): void
     {
         $this->authorizeManage();
@@ -91,6 +127,7 @@ class BillingSettings extends Component
             'hasSecret'        => $stripe->hasSecret(),
             'hasWebhookSecret' => $stripe->hasWebhookSecret(),
             'tiers'            => BillingService::TIERS,
+            'currencies'       => $this->currencyOptions(),
             'payments'         => \App\Models\Payment::latest()->limit(10)->get(),
         ])->layout('layouts.app');
     }

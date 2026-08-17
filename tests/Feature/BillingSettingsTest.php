@@ -90,6 +90,26 @@ class BillingSettingsTest extends TestCase
             ->assertHasErrors(['publishableKey', 'secretKey', 'webhookSecret']);
     }
 
+    /**
+     * The currency picker is a shortlist of 14, but Stripe supports 135+.
+     * An operator already billing in one of the other 121 must not have it
+     * silently dropped just because the field became a dropdown.
+     */
+    public function test_a_currency_outside_the_shortlist_survives_the_dropdown(): void
+    {
+        app(SettingsService::class)->set('billing.currency', 'huf');
+        app(StripeSettingsService::class)->save('pk_test_a', 'huf', 'sk_test_b', 'whsec_c');
+
+        Livewire::actingAs($this->admin())
+            ->test(BillingSettings::class)
+            ->assertSet('currency', 'huf')
+            ->assertSee('HUF')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame('huf', app(StripeSettingsService::class)->currency());
+    }
+
     public function test_billing_settings_page_requires_permission(): void
     {
         $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(\App\Enums\Role::Viewer->value));
