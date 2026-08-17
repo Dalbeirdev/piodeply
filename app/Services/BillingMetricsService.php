@@ -136,6 +136,32 @@ class BillingMetricsService
     }
 
     /**
+     * Who is due to be charged next, soonest first — money expected in, as
+     * opposed to money already taken. Only clients with a live subscription
+     * and a known renewal date can appear.
+     *
+     * @return \Illuminate\Support\Collection<int,Client>
+     */
+    public function upcomingRenewals(int $limit = 10): Collection
+    {
+        return Client::query()
+            ->whereIn('subscription_status', self::LIVE_STATUSES)
+            ->whereNotNull('subscription_period_end')
+            ->orderBy('subscription_period_end')
+            ->limit($limit)
+            ->get();
+    }
+
+    /** What the next round of renewals is worth in total, in cents. */
+    public function upcomingRenewalCents(): int
+    {
+        return (int) Client::query()
+            ->whereIn('subscription_status', self::LIVE_STATUSES)
+            ->whereNotNull('subscription_period_end')
+            ->sum('subscription_cents');
+    }
+
+    /**
      * Lifetime value: total revenue divided by the number of clients that
      * ever subscribed — including the ones who have since cancelled, or the
      * figure would climb every time a customer left.

@@ -89,6 +89,43 @@
                 </div>
             </div>
 
+            {{-- Next payments: money expected in, beside the money already taken. --}}
+            <div class="pd-card">
+                <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                    <h3 class="font-semibold text-slate-800">Next payments</h3>
+                    @if ($renewalCents > 0)
+                        <span class="text-sm text-slate-500">
+                            {{ $renewals->count() }} due ·
+                            <span class="font-semibold text-slate-800 tabular-nums">${{ number_format($renewalCents / 100, 2) }}</span> expected
+                        </span>
+                    @endif
+                </div>
+                <ul class="divide-y divide-slate-100">
+                    @forelse ($renewals as $client)
+                        <li class="px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-slate-800 truncate">{{ $client->company_name }}</p>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    {{ $client->subscription_period_end->format('j M Y') }}
+                                    <span class="mx-1">·</span>{{ $client->subscription_period_end->diffForHumans() }}
+                                    @if ($client->subscription_status === 'trialing')
+                                        <span class="mx-1">·</span><span class="text-blue-600 font-medium">first charge after trial</span>
+                                    @endif
+                                </p>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-800 tabular-nums">
+                                {{ $client->subscription_cents ? '$'.number_format($client->subscription_cents / 100, 2) : '—' }}
+                            </span>
+                        </li>
+                    @empty
+                        <li class="px-6 py-8 text-center text-slate-500 text-sm">
+                            No renewals scheduled.
+                            <span class="block text-xs text-slate-400 mt-1">Active subscriptions show their next charge date here.</span>
+                        </li>
+                    @endforelse
+                </ul>
+            </div>
+
             {{-- Recent payments --}}
             <div class="pd-card">
                 <div class="px-6 py-4 border-b border-slate-100"><h3 class="font-semibold text-slate-800">Recent payments</h3></div>

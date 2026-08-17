@@ -351,8 +351,12 @@
             <div class="pd-card">
                 <div class="px-6 pt-5 pb-3 flex items-center justify-between gap-3 flex-wrap">
                     <h3 class="text-base font-semibold text-slate-800">Recent payments</h3>
-                    <a href="{{ route('billing.invoices') }}" class="text-sm font-medium text-teal-700 hover:text-teal-800">
-                        View all invoices →
+                    {{-- Deliberately NOT billing.invoices: that page is this
+                         company's own subscription to PioDeploy, not customer
+                         money, and linking to it here read as "your customers
+                         have no invoices". --}}
+                    <a href="{{ route('admin.billing-overview') }}" class="text-sm font-medium text-teal-700 hover:text-teal-800">
+                        View all payments →
                     </a>
                 </div>
 

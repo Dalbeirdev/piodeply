@@ -26,6 +26,8 @@ class BillingDashboard extends Component
             'series'         => $series,
             'seriesMax'      => $max,
             'recentPayments' => $metrics->recentPayments(10),
+            'renewals'       => $metrics->upcomingRenewals(10),
+            'renewalCents'   => $metrics->upcomingRenewalCents(),
         ])->layout('layouts.app');
     }
 }
