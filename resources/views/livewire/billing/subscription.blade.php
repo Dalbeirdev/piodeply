@@ -142,7 +142,7 @@
                 {{-- Choose a plan + interval, verify a card, start the trial. --}}
                 <div class="pd-card p-6 space-y-5">
                     <div>
-                        <h3 class="font-semibold text-slate-800">Start your 14-day free trial</h3>
+                        <h3 class="font-semibold text-slate-800">Start your {{ trial_phrase() }}</h3>
                         <p class="text-sm text-slate-500">Card required to prevent abuse. You're not charged until the trial ends; cancel anytime.</p>
                     </div>
 
@@ -217,7 +217,7 @@
 
                     <button type="button" id="start-trial-btn"
                         class="w-full inline-flex justify-center items-center gap-2 px-4 py-2.5 bg-teal-700 text-white rounded-lg font-semibold hover:bg-teal-800 disabled:opacity-60">
-                        <span id="btn-label">Start 14-day trial</span>
+                        <span id="btn-label">Start {{ trial_days() }}-day trial</span>
                     </button>
                     <p class="text-center text-xs text-slate-400">Secured by Stripe. We never see or store your card number.</p>
                 </div>
@@ -250,14 +250,14 @@
 
                         if (error) {
                             document.getElementById('card-errors').textContent = error.message;
-                            btn.disabled = false; label.textContent = 'Start 14-day trial';
+                            btn.disabled = false; label.textContent = 'Start {{ trial_days() }}-day trial';
                             return;
                         }
 
                         label.textContent = 'Starting trial…';
                         $wire.set('paymentMethod', setupIntent.payment_method);
                         await $wire.startTrial();
-                        btn.disabled = false; label.textContent = 'Start 14-day trial';
+                        btn.disabled = false; label.textContent = 'Start {{ trial_days() }}-day trial';
                     });
                 </script>
                 @endscript

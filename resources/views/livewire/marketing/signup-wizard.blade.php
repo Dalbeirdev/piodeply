@@ -98,7 +98,7 @@
                     <div style="display:grid;gap:.5rem;margin:1rem 0;">
                         <label style="display:flex;gap:.6rem;align-items:flex-start;border:1px solid {{ '#e2e8f0' }};border-radius:10px;padding:.7rem .9rem;cursor:pointer;">
                             <input type="radio" wire:model.live="payVia" value="card" style="margin-top:.2rem;">
-                            <span style="font-size:.88rem;"><b>Pay by card</b> — 14-day free trial, nothing charged today.
+                            <span style="font-size:.88rem;"><b>Pay by card</b> — {{ trial_phrase() }}, nothing charged today.
                             First {{ $currency }} {{ number_format($monthlyCents / 100, 2) }} charge when the trial ends; cancel any time before then.</span>
                         </label>
                         <label style="display:flex;gap:.6rem;align-items:flex-start;border:1px solid {{ '#e2e8f0' }};border-radius:10px;padding:.7rem .9rem;cursor:pointer;">
@@ -124,7 +124,7 @@
                 <div style="display:flex;gap:.75rem;">
                     <button type="button" wire:click="back" class="btn btn-lg" style="flex:1;justify-content:center;">Back</button>
                     <button type="button" wire:click="submit" wire:loading.attr="disabled" class="btn btn-primary btn-lg" style="flex:2;justify-content:center;">
-                        <span wire:loading.remove wire:target="submit">{{ $paymentLive && $payVia === 'card' ? 'Start 14-day free trial' : 'Submit application' }}</span>
+                        <span wire:loading.remove wire:target="submit">{{ $paymentLive && $payVia === 'card' ? 'Start ' . trial_phrase() : 'Submit application' }}</span>
                         <span wire:loading wire:target="submit">One moment…</span>
                     </button>
                 </div>

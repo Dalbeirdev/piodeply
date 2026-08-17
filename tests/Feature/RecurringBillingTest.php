@@ -110,7 +110,7 @@ class RecurringBillingTest extends TestCase
         // session Stripe receives must actually say so.
         \Illuminate\Support\Facades\Http::assertSent(function ($request) {
             return str_contains($request->url(), '/checkout/sessions')
-                && ($request->data()['subscription_data']['trial_period_days'] ?? null) == \App\Services\BillingService::TRIAL_DAYS;
+                && ($request->data()['subscription_data']['trial_period_days'] ?? null) == app(\App\Services\BillingService::class)->trialDays();
         });
     }
 

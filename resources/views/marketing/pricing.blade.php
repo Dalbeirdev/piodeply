@@ -10,7 +10,7 @@
         <h1>Pay for <span class="accent">what you manage</span></h1>
         <p class="muted" style="max-width:52ch;margin:1rem auto 0;font-size:1.2rem;">{{ $content->get('pricing.intro') }}</p>
         <div class="hero-trust">
-            <span class="t">14-day free trial</span>
+            <span class="t">{{ trial_phrase() }}</span>
             <span class="t">No setup fees</span>
             <span class="t">Cancel anytime</span>
         </div>

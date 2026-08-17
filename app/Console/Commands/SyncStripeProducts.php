@@ -35,6 +35,13 @@ class SyncStripeProducts extends Command
         foreach (Plan::query()->orderBy('sort_order')->get() as $plan) {
             $this->line("Plan: {$plan->name}");
 
+            // A stored id that Stripe no longer knows is worse than an empty
+            // one: it reads as "already synced" here while every checkout
+            // dies on "No such price". Swapping the account behind
+            // STRIPE_SECRET orphans the whole catalogue this way, so drop
+            // what Stripe cannot confirm and let the create path rebuild it.
+            $this->forgetVanishedIds($stripe, $plan, $dry);
+
             // 1. Product
             if (! $plan->stripe_product_id) {
                 if ($dry) {
@@ -61,6 +68,74 @@ class SyncStripeProducts extends Command
         $this->info($dry ? 'Dry run complete.' : 'Stripe products and prices are in sync.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Clear the ids Stripe cannot confirm. Only a definitive "this does not
+     * exist" counts — a network blip or a bad key must never be read as
+     * absence, or a sync run during an outage would orphan a live catalogue
+     * and bill customers on freshly duplicated prices.
+     */
+    private function forgetVanishedIds($stripe, Plan $plan, bool $dry): void
+    {
+        if ($plan->stripe_product_id !== null && $this->isMissing(fn () => $stripe->products->retrieve($plan->stripe_product_id))) {
+            $this->warn("  product {$plan->stripe_product_id} is not in this Stripe account - rebuilding");
+
+            // Prices live inside the product, so they cannot outlive it.
+            $plan->stripe_product_id = null;
+            $plan->stripe_monthly_price_id = null;
+            $plan->stripe_yearly_price_id = null;
+            $dry || $plan->save();
+
+            return;
+        }
+
+        foreach (['stripe_monthly_price_id' => 'monthly', 'stripe_yearly_price_id' => 'yearly'] as $column => $label) {
+            $priceId = $plan->{$column};
+
+            if ($priceId === null || ! $this->isUnusablePrice($stripe, $priceId)) {
+                continue;
+            }
+
+            $this->warn("  {$label} price {$priceId} is missing or archived - rebuilding");
+            $plan->{$column} = null;
+            $dry || $plan->save();
+        }
+    }
+
+    /** An archived price still resolves but can no longer be subscribed to. */
+    private function isUnusablePrice($stripe, string $priceId): bool
+    {
+        try {
+            return ! $stripe->prices->retrieve($priceId)->active;
+        } catch (\Stripe\Exception\InvalidRequestException $e) {
+            if ($this->meansAbsent($e)) {
+                return true;
+            }
+
+            throw $e;
+        }
+    }
+
+    /** @param  callable():mixed  $lookup */
+    private function isMissing(callable $lookup): bool
+    {
+        try {
+            $lookup();
+
+            return false;
+        } catch (\Stripe\Exception\InvalidRequestException $e) {
+            if ($this->meansAbsent($e)) {
+                return true;
+            }
+
+            throw $e;
+        }
+    }
+
+    private function meansAbsent(\Stripe\Exception\InvalidRequestException $e): bool
+    {
+        return $e->getStripeCode() === 'resource_missing' || $e->getHttpStatus() === 404;
     }
 
     private function ensurePrice($stripe, Plan $plan, string $interval, int $amount, string $column, bool $dry): void

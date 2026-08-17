@@ -61,7 +61,7 @@
 </div>
 
 <p class="center muted" style="margin:18px 0 0;font-size:.9rem;">
-    Every plan includes unlimited users and the full platform. 14-day free trial — card required, cancel anytime.<br>
+    Every plan includes unlimited users and the full platform. {{ ucfirst(trial_phrase()) }} — card required, cancel anytime.<br>
     Managing more than 250 machines? <a href="#calc" style="color:var(--teal-700);font-weight:600;">Size your plan below →</a>
 </p>
 

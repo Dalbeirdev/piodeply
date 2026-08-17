@@ -73,6 +73,12 @@
                     <p class="text-xs text-slate-500 mt-1">Stripe supports 135+ currencies — e.g. usd, eur, gbp, inr, aud.</p>
                 </div>
                 <div class="max-w-[10rem]">
+                    <x-label for="trialDays" value="Free trial (days)" />
+                    <x-input id="trialDays" type="number" min="0" max="365" class="mt-1 block w-full" wire:model="trialDays" />
+                    <x-input-error for="trialDays" class="mt-1" />
+                    <p class="text-xs text-slate-500 mt-1">How long a new customer uses PioDeploy free before the first charge. A card is still collected up front. Set 0 to charge immediately. This number is what the pricing page promises and what Stripe is told.</p>
+                </div>
+                <div class="max-w-[10rem]">
                     <x-label for="clientGraceDays" value="Dunning grace (days)" />
                     <x-input id="clientGraceDays" type="number" min="3" max="60" class="mt-1 block w-full" wire:model="clientGraceDays" />
                     <x-input-error for="clientGraceDays" class="mt-1" />

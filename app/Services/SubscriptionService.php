@@ -10,13 +10,19 @@ use RuntimeException;
 
 /**
  * Subscription lifecycle on top of Cashier. Phase 2 covers getting a verified
- * card on file and starting the 14-day trial; later phases add swap / cancel /
- * resume / pause. Stripe calls are isolated in thin methods so the pure state
- * transitions stay unit-testable without a network.
+ * card on file and starting the operator's free trial; later phases add swap /
+ * cancel / resume / pause. Stripe calls are isolated in thin methods so the
+ * pure state transitions stay unit-testable without a network.
  */
 class SubscriptionService
 {
-    public const TRIAL_DAYS = 14;
+    public function __construct(private readonly SettingsService $settings) {}
+
+    /** The operator's configured trial length (Admin → Billing). */
+    public function trialDays(): int
+    {
+        return $this->settings->trialDays();
+    }
 
     /** A SetupIntent so the browser can verify and tokenise a card. */
     public function setupIntent(Account $account)
@@ -80,7 +86,7 @@ class SubscriptionService
         $account->updateDefaultPaymentMethod($paymentMethodId);
 
         $builder = $account->newSubscription('default', $priceId)
-            ->trialDays(self::TRIAL_DAYS + $extraTrialDays);
+            ->trialDays($this->trialDays() + $extraTrialDays);
         if ($stripeCoupon !== null) {
             $builder->withCoupon($stripeCoupon);
         }

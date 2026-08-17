@@ -28,7 +28,7 @@ class TrialStartedNotification extends Notification
         return (new MailMessage)
             ->subject('Your PioDeploy trial has started')
             ->greeting('Welcome aboard!')
-            ->line("Your 14-day free trial of the {$plan?->name} plan is now active.")
+            ->line('Your '.trial_phrase()." of the {$plan?->name} plan is now active.")
             ->when($ends, fn ($m) => $m->line("Your trial runs until {$ends->toFormattedDayDateString()}. We'll charge your card automatically then — cancel anytime before to avoid billing."))
             ->action('Open your dashboard', route('dashboard'))
             ->line('Thanks for trying PioDeploy.');

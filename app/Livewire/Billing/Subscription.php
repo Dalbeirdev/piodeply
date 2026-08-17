@@ -101,7 +101,7 @@ class Subscription extends Component
         }
 
         $this->account->refresh();
-        session()->flash('status', "Your 14-day trial of the {$plan->name} plan has started.");
+        session()->flash('status', 'Your '.trial_phrase()." of the {$plan->name} plan has started.");
         $this->redirectRoute('billing.subscription', navigate: true);
     }
 

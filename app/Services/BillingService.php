@@ -17,12 +17,16 @@ class BillingService
     private const API = 'https://api.stripe.com/v1';
 
     /**
-     * The marketing site promises a 14-day free trial, card required. The
-     * checkout must deliver exactly that: card verified today, $0 charged,
-     * first invoice when the trial ends. Stripe cancels the subscription
-     * itself if no card can be charged by then.
+     * The trial the operator is offering, card required: card verified
+     * today, $0 charged, first invoice when the trial ends. Stripe cancels
+     * the subscription itself if no card can be charged by then. Whatever
+     * the pricing page promises has to come from here too, or the buyer is
+     * told one number and Stripe is told another.
      */
-    public const TRIAL_DAYS = 14;
+    public function trialDays(): int
+    {
+        return $this->settings->trialDays();
+    }
 
     /**
      * Graduated per-machine pricing (monthly), deliberately below the
@@ -137,7 +141,7 @@ class BillingService
                 // find their way back without a session lookup.
                 'subscription_data' => [
                     'metadata'          => ['machines' => $machines] + $metadata,
-                    'trial_period_days' => self::TRIAL_DAYS,
+                    'trial_period_days' => $this->trialDays(),
                 ],
             ]));
 

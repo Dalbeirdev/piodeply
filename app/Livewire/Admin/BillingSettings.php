@@ -24,6 +24,9 @@ class BillingSettings extends Component
     /** Days a client may stay past-due before dunning suspends them. */
     public int $clientGraceDays = 14;
 
+    /** Free days a new subscription gets before the first charge. */
+    public int $trialDays = 14;
+
     public function mount(SettingsService $settings, StripeSettingsService $stripe): void
     {
         $this->authorizeManage();
@@ -31,6 +34,7 @@ class BillingSettings extends Component
         $this->currency = (string) $settings->get('billing.currency', 'usd');
         $this->publishableKey = (string) $stripe->publishableKey();
         $this->clientGraceDays = (int) $settings->get('billing.client_grace_days', '14');
+        $this->trialDays = $settings->trialDays();
     }
 
     public function save(SettingsService $settings, StripeSettingsService $stripe): void
@@ -46,10 +50,14 @@ class BillingSettings extends Component
             'secretKey'      => ['nullable', 'string', 'starts_with:sk_test_,sk_live_,rk_test_,rk_live_', 'max:255'],
             'webhookSecret'  => ['nullable', 'string', 'starts_with:whsec_', 'max:255'],
             'clientGraceDays' => ['required', 'integer', 'between:3,60'],
+            // 0 = charge on signup. Stripe refuses a negative trial, so the
+            // floor is enforced here rather than in front of a buyer.
+            'trialDays'       => ['required', 'integer', 'between:0,365'],
         ]);
 
         $settings->set('billing.enabled', $validated['enabled'] ? '1' : '0');
         $settings->set('billing.client_grace_days', (string) $validated['clientGraceDays']);
+        $settings->set('billing.trial_days', (string) $validated['trialDays']);
 
         $stripe->save(
             publishableKey: $validated['publishableKey'] ?: null,

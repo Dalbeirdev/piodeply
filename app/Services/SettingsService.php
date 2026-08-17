@@ -39,7 +39,24 @@ class SettingsService
             'security.require_two_factor'       => 'off',
             // Agents self-update to the published version by default.
             'agent.auto_update'                 => '1',
+            // Free-trial length offered at signup. Read through trialDays()
+            // so the checkout, the subscription and the marketing copy can
+            // never quote three different numbers.
+            'billing.trial_days'                => (string) self::DEFAULT_TRIAL_DAYS,
         ];
+    }
+
+    /** Trial length when the operator has not set one. */
+    public const DEFAULT_TRIAL_DAYS = 14;
+
+    /**
+     * How many free days a new subscription gets. Bounded because the value
+     * is handed straight to Stripe: a negative or absurd figure is rejected
+     * there, mid-checkout, in front of a buyer. 0 means "charge immediately".
+     */
+    public function trialDays(): int
+    {
+        return max(0, min(365, (int) $this->get('billing.trial_days', (string) self::DEFAULT_TRIAL_DAYS)));
     }
 
     public function get(string $key, mixed $default = null): mixed

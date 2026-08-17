@@ -99,3 +99,26 @@ if (! function_exists('browser_policy_term_lower')) {
         return Str::lower(browser_policy_term());
     }
 }
+
+if (! function_exists('trial_days')) {
+    /**
+     * The free-trial length the operator has configured (Admin → Billing).
+     * Copy that promises a trial must read it from here — a page still
+     * saying "14-day" after the setting moved is a promise Stripe will not
+     * honour.
+     */
+    function trial_days(): int
+    {
+        return app(SettingsService::class)->trialDays();
+    }
+}
+
+if (! function_exists('trial_phrase')) {
+    /** The trial as buyers see it, e.g. "14-day free trial". */
+    function trial_phrase(): string
+    {
+        return trial_days() > 0
+            ? trial_days().'-day free trial'
+            : 'no free trial';
+    }
+}
