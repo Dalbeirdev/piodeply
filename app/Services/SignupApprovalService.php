@@ -29,6 +29,18 @@ class SignupApprovalService
             throw new \DomainException("A user with {$signup->email} already exists — approve manually via Users.");
         }
 
+        // Client emails are unique in the database. Without this check the
+        // insert below throws a raw constraint violation and the whole
+        // Signups page 500s, so the operator sees a server error instead of
+        // being told what is actually wrong.
+        $existing = Client::where('email', $signup->email)->first();
+        if ($existing !== null) {
+            throw new \DomainException(
+                "A client ({$existing->company_name}) already uses {$signup->email}. "
+                .'Ask the applicant to sign up with a different address, or reject this application.'
+            );
+        }
+
         $owner = DB::transaction(function () use ($signup, $approver) {
             $client = Client::create([
                 'company_name' => $signup->company_name,
