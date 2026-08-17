@@ -12,6 +12,7 @@ use App\Services\EnrollmentScriptService;
 use App\Services\ProjectService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -298,6 +299,40 @@ class ProjectEnrollmentTest extends TestCase
             ->call('select', 'intune')
             ->assertSee('Intune / Entra platform script')
             ->assertDontSee('Group Policy computer startup script');
+    }
+
+    /**
+     * The Copy button must read the script that is on screen.
+     *
+     * It used to copy a body baked into Alpine's x-data at first render.
+     * Alpine never re-runs an x-data initialiser when Livewire swaps the DOM,
+     * so switching tabs changed the visible script while Copy kept handing
+     * out whichever one the page loaded with — always Group Policy.
+     *
+     * The server HTML was correct throughout, so no behavioural assertion can
+     * catch this; the guard has to be that copy() reads the rendered element.
+     */
+    public function test_copy_reads_the_visible_script_rather_than_a_captured_one(): void
+    {
+        $html = $this->page()->call('select', 'intune')->html();
+
+        // The block the operator sees is the copy source...
+        $this->assertStringContainsString('x-ref="script"', $html);
+        $this->assertStringContainsString('$refs.script.textContent', $html);
+
+        // ...and the handler holds no script of its own.
+        $handler = Str::between($html, 'copy(el) {', '},');
+        $this->assertStringNotContainsString('PioDeploy agent', $handler,
+            'copy() must not carry a script body — that is what went stale');
+    }
+
+    /** A script still holding the placeholder cannot install anything. */
+    public function test_copy_is_refused_until_a_key_is_entered(): void
+    {
+        $html = $this->page()->html();
+
+        $this->assertStringContainsString('Enter a key to copy', $html);
+        $this->assertStringContainsString('x-bind:disabled="! entered || ! valid"', $html);
     }
 
     public function test_an_unknown_method_falls_back_rather_than_failing(): void

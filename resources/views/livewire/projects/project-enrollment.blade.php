@@ -21,8 +21,22 @@
                      ? body.replaceAll(@js($placeholder), this.key.trim())
                      : body;
              },
+             /**
+              * Copy exactly what is on screen.
+              *
+              * This used to copy @js($current['body']) — the script body baked
+              * into x-data at first render. Alpine never re-runs an x-data
+              * initialiser when Livewire swaps the DOM, so switching tabs
+              * changed the visible script while the button kept handing out
+              * the one the page happened to load with. Reading the rendered
+              * block instead cannot drift from what the operator sees.
+              */
              copy(el) {
-                 navigator.clipboard.writeText(this.fill(@js($current['body'])));
+                 if (! this.entered || ! this.valid) {
+                     return; // the button is disabled; nothing safe to copy
+                 }
+
+                 navigator.clipboard.writeText(this.$refs.script.textContent);
                  el.textContent = 'Copied';
                  setTimeout(() => el.textContent = 'Copy', 1500);
              },
@@ -152,11 +166,22 @@
                 @endif
 
                 <div>
-                    <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center justify-between mb-1 gap-3">
                         <span class="text-xs font-mono text-slate-500">{{ $current['filename'] }}</span>
-                        <button type="button" class="text-xs pd-link" x-on:click="copy($el)">Copy</button>
+
+                        {{-- Copying a script that still carries the placeholder
+                             hands the operator something that cannot run, and
+                             the failure only shows up on the target machine.
+                             Refuse at the button rather than at the console. --}}
+                        <button type="button"
+                                class="text-xs pd-link disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline"
+                                x-bind:disabled="! entered || ! valid"
+                                x-bind:title="entered ? (valid ? 'Copy this script' : 'That key does not look like a project key') : 'Paste your project API key above first'"
+                                x-on:click="copy($el)"
+                                x-text="(! entered || ! valid) ? 'Enter a key to copy' : 'Copy'">Copy</button>
                     </div>
-                    <pre class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-xs leading-relaxed"
+                    <pre x-ref="script"
+                         class="bg-slate-900 text-slate-100 rounded-lg p-4 overflow-x-auto text-xs leading-relaxed"
                          x-text="fill(@js($current['body']))">{{ $current['body'] }}</pre>
                 </div>
             </div>
