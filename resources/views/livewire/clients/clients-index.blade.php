@@ -1,18 +1,57 @@
 <div>
     <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Clients') }}</h2>
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Clients') }}</h2>
+                <p class="text-sm text-slate-500 mt-0.5">Manage and monitor all your clients in one place.</p>
+            </div>
             @can('create', \App\Models\Client::class)
                 <a href="{{ route('clients.create') }}"
-                   class="inline-flex items-center px-4 py-2 bg-teal-700 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-teal-800">
-                    + New Client
+                   class="inline-flex items-center gap-2 px-4 py-2 bg-teal-700 rounded-lg font-semibold text-sm text-white hover:bg-teal-800 shrink-0">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    New client
                 </a>
             @endcan
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+    <div class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+
+            @unless ($isTenant)
+                @php
+                    $cards = [
+                        ['label' => 'Total clients', 'value' => $stats['clients'],  'sub' => 'All registered clients',   'tone' => 'teal',   'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>'],
+                        ['label' => 'Active',        'value' => $stats['active'],   'sub' => 'Currently enabled',        'tone' => 'green',  'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                        ['label' => 'On trial',      'value' => $stats['trialing'], 'sub' => 'Not yet charged',          'tone' => 'amber',  'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                        ['label' => 'Paying',        'value' => $stats['paying'],   'sub' => 'Live subscriptions',       'tone' => 'teal',   'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/>'],
+                        ['label' => project_terms(), 'value' => $stats['sites'],    'sub' => 'Across all clients',       'tone' => 'slate',  'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0 0a8.949 8.949 0 0 0 4.951-1.488A3.987 3.987 0 0 0 13 16h-2a3.987 3.987 0 0 0-3.951 3.512A8.949 8.949 0 0 0 12 21Zm3-11.25a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>'],
+                    ];
+                    $tones = [
+                        'teal'  => 'bg-teal-50 text-teal-700 border-teal-100',
+                        'green' => 'bg-green-50 text-green-700 border-green-100',
+                        'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+                        'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                    ];
+                @endphp
+                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    @foreach ($cards as $card)
+                        <div class="pd-card p-4">
+                            <div class="flex items-center gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $tones[$card['tone']] }}">
+                                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">{!! $card['icon'] !!}</svg>
+                                </span>
+                                <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                            </div>
+                            <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                            <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @endunless
+
             @if (session('status'))
                 <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700" role="status">
                     {{ session('status') }}
@@ -24,10 +63,10 @@
                 </div>
             @endif
 
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="pd-card p-4 flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search company, email, city…" aria-label="Search clients"
-                       class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-72">
+                       class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-lg shadow-sm w-full sm:w-72">
                 <select wire:model.live="status" aria-label="Filter by status"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All statuses</option>
@@ -65,7 +104,8 @@
                             <th class="pd-th">Primary contact</th>
                             <th class="pd-th">Timezone</th>
                             <th class="pd-th">Status</th>
-                            <th class="px-6 py-3"></th>
+                            <th class="pd-th">Billing</th>
+                            <th class="pd-th text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-slate-100">
@@ -99,6 +139,12 @@
                                         'bg-slate-100 text-slate-600 border-slate-200' => $client->status === \App\Enums\ClientStatus::Inactive,
                                         'bg-yellow-50 text-yellow-700 border-yellow-200' => $client->status === \App\Enums\ClientStatus::Suspended,
                                     ])>{{ $client->status->label() }}</span>
+                                </td>
+
+                                {{-- Billing stands on its own: an account can be
+                                     active in the portal while its subscription
+                                     is past due, and merging the two hid that. --}}
+                                <td class="px-6 py-3 whitespace-nowrap">
                                     @if ($client->subscription_status !== null)
                                         @php
                                             $subTitle = 'Subscription: '.$client->subscription_status
@@ -106,13 +152,15 @@
                                                 .($client->subscription_period_end ? ' · renews '.$client->subscription_period_end->format('j M') : '');
                                         @endphp
                                         <span @class([
-                                            'ml-1 text-xs font-semibold rounded-full px-2 py-0.5 border',
-                                            'bg-green-50 text-green-700 border-green-200' => in_array($client->subscription_status, ['active', 'trialing'], true),
-                                            'bg-yellow-50 text-yellow-700 border-yellow-200' => in_array($client->subscription_status, ['past_due', 'unpaid'], true),
+                                            'text-xs font-semibold rounded-full px-2.5 py-1 border capitalize',
+                                            'bg-green-50 text-green-700 border-green-200' => $client->subscription_status === 'active',
+                                            'bg-amber-50 text-amber-700 border-amber-200' => in_array($client->subscription_status, ['trialing', 'past_due', 'unpaid'], true),
                                             'bg-slate-100 text-slate-600 border-slate-200' => ! in_array($client->subscription_status, ['active', 'trialing', 'past_due', 'unpaid'], true),
                                         ]) title="{{ $subTitle }}">
                                             {{ str($client->subscription_status)->replace('_', ' ') }}
                                         </span>
+                                    @else
+                                        <span class="text-slate-300">—</span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
@@ -147,7 +195,10 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">No clients found.</td></tr>
+                            <tr><td colspan="7" class="px-6 py-10 text-center">
+                                <p class="text-slate-500">No clients found.</p>
+                                <p class="text-xs text-slate-400 mt-1">Try a different search, or clear the status filter.</p>
+                            </td></tr>
                         @endforelse
                     </tbody>
                 </table></div>

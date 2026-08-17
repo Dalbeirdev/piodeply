@@ -100,6 +100,24 @@ class ClientsIndex extends Component
         $this->importFile = null;
     }
 
+    /**
+     * The figures above the table. Each one is countable from data the app
+     * actually keeps — no estimates, and nothing that needs Stripe on a page
+     * load.
+     *
+     * @return array{clients:int, active:int, trialing:int, paying:int, sites:int}
+     */
+    private function stats(): array
+    {
+        return [
+            'clients'  => Client::count(),
+            'active'   => Client::where('status', \App\Enums\ClientStatus::Active)->count(),
+            'trialing' => Client::where('subscription_status', 'trialing')->count(),
+            'paying'   => Client::where('subscription_status', 'active')->count(),
+            'sites'    => \App\Models\Project::count(),
+        ];
+    }
+
     public function render(ClientRepositoryInterface $clients)
     {
         $this->authorize('viewAny', Client::class);
@@ -121,6 +139,7 @@ class ClientsIndex extends Component
             ),
             'statuses' => \App\Enums\ClientStatus::cases(),
             'isTenant' => false,
+            'stats'    => $this->stats(),
         ])->layout('layouts.app');
     }
 }
