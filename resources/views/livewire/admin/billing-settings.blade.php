@@ -115,6 +115,75 @@
                         <code class="font-mono">php artisan billing:sync-stripe</code> once to create the Stripe products &amp; prices.
                     </p>
                 </div>
+
+                {{-- Webhook health. Silence here is indistinguishable from a
+                     healthy quiet week, which is how a dead endpoint went
+                     unnoticed for a month — so say when we last heard from
+                     Stripe, out loud. --}}
+                @php
+                    $tone = match ($health['state']) {
+                        'ok'    => ['bg' => 'bg-green-50', 'border' => 'border-green-200', 'text' => 'text-green-800', 'dot' => 'bg-green-500'],
+                        'warn'  => ['bg' => 'bg-amber-50', 'border' => 'border-amber-200', 'text' => 'text-amber-800', 'dot' => 'bg-amber-500'],
+                        default => ['bg' => 'bg-red-50',   'border' => 'border-red-200',   'text' => 'text-red-800',   'dot' => 'bg-red-500'],
+                    };
+                @endphp
+                <div class="mt-5 pt-4 border-t border-slate-100">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Webhook health</p>
+
+                    <div class="rounded-xl {{ $tone['bg'] }} border {{ $tone['border'] }} px-4 py-3">
+                        <div class="flex items-start justify-between gap-4 flex-wrap">
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <span class="mt-1.5 h-2 w-2 rounded-full shrink-0 {{ $tone['dot'] }}"></span>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold {{ $tone['text'] }}">{{ $health['headline'] }}</p>
+                                    <p class="text-xs {{ $tone['text'] }} opacity-90 mt-0.5">{{ $health['detail'] }}</p>
+                                    @if ($health['last'])
+                                        <p class="text-xs text-slate-500 mt-1.5">
+                                            Last event: <span class="font-mono">{{ $health['last']->type }}</span>
+                                            <span class="mx-1">·</span>{{ $health['last']->status }}
+                                            <span class="mx-1">·</span>{{ $health['last']->created_at->format('j M Y, H:i') }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button type="button" wire:click="checkEndpoints" wire:loading.attr="disabled"
+                                        class="text-sm font-medium text-teal-700 hover:text-teal-800 disabled:opacity-50">
+                                    <span wire:loading.remove wire:target="checkEndpoints">Check endpoints</span>
+                                    <span wire:loading wire:target="checkEndpoints">Checking…</span>
+                                </button>
+                                <a href="{{ route('admin.webhooks') }}" class="text-sm font-medium text-slate-500 hover:text-slate-700">Log →</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if ($endpointCheck !== null)
+                        <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            @if ($endpointCheck['error'])
+                                <p class="text-sm text-red-700">Could not reach Stripe: {{ $endpointCheck['error'] }}</p>
+                            @else
+                                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                                    Endpoints registered in Stripe
+                                </p>
+                                <ul class="space-y-1.5">
+                                    @foreach ($endpointCheck['rows'] as $row)
+                                        <li class="flex items-start gap-2 text-sm">
+                                            <span class="mt-1 h-2 w-2 rounded-full shrink-0 {{ $row['registered'] ? 'bg-green-500' : 'bg-red-500' }}"></span>
+                                            <span class="min-w-0">
+                                                <span class="font-mono text-xs break-all">{{ $row['url'] }}</span>
+                                                <span class="block text-xs {{ $row['registered'] ? 'text-slate-500' : 'text-red-700 font-medium' }}">
+                                                    {{ $row['events'] }} —
+                                                    {{ $row['registered'] ? 'registered' : 'MISSING: Stripe is not sending these events' }}
+                                                </span>
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                        </div>
+                    @endif
+                </div>
             </div>
 
             {{-- Keys and configuration save together: one form, one button. --}}
