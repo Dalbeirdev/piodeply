@@ -78,6 +78,49 @@ class DuplicateSignupEmailTest extends TestCase
         $this->assertSame(1, Client::where('email', 'taken@techpio.com')->count());
     }
 
+    /**
+     * Deleting the clashing client does NOT free the address: the unique
+     * index counts soft-deleted rows. The guard must look through the
+     * soft-delete scope or it passes and the insert 500s anyway.
+     */
+    public function test_a_soft_deleted_client_still_blocks_the_email(): void
+    {
+        $client = Client::factory()->create(['company_name' => 'Akanksha', 'email' => 'taken@techpio.com']);
+        $client->delete();
+        $this->assertSoftDeleted('clients', ['id' => $client->id]);
+
+        $signup = Signup::factory()->create([
+            'company_name' => 'AMG Studio',
+            'email'        => 'taken@techpio.com',
+            'status'       => Signup::STATUS_PAID,
+            'paid_at'      => now(),
+        ]);
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('deleted client');
+
+        app(SignupApprovalService::class)->approve($signup, $this->admin());
+    }
+
+    public function test_the_page_survives_a_soft_deleted_clash_too(): void
+    {
+        $client = Client::factory()->create(['email' => 'taken@techpio.com']);
+        $client->delete();
+
+        $signup = Signup::factory()->create([
+            'email'   => 'taken@techpio.com',
+            'status'  => Signup::STATUS_PAID,
+            'paid_at' => now(),
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(SignupsIndex::class)
+            ->call('approve', $signup->id)
+            ->assertOk();
+
+        $this->assertSame(Signup::STATUS_PAID, $signup->fresh()->status);
+    }
+
     public function test_signup_refuses_an_email_that_already_belongs_to_a_client(): void
     {
         Client::factory()->create(['email' => 'taken@techpio.com']);

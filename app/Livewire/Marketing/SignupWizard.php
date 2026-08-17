@@ -63,6 +63,12 @@ class SignupWizard extends Component
                 // only users let an applicant pay for an account that could
                 // never be approved — the client insert failed on the
                 // duplicate email long after their card had been charged.
+                // Both tables, because approval creates a row in each. Checking
+                // only users let an applicant pay for an account that could
+                // never be approved — the client insert failed on the
+                // duplicate email long after their card had been charged.
+                // No whereNull(deleted_at): the unique index counts deleted
+                // clients too, so a trashed one still blocks the address.
                 'email'        => ['required', 'email', 'max:190', 'unique:users,email', 'unique:clients,email'],
                 // Matches the platform's password policy for created users.
                 'password'     => ['required', 'string', 'min:10', 'confirmed', 'regex:/[a-zA-Z]/', 'regex:/[0-9]/'],

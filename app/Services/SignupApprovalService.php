@@ -33,7 +33,21 @@ class SignupApprovalService
         // insert below throws a raw constraint violation and the whole
         // Signups page 500s, so the operator sees a server error instead of
         // being told what is actually wrong.
-        $existing = Client::where('email', $signup->email)->first();
+        //
+        // withTrashed matters: the unique index counts deleted rows, so a
+        // soft-deleted client still owns its address. Checking only live
+        // clients let the guard pass and the insert fail anyway — deleting
+        // the clashing client made the 500 come back.
+        $existing = Client::withTrashed()->where('email', $signup->email)->first();
+
+        if ($existing !== null && $existing->trashed()) {
+            throw new \DomainException(
+                "A deleted client ({$existing->company_name}) still holds {$signup->email}. "
+                .'Deleting a client keeps its record and billing history, so the address stays taken. '
+                .'Restore it and change its email, or have the applicant apply with a different address.'
+            );
+        }
+
         if ($existing !== null) {
             throw new \DomainException(
                 "A client ({$existing->company_name}) already uses {$signup->email}. "
