@@ -114,6 +114,38 @@ class NavigationGroupingTest extends TestCase
         }
     }
 
+    /**
+     * One section open at a time. Each section used to own its open/closed
+     * flag, so they accumulated open until the sidebar outgrew the screen —
+     * the state must be shared, not per-section.
+     */
+    public function test_only_one_section_can_be_open_at_a_time(): void
+    {
+        $html = $this->actingAs($this->userWithRole(RoleEnum::Admin))
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->getContent();
+
+        // A single shared key drives every section...
+        $this->assertStringContainsString("localStorage.getItem('nav-open-section')", $html);
+        $this->assertStringContainsString("this.openSection === slug ? null : slug", $html);
+
+        // ...and each section derives its state from it rather than its own.
+        foreach (['fleet', 'software', 'administration'] as $slug) {
+            $this->assertStringContainsString("this.openSection === '{$slug}'", $html);
+            $this->assertStringNotContainsString("localStorage.getItem('nav-{$slug}')", $html);
+        }
+    }
+
+    /** Arriving on a page opens the section that holds it, without a click. */
+    public function test_the_active_section_is_the_one_opened_on_arrival(): void
+    {
+        $this->actingAs($this->userWithRole(RoleEnum::Admin))
+            ->get(route('packages.index'))
+            ->assertOk()
+            ->assertSee("openSection: 'software'", false);
+    }
+
     /** Collapsing hides items visually; it must not remove them from the page. */
     public function test_a_collapsed_section_still_contains_its_links(): void
     {

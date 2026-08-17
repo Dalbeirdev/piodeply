@@ -38,8 +38,31 @@
     </div>
 
     {{-- Navigation --}}
-    <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary">
-        @foreach (app(\App\Services\NavigationService::class)->groups(Auth::user()) as $group)
+    @php
+        $navGroups = app(\App\Services\NavigationService::class)->groups(Auth::user());
+        // Which section holds the page you are on — it opens on arrival, so
+        // the sidebar always shows where you are without a click.
+        $activeSlug = collect($navGroups)
+            ->first(fn (array $g) => $g['label']
+                && collect($g['items'])->contains(fn (array $i) => request()->routeIs($i['active'])));
+        $activeSlug = $activeSlug ? Str::slug($activeSlug['label']) : null;
+    @endphp
+
+    {{-- One section open at a time. Independent toggles let every section
+         accumulate open until the sidebar was taller than the screen. --}}
+    <nav class="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary"
+         x-data="{
+             openSection: @js($activeSlug) ?? localStorage.getItem('nav-open-section'),
+             toggle(slug) {
+                 this.openSection = this.openSection === slug ? null : slug;
+                 if (this.openSection) {
+                     localStorage.setItem('nav-open-section', this.openSection);
+                 } else {
+                     localStorage.removeItem('nav-open-section');
+                 }
+             },
+         }">
+        @foreach ($navGroups as $group)
             @php
                 $slug = $group['label'] ? Str::slug($group['label']) : null;
                 // The section holding the current page always opens: a collapsed
@@ -58,15 +81,8 @@
             @else
                 <div class="mt-4"
                      data-nav-section="{{ $slug }}" data-holds-current-page="{{ $holdsCurrentPage ? 'true' : 'false' }}"
-                     x-data="{
-                         open: {{ $holdsCurrentPage ? 'true' : 'false' }}
-                               || localStorage.getItem('nav-{{ $slug }}') === 'open',
-                         toggle() {
-                             this.open = ! this.open;
-                             localStorage.setItem('nav-{{ $slug }}', this.open ? 'open' : 'closed');
-                         },
-                     }">
-                    <button type="button" @click="toggle()"
+                     x-data="{ get open() { return this.openSection === '{{ $slug }}' } }">
+                    <button type="button" @click="toggle('{{ $slug }}')"
                             :aria-expanded="open ? 'true' : 'false'" aria-controls="nav-{{ $slug }}"
                             class="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg
                                    text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400
