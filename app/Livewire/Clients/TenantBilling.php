@@ -125,7 +125,7 @@ class TenantBilling extends Component
                 ? app(BillingService::class)->listInvoices($client->stripe_customer_id)
                 : [],
             'upcoming'     => $client->stripe_customer_id
-                ? app(BillingService::class)->upcomingInvoice($client->stripe_customer_id)
+                ? app(BillingService::class)->upcomingInvoice($client->stripe_customer_id, $client->stripe_subscription_id)
                 : null,
             'isOwner'      => auth()->user()->isClientOwner(),
         ])->layout('layouts.app');

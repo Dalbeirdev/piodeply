@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Stripe Checkout integration — dependency-free (talks to the Stripe REST
@@ -230,25 +231,46 @@ class BillingService
         ])->all();
     }
 
-    /** The next charge: amount and date, or null when Stripe has none planned. */
-    public function upcomingInvoice(string $customerId): ?array
+    /**
+     * The next charge: amount and date, or null when Stripe has none planned.
+     *
+     * Uses Stripe's Create Preview Invoice API. The older /invoices/upcoming
+     * endpoint was retired and now answers 404, which this method quietly
+     * turned into "no upcoming payment" — so the customer's billing page
+     * simply stopped showing their next charge, with nothing logged. A
+     * preview needs the subscription, not just the customer.
+     */
+    public function upcomingInvoice(string $customerId, ?string $subscriptionId = null): ?array
     {
-        if (empty(config('services.stripe.secret'))) {
+        if (empty(config('services.stripe.secret')) || $subscriptionId === null) {
             return null;
         }
 
         $response = Http::withToken(config('services.stripe.secret'))
-            ->get(self::API . '/invoices/upcoming', ['customer' => $customerId]);
+            ->asForm()
+            ->post(self::API . '/invoices/create_preview', [
+                'customer'     => $customerId,
+                'subscription' => $subscriptionId,
+            ]);
 
         if ($response->failed()) {
+            // Loud enough to find, quiet enough not to break the page: a
+            // preview is a nicety, but a silent failure hid this for weeks.
+            Log::warning('Stripe upcoming-invoice preview failed', [
+                'customer'     => $customerId,
+                'subscription' => $subscriptionId,
+                'status'       => $response->status(),
+                'error'        => $response->json('error.message'),
+            ]);
+
             return null;
         }
 
+        $when = $response->json('next_payment_attempt') ?? $response->json('period_end');
+
         return [
             'amount' => number_format(($response->json('amount_due') ?? 0) / 100, 2),
-            'date'   => $response->json('next_payment_attempt') ?? $response->json('period_end')
-                ? date('j M Y', (int) ($response->json('next_payment_attempt') ?? $response->json('period_end')))
-                : null,
+            'date'   => $when ? date('j M Y', (int) $when) : null,
         ];
     }
 
