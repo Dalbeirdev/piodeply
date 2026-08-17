@@ -217,8 +217,11 @@
                         <x-label for="currency" value="Currency" />
                         <select id="currency" wire:model="currency"
                                 class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm text-sm">
+                            {{-- Marked selected server-side rather than relying on
+                                 the browser defaulting to the first option: an
+                                 operator billing in EUR must never be shown USD. --}}
                             @foreach ($currencies as $code => $name)
-                                <option value="{{ $code }}">{{ strtoupper($code) }} — {{ $name }}</option>
+                                <option value="{{ $code }}" @selected(strtolower($currency) === $code)>{{ strtoupper($code) }} — {{ $name }}</option>
                             @endforeach
                         </select>
                         <x-input-error for="currency" class="mt-1" />

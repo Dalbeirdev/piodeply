@@ -104,6 +104,9 @@ class BillingSettingsTest extends TestCase
             ->test(BillingSettings::class)
             ->assertSet('currency', 'huf')
             ->assertSee('HUF')
+            // Marked selected in the markup, not left to the browser picking
+            // the first option — otherwise saving would silently switch to USD.
+            ->assertSeeHtml('value="huf" selected')
             ->call('save')
             ->assertHasNoErrors();
 
