@@ -285,8 +285,15 @@ class BillingService
      */
     public function verifyWebhook(string $payload, ?string $signatureHeader): bool
     {
-        $secret = config('services.stripe.webhook_secret');
-        if (empty($secret) || empty($signatureHeader)) {
+        // Each Stripe endpoint has its own signing secret, so a payload is
+        // valid if ANY configured secret verifies it. Checking only one meant
+        // every event from the other endpoint was rejected as a forgery.
+        $secrets = array_values(array_filter([
+            config('services.stripe.webhook_secret'),
+            config('services.stripe.webhook_secret_subs'),
+        ], fn ($s) => ! empty($s)));
+
+        if ($secrets === [] || empty($signatureHeader)) {
             return false;
         }
 
@@ -306,11 +313,13 @@ class BillingService
             return false;
         }
 
-        $expected = hash_hmac('sha256', $timestamp . '.' . $payload, $secret);
+        foreach ($secrets as $secret) {
+            $expected = hash_hmac('sha256', $timestamp . '.' . $payload, $secret);
 
-        foreach ($signatures as $candidate) {
-            if (hash_equals($expected, (string) $candidate)) {
-                return true;
+            foreach ($signatures as $candidate) {
+                if (hash_equals($expected, (string) $candidate)) {
+                    return true;
+                }
             }
         }
 

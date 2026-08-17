@@ -79,6 +79,27 @@ class StripeSettingsService
     }
 
     /**
+     * The signing secret for the subscription endpoint (/stripe/webhook).
+     *
+     * Stripe issues a separate secret per endpoint and never reveals it
+     * again, so the two endpoints this app exposes — the legacy checkout one
+     * and the subscription one — cannot share a secret. Keeping both means a
+     * signature check can succeed for either, instead of the app silently
+     * rejecting half its events, which is exactly how weeks of subscriptions
+     * and invoices went unrecorded.
+     */
+    public function subscriptionWebhookSecret(): ?string
+    {
+        return $this->decrypt('billing.stripe_whsec_subs');
+    }
+
+    /** Stored by the endpoint registration, not typed by an operator. */
+    public function saveSubscriptionWebhookSecret(string $secret): void
+    {
+        $this->settings->set('billing.stripe_whsec_subs', Crypt::encryptString(trim($secret)));
+    }
+
+    /**
      * Push saved keys over the config for this request. Called at boot; does
      * nothing when nothing is saved, so .env still applies.
      */
@@ -97,6 +118,7 @@ class StripeSettingsService
             'services.stripe.key'            => $pk,
             'services.stripe.secret'         => $sk,
             'services.stripe.webhook_secret' => $whsec,
+            'services.stripe.webhook_secret_subs' => $this->subscriptionWebhookSecret(),
             'cashier.key'                    => $pk,
             'cashier.secret'                 => $sk,
             'cashier.webhook.secret'         => $whsec,
