@@ -124,7 +124,16 @@ class Computer extends Model
      *
      * @return array{score: int, notes: list<string>}
      */
-    public function healthScore(): array
+    /**
+     * @param  array<string, string>|null  $fleetBrowserLatest  browser value => newest
+     *         version seen on this computer's client's fleet. Pass this when
+     *         scoring many computers of the same client in a loop (the
+     *         dashboard average, the fleet health report, the PDF export) —
+     *         BrowserVersionService::fleetLatestByClient() computes it once
+     *         for everyone instead of once per row. Omitted, it is resolved
+     *         for just this one computer — fine for a single computer-show page.
+     */
+    public function healthScore(?array $fleetBrowserLatest = null): array
     {
         $score = 100;
         $notes = [];
@@ -171,6 +180,17 @@ class Computer extends Model
             ?? DeploymentJob::where('computer_id', $this->id)->where('status', JobStatus::Failed)->count();
         if ($failed > 0) {
             $take(10, "{$failed} failed deployment ".str('job')->plural($failed));
+        }
+
+        // Edge cannot be deployed at all (PackageMode::OsManaged) and
+        // winget's own reporting for a self-updating browser can lag what
+        // is really installed — this is the only check in the score that
+        // answers "is it actually current" for that class of software.
+        $browserLatest = $fleetBrowserLatest ?? app(\App\Services\BrowserVersionService::class)
+            ->fleetLatestForClient($this->project->client_id);
+        $stuckBrowsers = app(\App\Services\BrowserVersionService::class)->stuckNotes($this, $browserLatest);
+        if ($stuckBrowsers !== []) {
+            $take(10, implode('; ', $stuckBrowsers));
         }
 
         return ['score' => max(0, $score), 'notes' => $notes];

@@ -55,12 +55,16 @@ class ComputersReport extends Component
     {
         abort_unless(auth()->user()->can(Permission::ReportsExport->value), 403);
 
+        $computers = $this->query()->get();
+        $fleetBrowserLatest = app(\App\Services\BrowserVersionService::class)
+            ->fleetLatestByClient($computers->pluck('id')->all());
+
         $csv = "Hostname,Client,".project_term().",Health /100,Health notes,Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Serial\n";
-        foreach ($this->query()->get() as $computer) {
+        foreach ($computers as $computer) {
             $diskPct = ($computer->disk_total_bytes && $computer->disk_free_bytes !== null)
                 ? round($computer->disk_free_bytes / $computer->disk_total_bytes * 100)
                 : '';
-            $health = $computer->healthScore();
+            $health = $computer->healthScore($fleetBrowserLatest[$computer->project->client_id] ?? null);
 
             $csv .= implode(',', array_map(
                 fn ($value) => '"' . str_replace('"', '""', (string) $value) . '"',
@@ -95,10 +99,14 @@ class ComputersReport extends Component
     {
         abort_unless(auth()->user()->can(Permission::ReportsExport->value), 403);
 
+        $computers = $this->query()->get();
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.fleet-health-pdf', [
-            'computers'   => $this->query()->get(),
+            'computers'   => $computers,
             'generatedAt' => now(),
             'company'     => app(\App\Services\SettingsService::class)->get('branding.company_name'),
+            'fleetBrowserLatest' => app(\App\Services\BrowserVersionService::class)
+                ->fleetLatestByClient($computers->pluck('id')->all()),
         ])->setPaper('a4', 'landscape');
 
         return response()->streamDownload(
@@ -113,13 +121,18 @@ class ComputersReport extends Component
         abort_unless(auth()->user()->can(Permission::ReportsView->value), 403);
 
         $tenantId = auth()->user()->tenantClientId();
+        $computers = $this->query()->paginate(20);
 
         return view('livewire.reports.computers-report', [
-            'computers' => $this->query()->paginate(20),
+            'computers' => $computers,
             'rings'     => DeploymentRing::cases(),
             'projects'  => \App\Models\Project::orderBy('name')
                 ->when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
                 ->get(['id', 'name']),
+            // One query for the whole page of rows, not one per row — see
+            // Computer::healthScore()'s $fleetBrowserLatest parameter.
+            'fleetBrowserLatest' => app(\App\Services\BrowserVersionService::class)
+                ->fleetLatestByClient($computers->pluck('id')->all()),
         ])->layout('layouts.app');
     }
 }

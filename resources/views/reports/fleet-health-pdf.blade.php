@@ -35,7 +35,7 @@
         <tbody>
             @foreach ($computers as $computer)
                 @php
-                    $health = $computer->healthScore();
+                    $health = $computer->healthScore($fleetBrowserLatest[$computer->project->client_id] ?? null);
                     $class = $health['score'] >= 90 ? 'good' : ($health['score'] >= 70 ? 'warn' : 'bad');
                     $diskPct = ($computer->disk_total_bytes && $computer->disk_free_bytes !== null)
                         ? round($computer->disk_free_bytes / $computer->disk_total_bytes * 100).'%'

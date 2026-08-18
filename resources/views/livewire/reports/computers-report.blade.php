@@ -52,7 +52,7 @@
                         @forelse ($computers as $computer)
                             <tr>
                                 @php
-                                    $health = $computer->healthScore();
+                                    $health = $computer->healthScore($fleetBrowserLatest[$computer->project->client_id] ?? null);
                                     $healthClass = $health['score'] >= 90 ? 'text-green-600' : ($health['score'] >= 70 ? 'text-amber-600' : 'text-red-600');
                                 @endphp
                                 <td class="px-6 py-3 whitespace-nowrap"

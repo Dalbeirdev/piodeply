@@ -272,6 +272,34 @@
                 </div>
             </div>
 
+            {{-- Browsers: installed version compared to the newest seen
+                 anywhere on this client's fleet — never against Microsoft's
+                 release feed, which this platform has no way to verify. --}}
+            @if (! empty($browsers))
+                <div class="pd-card p-6">
+                    <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Browsers</h3>
+                    <dl class="divide-y divide-slate-100">
+                        @foreach ($browsers as $row)
+                            <div class="flex items-center justify-between gap-4 py-2 text-sm">
+                                <dt class="text-slate-600 font-medium">{{ $row['browser']->label() }}</dt>
+                                <dd class="flex items-center gap-2 text-right">
+                                    <span class="{{ $row['behind'] ? 'text-amber-700' : 'text-slate-700' }}">{{ $row['version'] }}</span>
+                                    @if ($row['stuck'])
+                                        <span class="pd-badge pd-badge-red" title="Unchanged since {{ $row['since']->format('j M Y') }} while the fleet moved to {{ $row['fleet_latest'] }} — the browser's own updater may be disabled.">
+                                            stuck {{ (int) $row['since']->diffInDays(now()) }}d
+                                        </span>
+                                    @elseif ($row['behind'])
+                                        <span class="text-xs text-slate-400">fleet: {{ $row['fleet_latest'] }}</span>
+                                    @else
+                                        <span class="pd-badge pd-badge-green">current</span>
+                                    @endif
+                                </dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            @endif
+
             {{-- Browser policies --}}
             @if ($browserPolicyRows->isNotEmpty())
                 <div class="pd-card p-6">

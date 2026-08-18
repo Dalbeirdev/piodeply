@@ -180,6 +180,9 @@ class Dashboard extends Component
     {
         $computers = Computer::query()
             ->when($computerIds !== null, fn ($q) => $q->whereIn('id', $computerIds))
+            // project:client_id — healthScore()'s browser check needs the
+            // client id per row; without this it is one query per computer.
+            ->with('project:id,client_id')
             ->withCount([
                 'software as updates_available_count' => fn ($q) => $q->whereNotNull('available_version'),
                 'deploymentJobs as failed_jobs_count' => fn ($q) => $q->where('status', JobStatus::Failed),
@@ -190,9 +193,14 @@ class Dashboard extends Component
             return null;
         }
 
+        // One query for whichever clients are represented here, not one per
+        // computer — see Computer::healthScore()'s $fleetBrowserLatest param.
+        $fleetBrowserLatest = app(\App\Services\BrowserVersionService::class)
+            ->fleetLatestByClient($computers->pluck('id')->all());
+
         $scored = $computers->map(fn (Computer $c) => [
             'hostname' => $c->hostname,
-            'score'    => $c->healthScore()['score'],
+            'score'    => $c->healthScore($fleetBrowserLatest[$c->project->client_id] ?? null)['score'],
         ]);
         $worst = $scored->sortBy('score')->first();
 

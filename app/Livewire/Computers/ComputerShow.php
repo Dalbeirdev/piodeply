@@ -238,8 +238,17 @@ class ComputerShow extends Component
             // software row's name.
             ->mapWithKeys(fn ($job) => [$managedPackages->search($job->package_id) => $job->status]);
 
+        // Fleet-relative, never against Microsoft's release feed — see
+        // BrowserVersionService. Empty for a machine with no tracked
+        // browser installed; the view treats that as nothing to show.
+        $browsers = app(\App\Services\BrowserVersionService::class)->summaryFor(
+            $this->computer,
+            app(\App\Services\BrowserVersionService::class)->fleetLatestForClient($this->computer->project->client_id)
+        );
+
         return view('livewire.computers.computer-show', [
             'health' => $this->healthChecks(),
+            'browsers' => $browsers,
             'readinessIssues' => app(\App\Services\ReadinessService::class)->issues($this->computer),
             'stats'  => [
                 'succeeded'   => (clone $jobs)->where('status', JobStatus::Succeeded)->count(),

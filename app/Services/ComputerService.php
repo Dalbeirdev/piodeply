@@ -194,6 +194,12 @@ class ComputerService
             return $rows->count();
         });
 
+        // Outside the replace transaction, on the ORIGINAL $items (not the
+        // trimmed/renamed $rows above) — it needs the raw source field this
+        // table's own rows don't keep once mapped, and a failure here must
+        // never roll back the inventory write that already succeeded.
+        app(\App\Services\BrowserVersionService::class)->recordFromInventory($computer, $items);
+
         // Fresh inventory in hand — heal any drift from the project's
         // software policies (new machines self-provision here).
         app(PolicyService::class)->enforceForComputer($computer);
