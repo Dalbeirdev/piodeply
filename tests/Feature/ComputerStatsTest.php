@@ -73,13 +73,23 @@ class ComputerStatsTest extends TestCase
             ->assertViewHas('stats', fn (array $s) => $s['total'] === 5 && $s['online'] === 3 && $s['offline'] === 2);
     }
 
-    public function test_machines_below_the_current_agent_are_counted_as_outdated(): void
+    /**
+     * Two different problems, counted apart: an agent that is merely behind
+     * fixes itself, whereas one below the self-update floor is stuck until
+     * somebody re-enrols it. Lumping them together hid the ones that
+     * actually need a human.
+     */
+    public function test_agents_that_can_self_update_are_counted_apart_from_stranded_ones(): void
     {
         $client = Client::factory()->create();
         $project = Project::factory()->create(['client_id' => $client->id]);
 
-        Computer::factory()->create(['project_id' => $project->id, 'agent_version' => '1.0.0']);
+        // Behind, but able to update itself.
+        Computer::factory()->create(['project_id' => $project->id, 'agent_version' => '1.4.20']);
+        // Too old to self-update, and one that never reported a version.
+        Computer::factory()->create(['project_id' => $project->id, 'agent_version' => '1.3.4']);
         Computer::factory()->create(['project_id' => $project->id, 'agent_version' => null]);
+        // Current.
         Computer::factory()->create([
             'project_id'    => $project->id,
             'agent_version' => \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION,
@@ -89,6 +99,6 @@ class ComputerStatsTest extends TestCase
 
         Livewire::actingAs($admin)
             ->test(ComputersIndex::class)
-            ->assertViewHas('stats', fn (array $s) => $s['outdated'] === 2);
+            ->assertViewHas('stats', fn (array $s) => $s['update_available'] === 1 && $s['stranded'] === 2);
     }
 }

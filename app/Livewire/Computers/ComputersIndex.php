@@ -70,6 +70,13 @@ class ComputersIndex extends Component
     }
 
     /**
+     * The first agent that can reliably update itself. Anything below this
+     * generates its own update helper with the bug that stopped the swap, so
+     * it can never move forward on its own — it needs one manual re-enrolment.
+     */
+    private const SELF_UPDATE_FLOOR = '1.4.13';
+
+    /**
      * The figures above the table.
      *
      * Scoped exactly like the list itself — a client-bound user counts their
@@ -97,13 +104,26 @@ class ComputersIndex extends Component
         $online = (clone $visible)->where('last_seen_at', '>=', $threshold)->count();
 
         return [
-            'total'    => $total,
-            'online'   => $online,
-            'offline'  => $total - $online,
-            'outdated' => (clone $visible)
+            'total'   => $total,
+            'online'  => $online,
+            'offline' => $total - $online,
+
+            // Behind the published agent, but able to fetch it themselves at
+            // the next check-in. Nothing to do.
+            'update_available' => (clone $visible)
+                ->whereNotNull('agent_version')
+                ->where('agent_version', '>=', self::SELF_UPDATE_FLOOR)
+                ->where('agent_version', '<', \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION)
+                ->count(),
+
+            // Too old to self-update: these carry the updater that could never
+            // apply an update, so they sit there until someone re-enrols them
+            // by hand. Counted apart because it is the only figure here that
+            // asks the operator to do something.
+            'stranded' => (clone $visible)
                 ->where(fn ($q) => $q
                     ->whereNull('agent_version')
-                    ->orWhere('agent_version', '<', \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION))
+                    ->orWhere('agent_version', '<', self::SELF_UPDATE_FLOOR))
                 ->count(),
         ];
     }
