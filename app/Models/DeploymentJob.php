@@ -103,6 +103,12 @@ class DeploymentJob extends Model
     public const PERMANENT_EXIT_CODES = [
         -1978335216, // 0x8A150010 no applicable installer (per-user-only package, or wrong architecture)
         -1978335146, // 0x8A150056 no machine-wide installer for --scope machine
+        // 0x8A15012E install technology mismatch: what is installed was put
+        // there by a different mechanism than the package upgrades with (an
+        // OS-shipped or self-updating app like Edge against a winget
+        // installer). winget refuses to cross technologies, and no number of
+        // retries changes that — the app must be removed first.
+        -1978335090,
         1625,        // MSI: install forbidden by system policy
         1643,        // MSI: patch forbidden by system policy
     ];
@@ -148,6 +154,11 @@ class DeploymentJob extends Model
                 . 'for all users (--scope machine); this package only publishes a per-user installer, which under '
                 . 'the SYSTEM account would vanish into the SYSTEM profile. Package it as an EXE/MSI with '
                 . 'machine-wide silent switches instead.',
+            -1978335090 => 'The installed copy was put there by a different mechanism than this package upgrades '
+                         . 'with (0x8A15012E). Microsoft Edge is the usual case: Windows ships it and it updates '
+                         . 'itself, so winget refuses to replace it. Retrying cannot fix this — the app must be '
+                         . 'uninstalled before the winget version can install. For self-updating apps like Edge, '
+                         . 'deploying them here is redundant: leave them to their own updater.',
             -1978335210 => 'Several copies of this package are installed on the machine (0x8A150016) — typically a '
                 . 'per-user copy alongside the machine-wide one. Agents from 1.4.7 uninstall every copy '
                 . '(--all-versions), so retrying on an updated agent clears this. Older agents need the machine '

@@ -214,6 +214,17 @@ class ComputerSoftwareLogTest extends TestCase
         $this->assertStringContainsString('MSI 1603', $hint(1603));
         $this->assertStringContainsString('Another install', $hint(1618));
         $this->assertStringContainsString('architecture', $hint(-1978335216));
+        $this->assertStringContainsString('Edge', $hint(-1978335090));
+    }
+
+    /**
+     * An app installed by a different mechanism than the package upgrades
+     * with — Windows' own Edge against the winget one — can never be
+     * upgraded in place. One machine retried it 30 times.
+     */
+    public function test_an_install_technology_mismatch_fails_once_rather_than_retrying(): void
+    {
+        $this->assertTrue(DeploymentJob::isPermanentExitCode(-1978335090));
     }
 
     /** The 29 "successful" installs that installed nothing. */
