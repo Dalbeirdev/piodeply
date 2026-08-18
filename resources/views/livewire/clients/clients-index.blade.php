@@ -115,7 +115,11 @@
 
                 <ul class="divide-y divide-slate-100">
                     @forelse ($clients as $client)
-                        <li @class(['px-5 py-4 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $client->trashed()])>
+                        {{-- py-3, not py-4: the 36px avatar already floors the row
+                             height, so the extra padding bought nothing but fewer
+                             rows on screen — a real cost on a fleet list this is
+                             meant to be scanned, not browsed. Matches Computers. --}}
+                        <li @class(['px-5 py-3 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $client->trashed()])>
                             <div class="flex flex-wrap items-start gap-x-6 gap-y-3">
 
                                 {{-- Identity --}}

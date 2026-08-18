@@ -106,7 +106,8 @@
             <div class="pd-card">
                 <ul class="divide-y divide-slate-100">
                     @forelse ($computers as $computer)
-                        <li @class(['px-5 py-4 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $computer->trashed()])>
+                        {{-- py-3, not py-4 — matches Clients; see that file for why. --}}
+                        <li @class(['px-5 py-3 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $computer->trashed()])>
                             <div class="flex flex-wrap items-start gap-x-6 gap-y-3">
 
                                 {{-- Identity --}}
