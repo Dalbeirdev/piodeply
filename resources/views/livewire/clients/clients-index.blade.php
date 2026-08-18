@@ -204,7 +204,18 @@
                 </table></div>
             </div>
 
-            {{ $clients->links() }}
+            {{-- Say where you are in the list, not just how to move through it. --}}
+            <div class="flex items-center justify-between gap-4 flex-wrap">
+                <p class="text-sm text-slate-500">
+                    @if ($clients->total() > 0)
+                        Showing {{ $clients->firstItem() }} to {{ $clients->lastItem() }}
+                        of {{ number_format($clients->total()) }} {{ Str::plural('client', $clients->total()) }}
+                    @else
+                        No clients to show
+                    @endif
+                </p>
+                <div>{{ $clients->links() }}</div>
+            </div>
         </div>
     </div>
 </div>
