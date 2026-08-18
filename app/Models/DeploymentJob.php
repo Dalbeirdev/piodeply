@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\FailureKind;
 use App\Enums\JobAction;
 use App\Enums\JobStatus;
 use Illuminate\Database\Eloquent\Builder;
@@ -109,6 +110,10 @@ class DeploymentJob extends Model
         // installer). winget refuses to cross technologies, and no number of
         // retries changes that — the app must be removed first.
         -1978335090,
+        // 0x8A150014 an MSIX/Store package cannot be applied machine-wide by
+        // an agent running as SYSTEM (Microsoft.Teams.Free is the case that
+        // found this). The update exists; winget just cannot deliver it here.
+        -1978335212,
         1625,        // MSI: install forbidden by system policy
         1643,        // MSI: patch forbidden by system policy
     ];
@@ -116,6 +121,52 @@ class DeploymentJob extends Model
     public static function isPermanentExitCode(?int $code): bool
     {
         return $code !== null && in_array($code, self::PERMANENT_EXIT_CODES, true);
+    }
+
+    /**
+     * Codes that mean the MACHINE cannot accept an install, whatever the
+     * package. No installer, engine or retry changes any of these — only a
+     * person with access to that machine can.
+     */
+    public const MACHINE_EXIT_CODES = [
+        112,          // ERROR_DISK_FULL
+        1602,         // MSI: user cancelled — on an unattended install, a broken/blocked install state
+        1610,         // MSI: configuration data corrupt
+        3010,         // MSI: success but a reboot is REQUIRED before more installs
+        -2147024891,  // 0x80070005 access denied
+        -2147024784,  // 0x800700DF file size exceeds limit (commonly out of space)
+        -1073741515,  // 0xC0000135 a required runtime is missing (VC++ etc.)
+    ];
+
+    /**
+     * Retries that only ever repeat the same failure are waste; retries that
+     * clear a momentary clash are worth having. This decides which is which.
+     */
+    public static function classifyFailure(?int $code): FailureKind
+    {
+        if ($code === null) {
+            return FailureKind::Unknown;
+        }
+
+        if (in_array($code, self::MACHINE_EXIT_CODES, true)) {
+            return FailureKind::Machine;
+        }
+
+        if (in_array($code, self::PERMANENT_EXIT_CODES, true)) {
+            return FailureKind::Package;
+        }
+
+        // Known-momentary: another install holding the lock, or a bad download.
+        if (in_array($code, [1618, -1978334975], true)) {
+            return FailureKind::Transient;
+        }
+
+        return FailureKind::Unknown;
+    }
+
+    public function failureKind(): FailureKind
+    {
+        return self::classifyFailure($this->exit_code);
     }
 
     /**
@@ -154,6 +205,11 @@ class DeploymentJob extends Model
                 . 'for all users (--scope machine); this package only publishes a per-user installer, which under '
                 . 'the SYSTEM account would vanish into the SYSTEM profile. Package it as an EXE/MSI with '
                 . 'machine-wide silent switches instead.',
+            -1978335212 => 'This is an MSIX / Store package (0x8A150014), which Windows installs per user. The '
+                         . 'agent installs for all users as SYSTEM, and winget cannot apply an MSIX update that '
+                         . 'way — Microsoft Teams is the usual case. A newer version may well exist; it simply '
+                         . 'cannot be delivered by winget here. Deliver it through Microsoft 365 / Intune, and '
+                         . 'take the package out of the catalogue.',
             -1978335090 => 'The installed copy was put there by a different mechanism than this package upgrades '
                          . 'with (0x8A15012E). Microsoft Edge is the usual case: Windows ships it and it updates '
                          . 'itself, so winget refuses to replace it. Retrying cannot fix this — the app must be '

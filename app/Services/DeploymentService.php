@@ -357,10 +357,12 @@ class DeploymentService
                     ...$observed,
                 ]);
                 $this->releaseDependents($job);
-            } elseif ($job->canRetry() && ! DeploymentJob::isPermanentExitCode($exitCode)) {
-                // Back into the queue for another agent pass. Permanent exit
-                // codes skip this: re-running "no installer for this machine"
-                // fails identically and just delays the operator finding out.
+            } elseif ($job->canRetry() && DeploymentJob::classifyFailure($exitCode)->shouldRetry()) {
+                // Back into the queue for another agent pass — but only for a
+                // failure a retry could actually clear. A package that cannot
+                // install here, a machine out of disk, or a code we have never
+                // seen all fail identically on the next pass; repeating them
+                // just delays the person who can fix it.
                 $job->update([
                     'status'         => JobStatus::Pending,
                     'exit_code'      => $exitCode,
