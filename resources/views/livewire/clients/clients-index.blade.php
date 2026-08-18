@@ -95,56 +95,56 @@
             </div>
             @error('importFile') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
 
+            {{-- Rows wrap instead of scrolling sideways. Seven columns never
+                 fit a laptop screen, so the table pushed Billing and the row
+                 actions off the right edge behind a scrollbar. --}}
             <div class="pd-card">
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="pd-th">Company</th>
-                            <th class="pd-th">Email</th>
-                            <th class="pd-th">Primary contact</th>
-                            <th class="pd-th">Timezone</th>
-                            <th class="pd-th">Status</th>
-                            <th class="pd-th">Billing</th>
-                            <th class="pd-th text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-slate-100">
-                        @forelse ($clients as $client)
-                            <tr @class(['opacity-60' => $client->trashed()])>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    <div class="flex items-center gap-3">
-                                        @if ($client->logoUrl())
-                                            <img src="{{ $client->logoUrl() }}" alt="" class="h-8 w-8 rounded object-cover">
-                                        @else
-                                            <span class="h-8 w-8 rounded bg-slate-100 grid place-content-center text-xs font-bold text-slate-500">
-                                                {{ strtoupper(substr($client->company_name, 0, 2)) }}
-                                            </span>
-                                        @endif
-                                        <span class="font-medium text-slate-900">{{ $client->company_name }}</span>
-                                        @if ($client->trashed())
-                                            <span class="text-xs rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5">deleted</span>
-                                        @endif
+                <ul class="divide-y divide-slate-100">
+                    @forelse ($clients as $client)
+                        <li @class(['px-5 py-4 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $client->trashed()])>
+                            <div class="flex flex-wrap items-start gap-x-6 gap-y-3">
+
+                                {{-- Identity --}}
+                                <div class="flex items-start gap-3 min-w-[15rem] grow basis-72">
+                                    @if ($client->logoUrl())
+                                        <img src="{{ $client->logoUrl() }}" alt="" class="h-9 w-9 rounded-lg object-cover shrink-0">
+                                    @else
+                                        <span class="h-9 w-9 shrink-0 rounded-lg bg-teal-50 border border-teal-100 grid place-content-center text-xs font-bold text-teal-700">
+                                            {{ strtoupper(substr($client->company_name, 0, 2)) }}
+                                        </span>
+                                    @endif
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="font-semibold text-slate-900">{{ $client->company_name }}</span>
+                                            @if ($client->trashed())
+                                                <span class="text-xs rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5">deleted</span>
+                                            @endif
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-0.5 break-all">{{ $client->email }}</p>
                                     </div>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $client->email }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">
-                                    {{ $client->primaryContact?->name ?? '—' }}
-                                    <span class="text-xs text-slate-400">({{ $client->contacts_count }})</span>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">{{ $client->timezone }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap">
+                                </div>
+
+                                {{-- Contact + timezone --}}
+                                <div class="min-w-[10rem] grow basis-44 text-sm text-slate-600">
+                                    <p>{{ $client->primaryContact?->name ?? 'No primary contact' }}</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">
+                                        {{ $client->contacts_count }} {{ Str::plural('contact', $client->contacts_count) }}
+                                        <span class="mx-1 text-slate-300">·</span>{{ $client->timezone }}
+                                    </p>
+                                </div>
+
+                                {{-- State + actions, pinned right on wide screens --}}
+                                <div class="flex items-center gap-3 flex-wrap shrink-0 ml-auto">
                                     <span @class([
-                                        'text-xs font-semibold rounded-full px-2 py-0.5 border',
+                                        'text-xs font-semibold rounded-full px-2.5 py-1 border',
                                         'bg-green-50 text-green-700 border-green-200' => $client->status === \App\Enums\ClientStatus::Active,
                                         'bg-slate-100 text-slate-600 border-slate-200' => $client->status === \App\Enums\ClientStatus::Inactive,
                                         'bg-yellow-50 text-yellow-700 border-yellow-200' => $client->status === \App\Enums\ClientStatus::Suspended,
                                     ])>{{ $client->status->label() }}</span>
-                                </td>
 
-                                {{-- Billing stands on its own: an account can be
-                                     active in the portal while its subscription
-                                     is past due, and merging the two hid that. --}}
-                                <td class="px-6 py-3 whitespace-nowrap">
+                                    {{-- Billing stands on its own: an account can be
+                                         active in the portal while its subscription
+                                         is past due, and merging the two hid that. --}}
                                     @if ($client->subscription_status !== null)
                                         @php
                                             $subTitle = 'Subscription: '.$client->subscription_status
@@ -160,48 +160,49 @@
                                             {{ str($client->subscription_status)->replace('_', ' ') }}
                                         </span>
                                     @else
-                                        <span class="text-slate-300">—</span>
+                                        <span class="text-xs text-slate-300">no subscription</span>
                                     @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
-                                    @if ($client->trashed())
-                                        @can('restore', $client)
-                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $client->id }})" />
-                                        @endcan
-                                    @else
-                                        @can('reports.view')
-                                            <a href="{{ route('clients.compliance-report', $client) }}"
-                                               class="inline-flex items-center text-xs font-semibold text-teal-700 hover:text-teal-600 mr-1"
-                                               title="Download this client's branded compliance PDF">
-                                                PDF
-                                            </a>
-                                        @endcan
-                                        @can('update', $client)
-                                            <label class="inline-flex items-center gap-1 text-xs text-slate-500 mr-1 select-none"
-                                                   title="Email the compliance PDF to this client's portal users on the 1st of each month">
-                                                <input type="checkbox" @checked($client->monthly_report)
-                                                       wire:click="toggleMonthlyReport({{ $client->id }})"
-                                                       class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
-                                                Monthly
-                                            </label>
-                                            <x-icon-button icon="edit" label="Edit" :href="route('clients.edit', $client)" />
-                                        @endcan
-                                        @can('delete', $client)
-                                            <x-icon-button icon="delete" variant="danger" label="Delete"
-                                                           wire:click="delete({{ $client->id }})"
-                                                           wire:confirm="Delete client “{{ $client->company_name }}”? It can be restored later." />
-                                        @endcan
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="7" class="px-6 py-10 text-center">
-                                <p class="text-slate-500">No clients found.</p>
-                                <p class="text-xs text-slate-400 mt-1">Try a different search, or clear the status filter.</p>
-                            </td></tr>
-                        @endforelse
-                    </tbody>
-                </table></div>
+
+                                    <div class="flex items-center gap-1">
+                                        @if ($client->trashed())
+                                            @can('restore', $client)
+                                                <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $client->id }})" />
+                                            @endcan
+                                        @else
+                                            @can('reports.view')
+                                                <a href="{{ route('clients.compliance-report', $client) }}"
+                                                   class="inline-flex items-center text-xs font-semibold text-teal-700 hover:text-teal-600"
+                                                   title="Download this client's branded compliance PDF">
+                                                    PDF
+                                                </a>
+                                            @endcan
+                                            @can('update', $client)
+                                                <label class="inline-flex items-center gap-1 text-xs text-slate-500 select-none"
+                                                       title="Email the compliance PDF to this client's portal users on the 1st of each month">
+                                                    <input type="checkbox" @checked($client->monthly_report)
+                                                           wire:click="toggleMonthlyReport({{ $client->id }})"
+                                                           class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                                                    Monthly
+                                                </label>
+                                                <x-icon-button icon="edit" label="Edit" :href="route('clients.edit', $client)" />
+                                            @endcan
+                                            @can('delete', $client)
+                                                <x-icon-button icon="delete" variant="danger" label="Delete"
+                                                               wire:click="delete({{ $client->id }})"
+                                                               wire:confirm="Delete client “{{ $client->company_name }}”? It can be restored later." />
+                                            @endcan
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    @empty
+                        <li class="px-6 py-12 text-center">
+                            <p class="text-slate-500">No clients found.</p>
+                            <p class="text-xs text-slate-400 mt-1">Try a different search, or clear the status filter.</p>
+                        </li>
+                    @endforelse
+                </ul>
             </div>
 
             {{-- Say where you are in the list, not just how to move through it. --}}
