@@ -93,89 +93,104 @@
 @endunless
             </div>
 
+            {{-- Rows wrap instead of scrolling sideways. Seven columns of
+                 machine detail never fit a laptop screen, so the table forced a
+                 horizontal scrollbar and hid the status column — the one thing
+                 an operator scans for. Each machine is now a block that reflows:
+                 identity on the left, facts in the middle, state on the right. --}}
             <div class="pd-card">
-                <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-100">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="pd-th">Hostname</th>
-                            <th class="pd-th">Client / {{ project_term() }}</th>
-                            <th class="pd-th">OS</th>
-                            <th class="pd-th">Private IP</th>
-                            <th class="pd-th">Agent</th>
-                            <th class="pd-th">Status</th>
-                            <th class="px-6 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-slate-100">
-                        @forelse ($computers as $computer)
-                            <tr @class(['opacity-60' => $computer->trashed()])>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    <a href="{{ route('computers.show', $computer) }}"
-                                       class="font-medium pd-link">{{ $computer->hostname }}</a>
-                                    @if ($computer->trashed())
-                                        <span class="ml-1 text-xs rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5">deleted</span>
+                <ul class="divide-y divide-slate-100">
+                    @forelse ($computers as $computer)
+                        <li @class(['px-5 py-4 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $computer->trashed()])>
+                            <div class="flex flex-wrap items-start gap-x-6 gap-y-3">
+
+                                {{-- Identity --}}
+                                <div class="min-w-[13rem] grow basis-64">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <a href="{{ route('computers.show', $computer) }}"
+                                           class="font-semibold pd-link">{{ $computer->hostname }}</a>
+                                        @if ($computer->trashed())
+                                            <span class="text-xs rounded-full bg-red-50 text-red-600 border border-red-200 px-2 py-0.5">deleted</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-xs text-slate-500 mt-0.5">
+                                        {{ $computer->project->client->company_name }}
+                                        <span class="mx-1 text-slate-300">·</span>{{ $computer->project->name }}
+                                    </p>
+                                    @if ($computer->serial_number)
+                                        <p class="text-[11px] text-slate-400 font-mono mt-0.5 break-all">{{ $computer->serial_number }}</p>
                                     @endif
-                                    <p class="text-xs text-slate-500">{{ $computer->serial_number }}</p>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600">
-                                    {{ $computer->project->client->company_name }}
-                                    <p class="text-xs text-slate-500">{{ $computer->project->name }}</p>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600 text-sm">
-                                    {{ $computer->os_name }}
-                                    <p class="text-xs text-slate-500">build {{ $computer->windows_build ?? '—' }}</p>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600 font-mono text-xs">{{ $computer->private_ip ?? '—' }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-slate-600 text-sm">
-                                    {{ $computer->agent_version ?? '—' }}
+                                </div>
+
+                                {{-- Machine facts --}}
+                                <div class="min-w-[11rem] grow basis-48 text-sm text-slate-600">
+                                    <p>{{ $computer->os_name }}</p>
+                                    <p class="text-xs text-slate-400 mt-0.5">
+                                        build {{ $computer->windows_build ?? '—' }}
+                                        <span class="mx-1 text-slate-300">·</span>
+                                        <span class="font-mono">{{ $computer->private_ip ?? 'no IP' }}</span>
+                                    </p>
+                                </div>
+
+                                {{-- Agent --}}
+                                <div class="min-w-[9rem] shrink-0 text-sm text-slate-600">
+                                    <span class="font-mono text-xs">{{ $computer->agent_version ?? '—' }}</span>
                                     @if ($computer->isAgentOutdated())
                                         <span class="ml-1 inline-flex items-center text-xs font-semibold rounded-full px-2 py-0.5 border bg-amber-50 text-amber-700 border-amber-200"
                                               title="Latest is {{ \App\Models\Computer::latestAgentVersion() }} — the agent self-updates on its next check-in">
                                             Update available
                                         </span>
                                     @endif
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap">
-                                    @if ($computer->isOnline())
-                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-0.5 border bg-green-50 text-green-700 border-green-200">
-                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true"></span> Online
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-0.5 border bg-slate-100 text-slate-600 border-slate-200">
-                                            <span class="h-1.5 w-1.5 rounded-full bg-slate-400" aria-hidden="true"></span> Offline
-                                        </span>
-                                    @endif
-                                    <p class="text-xs text-slate-400 mt-0.5">
-                                        {{ $computer->last_seen_at?->diffForHumans() ?? 'never seen' }}
-                                    </p>
-                                </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-sm space-x-1">
-                                    @if ($computer->trashed())
-                                        @can('restore', $computer)
-                                            <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $computer->id }})" />
-                                        @endcan
-                                        @can('forceDelete', $computer)
-                                            <x-icon-button icon="delete" variant="danger" label="Delete permanently"
-                                                           wire:click="forceDelete({{ $computer->id }})"
-                                                           wire:confirm="Permanently delete “{{ $computer->hostname }}” and all its history? Only possible once its agent is uninstalled — this cannot be undone." />
-                                        @endcan
-                                    @else
-                                        @can('update', $computer)
-                                            <x-icon-button icon="reassign" label="Reassign project" :href="route('computers.edit', $computer)" />
-                                        @endcan
-                                        @can('delete', $computer)
-                                            <x-icon-button icon="delete" variant="danger" label="Retire"
-                                                           wire:click="delete({{ $computer->id }})"
-                                                           wire:confirm="Retire “{{ $computer->hostname }}”? It moves to the retired list (Show deleted) with its history kept. If its agent reports again it is revived automatically. To remove it for good: uninstall the agent, then delete permanently from the retired list." />
-                                        @endcan
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">No computers found. Agents appear here after they register (Phase 7).</td></tr>
-                        @endforelse
-                    </tbody>
-                </table></div>
+                                </div>
+
+                                {{-- State + actions, pinned right on wide screens --}}
+                                <div class="flex items-center gap-4 shrink-0 ml-auto">
+                                    <div class="text-right">
+                                        @if ($computer->isOnline())
+                                            <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border bg-green-50 text-green-700 border-green-200">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true"></span> Online
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border bg-slate-100 text-slate-600 border-slate-200">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-slate-400" aria-hidden="true"></span> Offline
+                                            </span>
+                                        @endif
+                                        <p class="text-xs text-slate-400 mt-1">
+                                            {{ $computer->last_seen_at?->diffForHumans() ?? 'never seen' }}
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-center gap-1">
+                                        @if ($computer->trashed())
+                                            @can('restore', $computer)
+                                                <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $computer->id }})" />
+                                            @endcan
+                                            @can('forceDelete', $computer)
+                                                <x-icon-button icon="delete" variant="danger" label="Delete permanently"
+                                                               wire:click="forceDelete({{ $computer->id }})"
+                                                               wire:confirm="Permanently delete “{{ $computer->hostname }}” and all its history? Only possible once its agent is uninstalled — this cannot be undone." />
+                                            @endcan
+                                        @else
+                                            @can('update', $computer)
+                                                <x-icon-button icon="reassign" label="Reassign project" :href="route('computers.edit', $computer)" />
+                                            @endcan
+                                            @can('delete', $computer)
+                                                <x-icon-button icon="delete" variant="danger" label="Retire"
+                                                               wire:click="delete({{ $computer->id }})"
+                                                               wire:confirm="Retire “{{ $computer->hostname }}”? It moves to the retired list (Show deleted) with its history kept. If its agent reports again it is revived automatically. To remove it for good: uninstall the agent, then delete permanently from the retired list." />
+                                            @endcan
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    @empty
+                        <li class="px-6 py-12 text-center">
+                            <p class="text-slate-500">No computers found.</p>
+                            <p class="text-xs text-slate-400 mt-1">Machines appear here within a minute of their agent starting.</p>
+                        </li>
+                    @endforelse
+                </ul>
             </div>
 
             {{ $computers->links() }}
