@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Architecture;
 use App\Enums\InstallerType;
+use App\Enums\PackageMode;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,7 +27,19 @@ class Package extends Model
     protected $fillable = [
         'package_category_id', 'client_id', 'name', 'slug', 'vendor', 'homepage',
         'description', 'license', 'installer_type', 'architecture',
-        'winget_id', 'winget_scopeless', 'choco_id', 'is_active',
+        'winget_id', 'winget_scopeless', 'choco_id', 'is_active', 'management_mode',
+    ];
+
+    /**
+     * The migration's DB-level default only helps a raw INSERT; Eloquent's
+     * create() does not re-fetch the row afterwards, so a package made
+     * without stating management_mode would hold PHP null in memory right
+     * up until the next fresh() — and isDeployable() would crash on it the
+     * same request it was created in. This is what actually keeps every
+     * existing and future package "deploy" by default.
+     */
+    protected $attributes = [
+        'management_mode' => 'deploy',
     ];
 
     protected function casts(): array
@@ -36,7 +49,37 @@ class Package extends Model
             'architecture'     => Architecture::class,
             'is_active'        => 'boolean',
             'winget_scopeless' => 'boolean',
+            'management_mode'  => PackageMode::class,
         ];
+    }
+
+    /**
+     * Whether a job may EVER be queued for this package — the single check
+     * every deployment path (direct, bulk, policy remediation) must agree
+     * on, or a package that "cannot install" reappears through whichever
+     * route forgot to ask.
+     */
+    public function isDeployable(): bool
+    {
+        return $this->is_active && $this->management_mode->isDeployable();
+    }
+
+    /**
+     * Why an attempt was refused, for the interface to show BEFORE a click
+     * rather than after an agent reports back. Null when deployable — the
+     * caller decides what "no reason" means for its own UI.
+     */
+    public function blockedReason(): ?string
+    {
+        if (! $this->is_active) {
+            return "\"{$this->name}\" has been removed from the catalogue.";
+        }
+
+        if (! $this->management_mode->isDeployable()) {
+            return "\"{$this->name}\" is {$this->management_mode->label()} — ".$this->management_mode->clientExplanation();
+        }
+
+        return null;
     }
 
     public function category(): BelongsTo

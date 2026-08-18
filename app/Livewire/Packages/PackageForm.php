@@ -4,6 +4,7 @@ namespace App\Livewire\Packages;
 
 use App\Enums\Architecture;
 use App\Enums\InstallerType;
+use App\Enums\PackageMode;
 use App\Models\Package;
 use App\Models\PackageCategory;
 use App\Services\PackageService;
@@ -26,6 +27,13 @@ class PackageForm extends Component
     public bool $winget_scopeless = false;
     public ?string $choco_id = null;
 
+    /**
+     * How the software is actually managed — separate from is_active, which
+     * only ever meant "removed from the catalogue". A package can be real,
+     * active, and still not something this platform installs (Edge, Teams).
+     */
+    public string $management_mode = 'deploy';
+
     public function mount(?Package $package = null): void
     {
         if ($package !== null && $package->exists) {
@@ -37,6 +45,7 @@ class PackageForm extends Component
             ]));
             $this->installer_type = $package->installer_type->value;
             $this->architecture = $package->architecture->value;
+            $this->management_mode = $package->management_mode->value;
         } else {
             $this->authorize('create', Package::class);
         }
@@ -62,6 +71,7 @@ class PackageForm extends Component
             'winget_scopeless'    => ['boolean'],
             'choco_id'            => ['nullable', 'string', 'max:255', $idRule,
                 Rule::requiredIf($this->installer_type === 'choco')],
+            'management_mode'    => ['required', Rule::in(PackageMode::values())],
         ], [
             'winget_id.regex'       => 'winget IDs may only contain letters, digits, ".", "-", "+" and "_".',
             'choco_id.regex'        => 'Chocolatey IDs may only contain letters, digits, ".", "-", "+" and "_".',

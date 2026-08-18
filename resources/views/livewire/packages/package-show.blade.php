@@ -13,6 +13,15 @@
                     @else
                         <span class="ml-1 align-middle pd-badge pd-badge-slate"><span class="pd-dot"></span>inactive</span>
                     @endif
+                    {{-- Separate from active/inactive on purpose: a package
+                         can be perfectly real and still not something this
+                         platform installs — Edge is active AND OS-managed,
+                         not deactivated-and-hidden. --}}
+                    @unless ($package->management_mode->isDeployable())
+                        <span class="ml-1 align-middle pd-badge pd-badge-amber" title="{{ $package->management_mode->clientExplanation() }}">
+                            <span class="pd-dot"></span>{{ $package->management_mode->label() }}
+                        </span>
+                    @endunless
                 </h2>
             </div>
             @can('update', $package)
@@ -120,30 +129,44 @@
                 </dl>
             </div>
 
+            @if (session('error'))
+                <div class="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700" role="alert">
+                    {{ session('error') }}
+                </div>
+            @endif
+
             {{-- Quick deploy --}}
             @can('create', \App\Models\DeploymentJob::class)
                 <div class="pd-card !overflow-visible p-6">
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-3">Deploy this package</h3>
-                    <form wire:submit="deploy" class="grid grid-cols-1 md:grid-cols-4 gap-2 items-start">
-                        <div class="md:col-span-2">
-                            <x-searchable-select wire:model="deploy_computer_id" placeholder="— select computer —"
-                                :options="$computers->map(fn ($c) => ['value' => $c->id, 'label' => $c->hostname])->values()->all()" />
-                            <x-input-error for="deploy_computer_id" class="mt-1" />
-                        </div>
-                        <select wire:model="deploy_action" aria-label="Action" class="pd-select w-full">
-                            @foreach ($actions as $a)
-                                <option value="{{ $a->value }}">{{ $a->label() }}</option>
-                            @endforeach
-                        </select>
-                        <div class="flex gap-2">
-                            <select wire:model="deploy_priority" aria-label="Priority" class="pd-select w-full" title="1 = highest">
-                                @foreach (range(1, 10) as $p)
-                                    <option value="{{ $p }}">P{{ $p }}</option>
+                    @if ($package->isDeployable())
+                        <form wire:submit="deploy" class="grid grid-cols-1 md:grid-cols-4 gap-2 items-start">
+                            <div class="md:col-span-2">
+                                <x-searchable-select wire:model="deploy_computer_id" placeholder="— select computer —"
+                                    :options="$computers->map(fn ($c) => ['value' => $c->id, 'label' => $c->hostname])->values()->all()" />
+                                <x-input-error for="deploy_computer_id" class="mt-1" />
+                            </div>
+                            <select wire:model="deploy_action" aria-label="Action" class="pd-select w-full">
+                                @foreach ($actions as $a)
+                                    <option value="{{ $a->value }}">{{ $a->label() }}</option>
                                 @endforeach
                             </select>
-                            <x-button type="submit">Queue</x-button>
+                            <div class="flex gap-2">
+                                <select wire:model="deploy_priority" aria-label="Priority" class="pd-select w-full" title="1 = highest">
+                                    @foreach (range(1, 10) as $p)
+                                        <option value="{{ $p }}">P{{ $p }}</option>
+                                    @endforeach
+                                </select>
+                                <x-button type="submit">Queue</x-button>
+                            </div>
+                        </form>
+                    @else
+                        {{-- Refused here, before any click, rather than left
+                             for the agent to fail and report back. --}}
+                        <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                            {{ $package->blockedReason() }}
                         </div>
-                    </form>
+                    @endif
                 </div>
             @endcan
 

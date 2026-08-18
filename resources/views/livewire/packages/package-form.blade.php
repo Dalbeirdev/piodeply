@@ -84,6 +84,35 @@
                             Binary installer — add versions with a download URL and SHA-256 on the package page after saving.
                         </div>
                     @endif
+
+                    <div class="md:col-span-2">
+                        <x-label for="management_mode" value="Management" />
+                        <select id="management_mode" wire:model.live="management_mode"
+                                class="mt-1 block w-full border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
+                            @foreach (\App\Enums\PackageMode::cases() as $mode)
+                                <option value="{{ $mode->value }}">{{ $mode->label() }}</option>
+                            @endforeach
+                        </select>
+                        <x-input-error for="management_mode" class="mt-1" />
+                        {{-- tryFrom, not from(): this is wire:model.live, so an
+                             invalid value (a tampered request, not just a bad
+                             click) reaches this render before "required in:"
+                             validation ever runs on submit. from() would crash
+                             the page instead of letting the error render. --}}
+                        @if ($management_mode !== 'deploy' && ($mode = \App\Enums\PackageMode::tryFrom($management_mode)))
+                            <p class="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+                                {{ $mode->clientExplanation() }}
+                                Nobody can queue a deployment for this package while it is set this way.
+                            </p>
+                        @elseif ($management_mode === 'deploy')
+                            <p class="mt-1 text-xs text-slate-500">
+                                <strong>Deploy</strong> installs and updates it, as normal. Change this only for
+                                software this platform genuinely cannot install machine-wide — Windows-managed
+                                apps (Edge) or Store/MSIX packages (Teams) — so it stays visible and explained
+                                rather than quietly deactivated.
+                            </p>
+                        @endif
+                    </div>
                 </div>
 
                 <div>

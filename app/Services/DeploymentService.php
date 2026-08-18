@@ -36,6 +36,17 @@ class DeploymentService
         ?int $createdBy = null,
         ?string $targetVersion = null,
     ): DeploymentJob {
+        // The last line of defence, for whichever caller forgot to ask
+        // first: a package that cannot be installed this way — Edge, Teams —
+        // must refuse identically here, whether the request came from a
+        // click, a bulk run, or the policy engine on a five-minute timer.
+        // queueIfNeeded() and PolicyService already check this earlier so an
+        // operator sees the reason before an attempt, not after; this is
+        // what makes it true rather than merely usual.
+        if (! $package->isDeployable()) {
+            throw new \DomainException($package->blockedReason());
+        }
+
         // The tenant-isolation line, drawn where every deployment funnels
         // through: a client's private package never lands on another
         // client's machine. Role does not matter — Super Admin included —
@@ -134,6 +145,14 @@ class DeploymentService
         ?string $targetVersion = null,
         bool $force = false,
     ): QueueResult {
+        // Some software cannot be installed this way at all — Windows owns
+        // it (Edge), or it is a per-user Store package (Teams). Refuse here,
+        // in the same "why" shape as the capability check below, instead of
+        // spending three attempts to arrive at queue()'s DomainException.
+        if (! $package->isDeployable()) {
+            return new QueueResult(QueueOutcome::Invalid, null, $package->blockedReason());
+        }
+
         // The package's installer type has to be able to carry out the action
         // at all. A rollback on an MSI, or an uninstall on a portable EXE, can
         // never succeed — refuse it here instead of queueing three doomed

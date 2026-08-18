@@ -136,6 +136,18 @@ class PolicyService
 
     private function enforceOn(SoftwarePolicy $policy, Computer $computer, ?PolicyBatchContext $context = null): bool
     {
+        // A package that cannot be queued at all must never reach queue()'s
+        // DomainException from here: this call has no try/catch, so ONE
+        // policy targeting an undeployable package would abort enforcement
+        // for every other computer and policy in the same batch run. Real,
+        // not hypothetical — the scheduled run currently holds a policy
+        // enforcing Microsoft Edge, deactivated after it was found to be
+        // permanently unable to install. Checked once here rather than in
+        // both enforce() and enforceForComputer(), the two callers.
+        if (! $policy->package->isDeployable()) {
+            return false;
+        }
+
         $remediation = $this->remediationFor($policy, $computer, $context);
 
         if ($remediation === null || $this->hasRelevantJob($policy, $computer, $context)) {

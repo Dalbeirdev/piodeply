@@ -47,13 +47,22 @@ class PackageShow extends Component
             'deploy_priority'    => ['required', 'integer', 'between:1,10'],
         ]);
 
-        $service->queue(
-            computer: Computer::findOrFail($validated['deploy_computer_id']),
-            package: $this->package,
-            action: JobAction::from($validated['deploy_action']),
-            priority: (int) $validated['deploy_priority'],
-            createdBy: auth()->id(),
-        );
+        // The button is already hidden for a package that cannot deploy (see
+        // the Blade), so this is the second line of defence — someone acting
+        // on a stale page, or a direct call — not the primary UX.
+        try {
+            $service->queue(
+                computer: Computer::findOrFail($validated['deploy_computer_id']),
+                package: $this->package,
+                action: JobAction::from($validated['deploy_action']),
+                priority: (int) $validated['deploy_priority'],
+                createdBy: auth()->id(),
+            );
+        } catch (\DomainException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return;
+        }
 
         $this->reset('deploy_computer_id');
         session()->flash('status', 'Deployment queued.');
