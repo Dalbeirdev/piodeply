@@ -333,13 +333,9 @@ class DeploymentService
     {
         $kind = $job->failureKind();
 
-        // Machine problems belong to that machine; everything else is one
-        // fact about a package, however many machines reported it.
-        $scope = $kind === \App\Enums\FailureKind::Machine
-            ? 'computer:'.$job->computer_id
-            : 'package:'.$job->package_id;
-
-        $key = 'escalation:'.$kind->value.':'.$scope.':'.($exitCode ?? 'none');
+        // The scope/key is shared with DeploymentJob::causeKey() so a cause
+        // is identified identically here and on the "Needs attention" queue.
+        $key = 'escalation:'.$job->causeKey();
 
         if (! \Illuminate\Support\Facades\Cache::add($key, true, now()->addHours(self::ESCALATION_QUIET_HOURS))) {
             return; // already reported this cause recently

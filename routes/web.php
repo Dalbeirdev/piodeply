@@ -181,6 +181,7 @@ Route::middleware([
     Route::middleware('permission:deployments.view')->group(function () {
         Route::get('/deployments', \App\Livewire\Deployments\DeploymentsIndex::class)->name('deployments.index');
         Route::get('/deployments/bulk', \App\Livewire\Deployments\BulkDeploy::class)->name('deployments.bulk');
+        Route::get('/deployments/needs-attention', \App\Livewire\Deployments\FailureQueue::class)->name('failure-queue.index');
     });
 
     // The controller authorizes internally: staff need reports.view, while a

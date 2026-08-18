@@ -170,6 +170,27 @@ class DeploymentJob extends Model
     }
 
     /**
+     * The scope a failure cause is grouped by: machine problems belong to
+     * that machine (a full disk is real for every package sent to it);
+     * everything else is one fact about a package, however many machines
+     * report it. Shared by DeploymentService::escalate() (what gets notified)
+     * and the "Needs attention" queue (what stays listed), so a cause can
+     * never be keyed two different ways in two different places.
+     */
+    public function causeScope(): string
+    {
+        return $this->failureKind() === FailureKind::Machine
+            ? 'machine:'.$this->computer_id
+            : 'package:'.$this->package_id;
+    }
+
+    /** The identity of "this failure", for deduplication and dismissal. */
+    public function causeKey(): string
+    {
+        return $this->causeScope().':'.($this->exit_code ?? 'none');
+    }
+
+    /**
      * A failure explained in plain terms and, where possible, what to do about
      * it. The raw "winget exited with -1073741515" is exact and useless unless
      * you already read Windows status codes; this sits above it, never instead.
