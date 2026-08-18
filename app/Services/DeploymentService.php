@@ -317,14 +317,38 @@ class DeploymentService
      * returns to Pending; otherwise it is terminal. Success releases any
      * jobs waiting on it.
      */
-    public function reportResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null, ?string $installedVersion = null): DeploymentJob
-    {
-        $job = $this->persistResult($job, $success, $exitCode, $log, $failureReason, $installedVersion);
+    /** How long the same cause stays quiet after being reported once. */
+    public const ESCALATION_QUIET_HOURS = 6;
 
-        // Outside the transaction, fault-isolated: a notification failure
-        // must never make an agent re-report a result.
-        if ($job->status === JobStatus::Failed) {
-            app(\App\Services\NotificationService::class)->notify('job.failed', "Deployment failed: {$job->package->name} on {$job->computer->hostname}", [
+    /**
+     * Report a terminal failure to whoever can act on it — once.
+     *
+     * A package that cannot install anywhere fails on every machine it is
+     * sent to, and one notification per machine buries the single fact that
+     * matters under forty copies of it. Package-level causes are therefore
+     * announced once per package; a machine-level cause (no disk, access
+     * denied) is genuinely per-machine and stays that way.
+     */
+    private function escalate(DeploymentJob $job, ?int $exitCode, ?string $failureReason): void
+    {
+        $kind = $job->failureKind();
+
+        // Machine problems belong to that machine; everything else is one
+        // fact about a package, however many machines reported it.
+        $scope = $kind === \App\Enums\FailureKind::Machine
+            ? 'computer:'.$job->computer_id
+            : 'package:'.$job->package_id;
+
+        $key = 'escalation:'.$kind->value.':'.$scope.':'.($exitCode ?? 'none');
+
+        if (! \Illuminate\Support\Facades\Cache::add($key, true, now()->addHours(self::ESCALATION_QUIET_HOURS))) {
+            return; // already reported this cause recently
+        }
+
+        app(\App\Services\NotificationService::class)->notify(
+            'job.failed',
+            "Deployment failed: {$job->package->name} on {$job->computer->hostname}",
+            [
                 'computer'       => $job->computer->hostname,
                 'client'         => $job->computer->project->client->company_name,
                 'package'        => $job->package->name,
@@ -332,7 +356,24 @@ class DeploymentService
                 'attempts'       => "{$job->attempts}/{$job->max_attempts}",
                 'exit_code'      => $exitCode,
                 'failure_reason' => $failureReason,
-            ]);
+                // What kind of problem this is, and therefore who fixes it.
+                'kind'           => $kind->label(),
+                'owner'          => $kind->ownedByOperator()
+                    ? 'Platform administrator — the package or catalogue needs changing'
+                    : 'Whoever manages this machine — nothing is wrong with the package',
+                'what_to_do'     => $job->failureHint(),
+            ]
+        );
+    }
+
+    public function reportResult(DeploymentJob $job, bool $success, ?int $exitCode, ?string $log, ?string $failureReason = null, ?string $installedVersion = null): DeploymentJob
+    {
+        $job = $this->persistResult($job, $success, $exitCode, $log, $failureReason, $installedVersion);
+
+        // Outside the transaction, fault-isolated: a notification failure
+        // must never make an agent re-report a result.
+        if ($job->status === JobStatus::Failed) {
+            $this->escalate($job, $exitCode, $failureReason);
         }
 
         return $job;
