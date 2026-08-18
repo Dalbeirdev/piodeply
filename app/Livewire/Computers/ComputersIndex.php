@@ -69,6 +69,45 @@ class ComputersIndex extends Component
         }
     }
 
+    /**
+     * The figures above the table.
+     *
+     * Scoped exactly like the list itself — a client-bound user counts their
+     * own machines and nobody else's, and staff are still limited to the
+     * projects they can see. A headline number that ignored tenancy would
+     * leak the size of other people's fleets.
+     *
+     * @return array{total:int, online:int, offline:int, outdated:int}
+     */
+    private function stats(?int $tenantId): array
+    {
+        // null means "not confined to specific projects" — staff, or a tenant
+        // without a site-scoped role. Passing it to whereIn would be a bug.
+        $allowed = auth()->user()->visibleProjectIds();
+
+        $visible = Computer::query()
+            ->when($allowed !== null, fn ($q) => $q->whereIn('project_id', $allowed))
+            ->when($tenantId !== null, fn ($q) => $q->whereHas('project', fn ($p) => $p->where('client_id', $tenantId)));
+
+        $threshold = now()->subSeconds(
+            (int) app(\App\Services\SettingsService::class)->get('agent.online_threshold_seconds', 300)
+        );
+
+        $total = (clone $visible)->count();
+        $online = (clone $visible)->where('last_seen_at', '>=', $threshold)->count();
+
+        return [
+            'total'    => $total,
+            'online'   => $online,
+            'offline'  => $total - $online,
+            'outdated' => (clone $visible)
+                ->where(fn ($q) => $q
+                    ->whereNull('agent_version')
+                    ->orWhere('agent_version', '<', \App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION))
+                ->count(),
+        ];
+    }
+
     public function render(ComputerRepositoryInterface $computers)
     {
         $this->authorize('viewAny', Computer::class);
@@ -92,6 +131,7 @@ class ComputersIndex extends Component
             'projects' => \App\Models\Project::when($tenantId !== null, fn ($q) => $q->where('client_id', $tenantId))
                 ->orderBy('name')->get(['id', 'name', 'client_id']),
             'isTenant' => $tenantId !== null,
+            'stats'    => $this->stats($tenantId),
         ])->layout('layouts.app');
     }
 }

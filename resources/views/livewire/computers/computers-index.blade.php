@@ -1,10 +1,47 @@
 <div>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Computers') }}</h2>
+        <div>
+            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ __('Computers') }}</h2>
+            <p class="text-sm text-slate-500 mt-0.5">Every machine reporting in, and what it is running.</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
+    <div class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5">
+
+            @php
+                $cards = [
+                    ['label' => 'Machines', 'value' => $stats['total'],    'sub' => 'Enrolled and reporting',  'tone' => 'teal',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"/>'],
+                    ['label' => 'Online',   'value' => $stats['online'],   'sub' => 'Checked in just now',     'tone' => 'green',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                    ['label' => 'Offline',  'value' => $stats['offline'],  'sub' => 'Not reporting',           'tone' => $stats['offline'] > 0 ? 'amber' : 'slate',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>'],
+                    ['label' => 'Outdated agent', 'value' => $stats['outdated'], 'sub' => 'Below '.\App\Services\EnrollmentScriptService::CURRENT_AGENT_VERSION, 'tone' => $stats['outdated'] > 0 ? 'amber' : 'slate',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>'],
+                ];
+                $tones = [
+                    'teal'  => 'bg-teal-50 text-teal-700 border-teal-100',
+                    'green' => 'bg-green-50 text-green-700 border-green-100',
+                    'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+                    'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                ];
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach ($cards as $card)
+                    <div class="pd-card p-4">
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $tones[$card['tone']] }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">{!! $card['icon'] !!}</svg>
+                            </span>
+                            <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                        </div>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                    </div>
+                @endforeach
+            </div>
+
             @if (session('status'))
                 <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700" role="status">
                     {{ session('status') }}
@@ -16,7 +53,7 @@
                 </div>
             @endif
 
-            <div class="flex flex-wrap items-center gap-3">
+            <div class="pd-card p-4 flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search hostname, serial, IP, MAC…" aria-label="Search computers"
                        class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-80">
