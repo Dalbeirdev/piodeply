@@ -99,6 +99,20 @@
                  fit a laptop screen, so the table pushed Billing and the row
                  actions off the right edge behind a scrollbar. --}}
             <div class="pd-card">
+                {{-- Headers use the same widths as the rows, so the columns line
+                     up on a wide screen. Hidden once the rows start wrapping,
+                     where a fixed header would label the wrong things. --}}
+                <div class="hidden lg:flex items-center gap-x-6 px-5 py-2.5 bg-slate-50/70 border-b border-slate-100
+                            text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <span class="min-w-[15rem] grow basis-72">Company</span>
+                    <span class="min-w-[10rem] grow basis-44">Primary contact</span>
+                    <span class="shrink-0 ml-auto flex items-center gap-3">
+                        <span class="w-[4.5rem]">Status</span>
+                        <span class="w-[7rem]">Billing</span>
+                        <span class="w-[9.5rem] text-right">Actions</span>
+                    </span>
+                </div>
+
                 <ul class="divide-y divide-slate-100">
                     @forelse ($clients as $client)
                         <li @class(['px-5 py-4 hover:bg-slate-50/60 transition-colors', 'opacity-60' => $client->trashed()])>
@@ -107,7 +121,10 @@
                                 {{-- Identity --}}
                                 <div class="flex items-start gap-3 min-w-[15rem] grow basis-72">
                                     @if ($client->logoUrl())
-                                        <img src="{{ $client->logoUrl() }}" alt="" class="h-9 w-9 rounded-lg object-cover shrink-0">
+                                        {{-- contain, not cover: a wide logo cropped to a
+                                             square reads as an unrecognisable sliver. --}}
+                                        <img src="{{ $client->logoUrl() }}" alt=""
+                                             class="h-9 w-9 rounded-lg object-contain bg-white border border-slate-200 shrink-0">
                                     @else
                                         <span class="h-9 w-9 shrink-0 rounded-lg bg-teal-50 border border-teal-100 grid place-content-center text-xs font-bold text-teal-700">
                                             {{ strtoupper(substr($client->company_name, 0, 2)) }}
@@ -124,19 +141,26 @@
                                     </div>
                                 </div>
 
-                                {{-- Contact + timezone --}}
+                                {{-- Contact + timezone. Absence is stated once, quietly:
+                                     "No primary contact" repeated down every row shouted
+                                     the least useful fact on the page. --}}
                                 <div class="min-w-[10rem] grow basis-44 text-sm text-slate-600">
-                                    <p>{{ $client->primaryContact?->name ?? 'No primary contact' }}</p>
-                                    <p class="text-xs text-slate-400 mt-0.5">
-                                        {{ $client->contacts_count }} {{ Str::plural('contact', $client->contacts_count) }}
-                                        <span class="mx-1 text-slate-300">·</span>{{ $client->timezone }}
-                                    </p>
+                                    @if ($client->primaryContact)
+                                        <p>{{ $client->primaryContact->name }}</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">
+                                            {{ $client->contacts_count }} {{ Str::plural('contact', $client->contacts_count) }}
+                                            <span class="mx-1 text-slate-300">·</span>{{ $client->timezone }}
+                                        </p>
+                                    @else
+                                        <p class="text-slate-300">—</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">{{ $client->timezone }}</p>
+                                    @endif
                                 </div>
 
                                 {{-- State + actions, pinned right on wide screens --}}
                                 <div class="flex items-center gap-3 flex-wrap shrink-0 ml-auto">
                                     <span @class([
-                                        'text-xs font-semibold rounded-full px-2.5 py-1 border',
+                                        'lg:w-[4.5rem] text-xs font-semibold rounded-full px-2.5 py-1 border text-center',
                                         'bg-green-50 text-green-700 border-green-200' => $client->status === \App\Enums\ClientStatus::Active,
                                         'bg-slate-100 text-slate-600 border-slate-200' => $client->status === \App\Enums\ClientStatus::Inactive,
                                         'bg-yellow-50 text-yellow-700 border-yellow-200' => $client->status === \App\Enums\ClientStatus::Suspended,
@@ -152,7 +176,7 @@
                                                 .($client->subscription_period_end ? ' · renews '.$client->subscription_period_end->format('j M') : '');
                                         @endphp
                                         <span @class([
-                                            'text-xs font-semibold rounded-full px-2.5 py-1 border capitalize',
+                                            'lg:w-[7rem] text-xs font-semibold rounded-full px-2.5 py-1 border capitalize text-center',
                                             'bg-green-50 text-green-700 border-green-200' => $client->subscription_status === 'active',
                                             'bg-amber-50 text-amber-700 border-amber-200' => in_array($client->subscription_status, ['trialing', 'past_due', 'unpaid'], true),
                                             'bg-slate-100 text-slate-600 border-slate-200' => ! in_array($client->subscription_status, ['active', 'trialing', 'past_due', 'unpaid'], true),
@@ -160,10 +184,10 @@
                                             {{ str($client->subscription_status)->replace('_', ' ') }}
                                         </span>
                                     @else
-                                        <span class="text-xs text-slate-300">no subscription</span>
+                                        <span class="lg:w-[7rem] text-xs text-slate-300 text-center">—</span>
                                     @endif
 
-                                    <div class="flex items-center gap-1">
+                                    <div class="flex items-center justify-end gap-1 lg:w-[9.5rem]">
                                         @if ($client->trashed())
                                             @can('restore', $client)
                                                 <x-icon-button icon="restore" label="Restore" wire:click="restore({{ $client->id }})" />
