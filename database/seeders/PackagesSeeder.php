@@ -50,6 +50,8 @@ class PackagesSeeder extends Seeder
                 ['Telegram Desktop', 'Telegram', 'Telegram.TelegramDesktop', 'GPL-3.0', true],
                 ['Signal', 'Signal', 'OpenWhisperSystems.Signal', 'GPL-3.0', true],
                 ['Element', 'Element', 'Element.Element', 'Apache-2.0', true],
+                ['Cisco Webex Meetings', 'Cisco', 'Cisco.CiscoWebexMeetings', 'Freemium', true],
+                ['GoToMeeting', 'GoTo', 'GoTo.GoToMeeting', 'Commercial', true],
             ],
             'Media' => [
                 ['iTunes', 'Apple', 'Apple.iTunes', 'Freeware', true],
@@ -144,6 +146,10 @@ class PackagesSeeder extends Seeder
                 ['Google Drive for Desktop', 'Google LLC', 'Google.GoogleDrive', 'Freeware', true],
                 ['Microsoft OneDrive', 'Microsoft', 'Microsoft.OneDrive', 'Freeware', true],
                 ['SugarSync', 'SugarSync', 'SugarSync.SugarSync', 'Commercial', false],
+                // No Scope in the winget manifest at all (neither user nor
+                // machine) -- same shape as the .NET runtimes, so it needs
+                // winget_scopeless like them; set below after creation.
+                ['IDrive', 'IDrive Inc.', 'IDrive.IDrive', 'Commercial', true],
             ],
             'Other' => [
                 ['Evernote', 'Evernote', 'evernote.evernote', 'Freemium', true],
@@ -234,6 +240,13 @@ class PackagesSeeder extends Seeder
                 ['CrystalDiskInfo', 'Crystal Dew World', 'CrystalDewWorld.CrystalDiskInfo', 'MIT', true],
                 ['CrystalDiskMark', 'Crystal Dew World', 'CrystalDewWorld.CrystalDiskMark', 'MIT', true],
                 ['HWiNFO', 'REALiX', 'REALiX.HWiNFO', 'Freeware', true],
+                ['Dell Command | Update', 'Dell', 'Dell.CommandUpdate', 'Freeware', true],
+            ],
+            'AI Tools' => [
+                // MSIX, same as Teams/Outlook above -- Store mode set below,
+                // never queued. Kept in the catalogue so a client sees the
+                // real reason instead of a name that's just missing.
+                ['Claude', 'Anthropic', 'Anthropic.Claude', 'Freemium', true],
             ],
         ];
 
