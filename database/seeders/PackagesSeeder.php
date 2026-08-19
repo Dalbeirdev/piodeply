@@ -38,6 +38,11 @@ class PackagesSeeder extends Seeder
                 ['Zoom', 'Zoom', 'Zoom.Zoom', 'Freemium', true],
                 ['Discord', 'Discord Inc.', 'Discord.Discord', 'Freeware', true],
                 ['Microsoft Teams', 'Microsoft', 'Microsoft.Teams', 'Freemium', true],
+                // Winget's "Outlook for Windows" is the new lightweight
+                // client, distributed as MSIX — per-user by design, same as
+                // Teams above. Seeded active so it's visible with a reason,
+                // then set to PackageMode::Store below (not deployable).
+                ['Outlook for Windows', 'Microsoft', 'Microsoft.Outlook', 'Freemium', true],
                 ['Slack', 'Slack Technologies', 'SlackTechnologies.Slack', 'Freemium', true],
                 ['Pidgin', 'Pidgin', 'Pidgin.Pidgin', 'GPL-2.0', true],
                 ['Mozilla Thunderbird', 'Mozilla', 'Mozilla.Thunderbird', 'MPL-2.0', true],
