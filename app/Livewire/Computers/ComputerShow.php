@@ -20,6 +20,8 @@ class ComputerShow extends Component
      * deployed  — PioDeploy put it here (the default: what we're accountable for)
      * managed   — matches a catalogue package, however it arrived
      * outdated  — the machine's package manager is offering something newer
+     * uptodate  — reported with nothing newer on offer
+     * pending   — a job is already queued or running for it
      * all       — everything the machine reported
      */
     public string $softwareFilter = 'deployed';
@@ -284,6 +286,12 @@ class ComputerShow extends Component
             // winget sometimes offers an "available" that is not ahead.
             'softwareOutdated' => $this->computer->software()
                 ->withUpdateAvailable()->get()->filter->hasUpdate()->count(),
+            // Total minus outdated, not a second query: both numbers must
+            // always add up to the total the card row sits next to.
+            'softwareUpToDate' => $this->computer->software()->count()
+                - $this->computer->software()->withUpdateAvailable()->get()->filter->hasUpdate()->count(),
+            'softwarePending' => $this->computer->software()
+                ->where('source', 'winget')->whereIn('name', $inFlightByWingetId->keys())->count(),
             'softwareItems'   => $this->computer->software()
                 ->when($this->softwareFilter === 'managed', fn ($q) => $q
                     ->where('source', 'winget')
@@ -292,6 +300,10 @@ class ComputerShow extends Component
                     ->where('source', 'winget')
                     ->whereIn('name', $deployedNames))
                 ->when($this->softwareFilter === 'outdated', fn ($q) => $q->withUpdateAvailable())
+                ->when($this->softwareFilter === 'uptodate', fn ($q) => $q->whereNull('available_version'))
+                ->when($this->softwareFilter === 'pending', fn ($q) => $q
+                    ->where('source', 'winget')
+                    ->whereIn('name', $inFlightByWingetId->keys()))
                 ->when($this->softwareSearch !== '', fn ($q) => $q->where(fn ($w) => $w
                     ->where('name', 'like', "%{$this->softwareSearch}%")
                     ->orWhere('publisher', 'like', "%{$this->softwareSearch}%")))

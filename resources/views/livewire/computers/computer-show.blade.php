@@ -336,8 +336,46 @@
                 </div>
             @endif
 
+            {{-- Software summary: click any card to jump to and filter the
+                 table below to exactly that slice — same softwareFilter
+                 property the dropdown drives, so the two stay in sync. --}}
+            @php
+                $softwareCards = [
+                    ['label' => 'Total tracked', 'value' => $softwareTotal, 'sub' => 'All detected', 'tone' => 'teal', 'filter' => 'all',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/>'],
+                    ['label' => 'Update required', 'value' => $softwareOutdated, 'sub' => 'Needs attention', 'tone' => $softwareOutdated > 0 ? 'amber' : 'slate', 'filter' => 'outdated',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>'],
+                    ['label' => 'Up to date', 'value' => $softwareUpToDate, 'sub' => $softwareTotal > 0 ? round($softwareUpToDate / $softwareTotal * 100).'%' : '—', 'tone' => 'green', 'filter' => 'uptodate',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                    ['label' => 'Pending', 'value' => $softwarePending, 'sub' => 'Queued / running', 'tone' => $softwarePending > 0 ? 'sky' : 'slate', 'filter' => 'pending',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                ];
+                $softwareTones = [
+                    'teal'  => 'bg-teal-50 text-teal-700 border-teal-100',
+                    'green' => 'bg-green-50 text-green-700 border-green-100',
+                    'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+                    'sky'   => 'bg-sky-50 text-sky-700 border-sky-100',
+                    'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                ];
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach ($softwareCards as $card)
+                    <a href="#installed-software" wire:click="$set('softwareFilter', '{{ $card['filter'] }}')"
+                       class="pd-card p-4 block text-left hover:border-teal-200 transition-colors {{ $softwareFilter === $card['filter'] ? 'ring-2 ring-teal-500' : '' }}">
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $softwareTones[$card['tone']] }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">{!! $card['icon'] !!}</svg>
+                            </span>
+                            <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                        </div>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                    </a>
+                @endforeach
+            </div>
+
             {{-- Installed software --}}
-            <div class="pd-card">
+            <div class="pd-card" id="installed-software">
                 <div class="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-3">
                     <h3 class="text-sm font-semibold text-slate-700 uppercase tracking-wide">
                         Installed software
@@ -351,6 +389,8 @@
                             <option value="managed">In catalogue</option>
                             <option value="deployed">Deployed by PioDeploy</option>
                             <option value="outdated">Update available</option>
+                            <option value="uptodate">Up to date</option>
+                            <option value="pending">Pending job</option>
                             <option value="all">All software</option>
                         </select>
                         <input type="search" wire:model.live.debounce.300ms="softwareSearch"

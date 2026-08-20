@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JobStatus;
 use App\Enums\PolicyAction;
 use App\Enums\PolicyMode;
 use App\Enums\Role as RoleEnum;
@@ -218,6 +219,70 @@ class UpdateAvailableTest extends TestCase
         $this->page()
             ->assertViewHas('softwareOutdated', 0)
             ->assertDontSee('1 outdated');
+    }
+
+    /* ─────────── the software summary cards ─────────── */
+
+    public function test_software_can_be_filtered_to_what_is_up_to_date(): void
+    {
+        $this->chrome();
+        $this->installed('138.0', '141.0');
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->computer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '141.0', 'available_version' => null, 'source' => 'winget',
+        ]);
+
+        $this->page()
+            ->set('softwareFilter', 'uptodate')
+            ->assertSee('Mozilla.Firefox')
+            ->assertDontSee('Google.Chrome');
+    }
+
+    public function test_software_can_be_filtered_to_a_pending_job(): void
+    {
+        $package = $this->chrome();
+        $this->installed('138.0', '141.0');
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->computer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '141.0', 'available_version' => null, 'source' => 'winget',
+        ]);
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $this->computer->id, 'package_id' => $package->id,
+            'action' => 'update', 'status' => JobStatus::Running,
+        ]);
+
+        $this->page()
+            ->set('softwareFilter', 'pending')
+            ->assertSee('Google.Chrome')
+            ->assertDontSee('Mozilla.Firefox');
+    }
+
+    /** Up-to-date and outdated must always split the total exactly, since a card row shows both next to it. */
+    public function test_up_to_date_and_outdated_counts_add_up_to_the_total(): void
+    {
+        $this->chrome();
+        $this->installed('138.0', '141.0'); // outdated
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->computer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '141.0', 'available_version' => null, 'source' => 'winget',
+        ]); // up to date
+
+        $this->page()
+            ->assertViewHas('softwareTotal', 2)
+            ->assertViewHas('softwareOutdated', 1)
+            ->assertViewHas('softwareUpToDate', 1);
+    }
+
+    public function test_pending_count_only_counts_winget_rows_with_an_in_flight_job(): void
+    {
+        $package = $this->chrome();
+        $this->installed('138.0', '141.0');
+        \App\Models\DeploymentJob::factory()->create([
+            'computer_id' => $this->computer->id, 'package_id' => $package->id,
+            'action' => 'update', 'status' => JobStatus::Pending,
+        ]);
+
+        $this->page()->assertViewHas('softwarePending', 1);
     }
 
     /* ─────────── the status panel ─────────── */
