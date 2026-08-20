@@ -251,6 +251,27 @@ class Computer extends Model
             ->when($machines !== null, fn (Builder $q) => $q->whereIn('computers.id', $machines));
     }
 
+    /**
+     * Machines by their reported CATALOGUE SOFTWARE state — outdated /
+     * uptodate / pending — not the agent's own version (see
+     * scopeAgentOutdated) and not any single package's state (see
+     * ComputerSoftware::hasUpdate). One definition shared by the Computers
+     * list, the fleet health report and their summary cards, so "outdated"
+     * can never mean something different in one place than another.
+     */
+    public function scopeSoftwareStatus(Builder $query, string $status): Builder
+    {
+        return match ($status) {
+            'outdated' => $query->whereHas('software', fn ($s) => $s->withUpdateAvailable()),
+            'uptodate' => $query->whereHas('software')
+                ->whereDoesntHave('software', fn ($s) => $s->withUpdateAvailable()),
+            'pending' => $query->whereHas('deploymentJobs', fn ($j) => $j->whereIn('status', [
+                JobStatus::Pending, JobStatus::Blocked, JobStatus::Running,
+            ])),
+            default => $query,
+        };
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(fn (Builder $q) => $q

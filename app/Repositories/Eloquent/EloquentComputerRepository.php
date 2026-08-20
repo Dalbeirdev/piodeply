@@ -39,15 +39,7 @@ class EloquentComputerRepository extends BaseRepository implements ComputerRepos
             ->when($online === false, fn ($q) => $q->offline())
             ->when($agentStatus === 'outdated', fn ($q) => $q->agentOutdated())
             ->when($agentStatus === 'current', fn ($q) => $q->where('agent_version', Computer::latestAgentVersion()))
-            ->when($softwareStatus === 'outdated', fn ($q) => $q
-                ->whereHas('software', fn ($s) => $s->withUpdateAvailable()))
-            ->when($softwareStatus === 'uptodate', fn ($q) => $q
-                ->whereHas('software')
-                ->whereDoesntHave('software', fn ($s) => $s->withUpdateAvailable()))
-            ->when($softwareStatus === 'pending', fn ($q) => $q
-                ->whereHas('deploymentJobs', fn ($j) => $j->whereIn('status', [
-                    \App\Enums\JobStatus::Pending, \App\Enums\JobStatus::Blocked, \App\Enums\JobStatus::Running,
-                ])))
+            ->when($softwareStatus !== '', fn ($q) => $q->softwareStatus($softwareStatus))
             ->orderBy('hostname')
             ->paginate($perPage);
     }

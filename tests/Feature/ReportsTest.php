@@ -153,6 +153,46 @@ class ReportsTest extends TestCase
             ->assertSee('PROD-OFF')->assertDontSee('PILOT-ON');
     }
 
+    /** Same softwareStatus scope the Computers list and its cards use — one definition, not a second copy that could drift. */
+    public function test_computers_report_filters_by_software_status(): void
+    {
+        $outdated = Computer::factory()->create(['hostname' => 'OUTDATED-PC']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $outdated->id, 'name' => 'Google.Chrome',
+            'version' => '138.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+        $current = Computer::factory()->create(['hostname' => 'CURRENT-PC']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $current->id, 'name' => 'Notepad++.Notepad++',
+            'version' => '8.9', 'available_version' => null, 'source' => 'winget',
+        ]);
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(ComputersReport::class)
+            ->assertSee('OUTDATED-PC')->assertSee('CURRENT-PC')
+            ->set('softwareStatus', 'outdated')
+            ->assertSee('OUTDATED-PC')->assertDontSee('CURRENT-PC')
+            ->assertSee('1 outdated');
+    }
+
+    public function test_the_csv_export_includes_the_outdated_count(): void
+    {
+        $computer = Computer::factory()->create(['hostname' => 'CSV-OUTDATED']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => 'Google.Chrome',
+            'version' => '138.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+
+        $this->actingAs($this->userWithRole(RoleEnum::Manager));
+        $component = new ComputersReport();
+        ob_start();
+        $component->export()->sendContent();
+        $csv = ob_get_clean();
+
+        $this->assertStringContainsString('Updates required', $csv);
+        $this->assertMatchesRegularExpression('/CSV-OUTDATED.*\n/', $csv);
+    }
+
     public function test_reports_are_tenant_scoped(): void
     {
         $acme = Client::factory()->create();

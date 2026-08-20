@@ -139,15 +139,9 @@ class ComputersIndex extends Component
             'software_total' => \App\Models\ComputerSoftware::whereIn(
                 'computer_id', (clone $visible)->pluck('id')
             )->count(),
-            'software_outdated' => (clone $visible)
-                ->whereHas('software', fn ($q) => $q->withUpdateAvailable())->count(),
-            'software_uptodate' => (clone $visible)
-                ->whereHas('software')
-                ->whereDoesntHave('software', fn ($q) => $q->withUpdateAvailable())->count(),
-            'software_pending' => (clone $visible)
-                ->whereHas('deploymentJobs', fn ($q) => $q->whereIn('status', [
-                    \App\Enums\JobStatus::Pending, \App\Enums\JobStatus::Blocked, \App\Enums\JobStatus::Running,
-                ]))->count(),
+            'software_outdated' => (clone $visible)->softwareStatus('outdated')->count(),
+            'software_uptodate' => (clone $visible)->softwareStatus('uptodate')->count(),
+            'software_pending'  => (clone $visible)->softwareStatus('pending')->count(),
         ];
     }
 

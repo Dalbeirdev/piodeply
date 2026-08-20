@@ -32,6 +32,13 @@
                     <option value="online">Online only</option>
                     <option value="offline">Offline only</option>
                 </select>
+                <select wire:model.live="softwareStatus" aria-label="Filter by software status"
+                        class="border-slate-300 rounded-md shadow-sm text-sm">
+                    <option value="">Any software status</option>
+                    <option value="outdated">Update required</option>
+                    <option value="uptodate">Up to date</option>
+                    <option value="pending">Pending job</option>
+                </select>
             </div>
 
             <div class="pd-card">
@@ -90,7 +97,15 @@
                                         <span class="text-slate-400">—</span>
                                     @endif
                                 </td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-slate-600">{{ $computer->software_count }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-slate-600">
+                                    {{ $computer->software_count }}
+                                    @if ($computer->updates_available_count > 0)
+                                        <span class="ml-1 inline-flex text-xs font-semibold rounded-full px-2 py-0.5 border bg-amber-50 text-amber-700 border-amber-300"
+                                              title="{{ $computer->updates_available_count }} {{ Str::plural('package', $computer->updates_available_count) }} with a newer version on offer">
+                                            {{ $computer->updates_available_count }} outdated
+                                        </span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">No computers match these filters.</td></tr>

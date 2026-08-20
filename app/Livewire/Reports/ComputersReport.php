@@ -23,6 +23,8 @@ class ComputersReport extends Component
 
     public string $presence = ''; // '' | online | offline
 
+    public string $softwareStatus = ''; // '' | outdated | uptodate | pending
+
     public function updating($name, $value): void
     {
         $this->resetPage();
@@ -48,6 +50,7 @@ class ComputersReport extends Component
             ->when($this->ringFilter !== '', fn ($q) => $q->where('ring', $this->ringFilter))
             ->when($this->presence === 'online', fn ($q) => $q->online())
             ->when($this->presence === 'offline', fn ($q) => $q->offline())
+            ->when($this->softwareStatus !== '', fn ($q) => $q->softwareStatus($this->softwareStatus))
             ->orderBy('hostname');
     }
 
@@ -59,7 +62,7 @@ class ComputersReport extends Component
         $fleetBrowserLatest = app(\App\Services\BrowserVersionService::class)
             ->fleetLatestByClient($computers->pluck('id')->all());
 
-        $csv = "Hostname,Client,".project_term().",Health /100,Health notes,Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Serial\n";
+        $csv = "Hostname,Client,".project_term().",Health /100,Health notes,Ring,OS,Build,Agent version,Last seen,Online,RAM,Disk free %,Software entries,Updates required,Serial\n";
         foreach ($computers as $computer) {
             $diskPct = ($computer->disk_total_bytes && $computer->disk_free_bytes !== null)
                 ? round($computer->disk_free_bytes / $computer->disk_total_bytes * 100)
@@ -83,6 +86,7 @@ class ComputersReport extends Component
                     $computer->ramForHumans() ?? '',
                     $diskPct,
                     $computer->software_count,
+                    $computer->updates_available_count,
                     $computer->serial_number ?? '',
                 ]
             )) . "\n";
