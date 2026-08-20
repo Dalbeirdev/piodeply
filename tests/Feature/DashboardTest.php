@@ -59,6 +59,28 @@ class DashboardTest extends TestCase
             ->assertSee('Tile Corp'); // fleet-by-client chart row
     }
 
+    /** An old failed attempt a later retry superseded is history, not a currently failing machine. */
+    public function test_failed_jobs_tile_is_folded_to_the_current_state_per_task(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create();
+
+        DeploymentJob::factory()->failed()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+        DeploymentJob::factory()->succeeded()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+        // A different, still-failing task.
+        DeploymentJob::factory()->failed()->create([
+            'computer_id' => $computer->id, 'package_id' => Package::factory()->create()->id, 'action' => 'install',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(Dashboard::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['failed'] === 1);
+    }
+
     public function test_outdated_software_compares_against_pinned_latest(): void
     {
         $package = Package::factory()->create(['winget_id' => 'Vendor.App']);

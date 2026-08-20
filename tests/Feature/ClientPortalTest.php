@@ -11,6 +11,7 @@ use App\Models\Client;
 use App\Models\Computer;
 use App\Models\ComputerSoftware;
 use App\Models\DeploymentJob;
+use App\Models\Package;
 use App\Models\Project;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -160,6 +161,23 @@ class ClientPortalTest extends TestCase
             ->assertSee('ACME-PC')
             ->assertDontSee('Globex')
             ->assertViewHas('stats', fn ($stats) => $stats['online'] === 1 && $stats['failed'] === 1);
+    }
+
+    /** Same fix as the staff dashboard: a superseded failed attempt must not inflate the client's own "Failed installs" tile. */
+    public function test_client_dashboards_failed_tile_is_folded_too(): void
+    {
+        $package = Package::factory()->create();
+
+        DeploymentJob::factory()->failed()->create([
+            'computer_id' => $this->acmeComputer->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+        DeploymentJob::factory()->succeeded()->create([
+            'computer_id' => $this->acmeComputer->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+
+        Livewire::actingAs($this->acmeUser)
+            ->test(Dashboard::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['failed'] === 0);
     }
 
     public function test_staff_dashboard_is_unchanged(): void

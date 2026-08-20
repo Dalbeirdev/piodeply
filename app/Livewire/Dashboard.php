@@ -99,7 +99,11 @@ class Dashboard extends Component
             'online'    => Computer::online()->count(),
             'offline'   => Computer::offline()->count(),
             'pending'   => DeploymentJob::whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])->count(),
-            'failed'    => DeploymentJob::where('status', JobStatus::Failed)->count(),
+            // Folded to one row per task: an old failed attempt later
+            // superseded by a successful retry is history, not a currently
+            // failing machine — counting the raw row would overstate it,
+            // exactly the gap fixed on the Deployments queue's own cards.
+            'failed'    => DeploymentJob::onlyLatestPerTask()->where('status', JobStatus::Failed)->count(),
             'outdated'  => $updates->count(),
             // One update across sixty machines is one decision, not sixty.
             'outdated_machines' => $updates->pluck('computer_id')->unique()->count(),
@@ -159,8 +163,11 @@ class Dashboard extends Component
             'offline' => (clone $computers)->offline()->count(),
             'pending' => DeploymentJob::whereIn('computer_id', (clone $computers)->pluck('id'))
                 ->whereIn('status', [JobStatus::Pending, JobStatus::Blocked, JobStatus::Running])->count(),
+            // Folded to one row per task -- same reasoning as the staff
+            // dashboard's identical fix: an old failed attempt a later retry
+            // superseded is not a currently failing machine.
             'failed'  => DeploymentJob::whereIn('computer_id', (clone $computers)->pluck('id'))
-                ->where('status', JobStatus::Failed)->count(),
+                ->onlyLatestPerTask()->where('status', JobStatus::Failed)->count(),
             'health'  => $this->averageHealth((clone $computers)->pluck('id')->all()),
             // The staff dashboard's "Updates available" tile, scoped to this
             // client — previously the portal had no software-update
