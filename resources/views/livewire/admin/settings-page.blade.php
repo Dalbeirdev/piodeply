@@ -88,6 +88,12 @@
                                 <span>
                                     <span class="text-sm font-medium text-slate-700">Auto-update agents</span>
                                     <span class="block text-xs text-slate-500">On: every machine self-updates to the published agent version. Off: agents hold their current version — you still update any machine on demand with “Reinstall agent”. Turn off only to freeze the fleet during a change window.</span>
+                                    @if ($agentsOutdated > 0)
+                                        <span class="block text-xs mt-1 {{ $agent_auto_update ? 'text-slate-400' : 'text-amber-600 font-medium' }}">
+                                            {{ $agentsOutdated }} {{ Str::plural('machine', $agentsOutdated) }} behind the published version right now
+                                            @if (! $agent_auto_update) — frozen there until this is turned back on or someone reinstalls by hand @endif
+                                        </span>
+                                    @endif
                                 </span>
                             </label>
                         </div>
@@ -139,6 +145,19 @@
                             Users without 2FA are sent to their profile to enrol before they can continue.
                             Nobody is signed out — enrolment happens on their next page load.
                         </p>
+                        @if ($twoFactorImpact['staff_unenrolled'] > 0 || $twoFactorImpact['client_unenrolled'] > 0)
+                            <p class="mt-1.5 text-xs text-amber-600">
+                                Right now:
+                                @if ($twoFactorImpact['staff_unenrolled'] > 0)
+                                    <strong>{{ $twoFactorImpact['staff_unenrolled'] }}</strong> {{ Str::plural('staff member', $twoFactorImpact['staff_unenrolled']) }} without 2FA — locked out on their next page load if you pick Staff or Everyone.
+                                @endif
+                                @if ($twoFactorImpact['client_unenrolled'] > 0)
+                                    <strong>{{ $twoFactorImpact['client_unenrolled'] }}</strong> {{ Str::plural('client-portal user', $twoFactorImpact['client_unenrolled']) }} without 2FA — only affected by Everyone.
+                                @endif
+                            </p>
+                        @else
+                            <p class="mt-1.5 text-xs text-slate-400">Every user already has 2FA enabled — either level is safe to pick.</p>
+                        @endif
                         <x-input-error for="require_two_factor" class="mt-1" />
                     </div>
                 </div>

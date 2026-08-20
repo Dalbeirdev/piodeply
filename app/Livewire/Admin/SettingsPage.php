@@ -3,6 +3,9 @@
 namespace App\Livewire\Admin;
 
 use App\Enums\Permission;
+use App\Enums\Role as RoleEnum;
+use App\Models\Computer;
+use App\Models\User;
 use App\Services\SettingsService;
 use Livewire\Component;
 
@@ -99,10 +102,33 @@ class SettingsPage extends Component
         abort_unless(auth()->user()->can(Permission::SettingsManage->value), 403);
     }
 
+    /**
+     * The blast radius of the two toggles above, before anyone clicks Save.
+     * Flipping "Require two-factor" to Staff or Everyone locks out every
+     * unenrolled user in that group on their very next page load — an admin
+     * should see who that is, not discover it from a support ticket.
+     */
+    private function twoFactorImpact(): array
+    {
+        $unenrolled = User::whereNull('two_factor_confirmed_at');
+        $clientUnenrolled = (clone $unenrolled)->role(RoleEnum::Client->value)->count();
+
+        return [
+            'total'             => User::count(),
+            'staff_unenrolled'  => (clone $unenrolled)->count() - $clientUnenrolled,
+            'client_unenrolled' => $clientUnenrolled,
+        ];
+    }
+
     public function render()
     {
         $this->authorizeManage();
 
-        return view('livewire.admin.settings-page')->layout('layouts.app');
+        return view('livewire.admin.settings-page', [
+            'twoFactorImpact' => $this->twoFactorImpact(),
+            // Auto-update's own description already says what turning it off
+            // does; this says how many machines it is doing it to right now.
+            'agentsOutdated'  => Computer::agentOutdated()->count(),
+        ])->layout('layouts.app');
     }
 }

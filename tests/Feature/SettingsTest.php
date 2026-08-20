@@ -151,6 +151,40 @@ class SettingsTest extends TestCase
         $this->assertDatabaseHas('activity_log', ['description' => 'recent']);
     }
 
+    // ── Blast radius shown before you flip a switch ────────────────────
+
+    /** Flipping this setting locks unenrolled users out on their next page load -- they must be counted before that happens, not after. */
+    public function test_two_factor_impact_counts_staff_and_client_users_apart(): void
+    {
+        // The acting admin is 2FA-enrolled so only the deliberately-created
+        // users below land in the counts.
+        $admin = tap($this->admin(), fn (User $u) => $u->forceFill(['two_factor_confirmed_at' => now()])->save());
+
+        // Staff, no 2FA.
+        User::factory()->create(['two_factor_confirmed_at' => null])->assignRole(RoleEnum::Manager->value);
+        // Staff, already enrolled -- must not be counted.
+        User::factory()->create(['two_factor_confirmed_at' => now()])->assignRole(RoleEnum::Technician->value);
+        // Client-portal user, no 2FA.
+        User::factory()->create(['two_factor_confirmed_at' => null])->assignRole(RoleEnum::Client->value);
+
+        Livewire::actingAs($admin)
+            ->test(SettingsPage::class)
+            ->assertViewHas('twoFactorImpact', fn (array $i) => $i['staff_unenrolled'] === 1
+                && $i['client_unenrolled'] === 1)
+            ->assertSee('staff member')
+            ->assertSee('client-portal user');
+    }
+
+    public function test_agents_outdated_count_appears_next_to_auto_update(): void
+    {
+        Computer::factory()->create(['agent_version' => '1.0.0']); // behind
+
+        Livewire::actingAs($this->admin())
+            ->test(SettingsPage::class)
+            ->assertViewHas('agentsOutdated', 1)
+            ->assertSee('1 machine behind the published version');
+    }
+
     public function test_sidebar_shows_the_configured_company_name(): void
     {
         $this->settings()->set('branding.company_name', 'Acme Managed IT');
