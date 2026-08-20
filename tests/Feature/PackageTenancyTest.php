@@ -99,6 +99,22 @@ class PackageTenancyTest extends TestCase
         $this->assertTrue(Package::visibleTo($admin)->pluck('id')->contains($this->privateA->id));
     }
 
+    /** The summary cards are a headline number -- exactly the kind of figure that leaks a fleet size if it forgets tenancy. */
+    public function test_the_summary_cards_never_count_another_tenants_private_packages(): void
+    {
+        Package::factory()->create(['client_id' => $this->clientB->id, 'name' => 'Beta In-House Tool']);
+        $sharedCount = Package::whereNull('client_id')->count();
+
+        $ownerA = $this->ownerOf($this->clientA);
+
+        Livewire::actingAs($ownerA)
+            ->test(\App\Livewire\Packages\PackagesIndex::class)
+            // Sees the shared catalogue plus exactly their own one private
+            // package -- never Beta's, which a naive "total" could leak.
+            ->assertViewHas('stats', fn (array $s) => $s['total'] === $sharedCount + 1)
+            ->assertDontSee('Beta In-House Tool');
+    }
+
     public function test_a_tenants_new_package_is_born_private_to_them(): void
     {
         $owner = $this->ownerOf($this->clientB);

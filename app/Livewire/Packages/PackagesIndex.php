@@ -34,13 +34,14 @@ class PackagesIndex extends Component
     /**
      * Scoped the same as the list itself (tenancy, private packages), so
      * the cards can never claim a bigger or smaller catalogue than what a
-     * click on them actually filters down to.
+     * click on them actually filters down to. Package::visibleTo() is the
+     * canonical definition of that (already relied on by the show-page
+     * guard and the tenancy tests) — reused here rather than a second
+     * hand-rolled copy of the same whereNull/orWhere condition.
      */
     private function stats(): array
     {
-        $visible = Package::query()
-            ->when(auth()->user()->tenantClientId() !== null, fn ($q) => $q->where(fn ($w) => $w
-                ->whereNull('client_id')->orWhere('client_id', auth()->user()->tenantClientId())));
+        $visible = Package::visibleTo(auth()->user());
 
         return [
             'total'      => (clone $visible)->count(),
