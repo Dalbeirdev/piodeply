@@ -21,6 +21,7 @@ class EloquentPackageRepository extends BaseRepository implements PackageReposit
         bool $withTrashed = false,
         ?int $visibleToClientId = null,
         int $perPage = 15,
+        string $managementStatus = '',
     ): LengthAwarePaginator {
         return $this->query()
             ->with(['category', 'latestVersion'])
@@ -30,6 +31,7 @@ class EloquentPackageRepository extends BaseRepository implements PackageReposit
             ->when($categoryId !== null, fn ($q) => $q->where('package_category_id', $categoryId))
             ->when($installerType !== null && $installerType !== '', fn ($q) => $q->where('installer_type', $installerType))
             ->when($activeOnly === true, fn ($q) => $q->active())
+            ->when($managementStatus !== '', fn ($q) => $q->managementStatus($managementStatus))
             // Tenancy: a tenant's list is the catalogue plus their own
             // private packages — never another client's.
             ->when($visibleToClientId !== null, fn ($q) => $q->where(fn ($w) => $w

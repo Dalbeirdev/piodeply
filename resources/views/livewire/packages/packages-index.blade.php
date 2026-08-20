@@ -23,6 +23,48 @@
                 </div>
             @endif
 
+            @php
+                $packageCards = [
+                    ['label' => 'Total packages', 'value' => $stats['total'], 'sub' => 'In the catalogue', 'tone' => 'teal', 'filter' => null,
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/>'],
+                    ['label' => 'Deployable', 'value' => $stats['deployable'], 'sub' => 'A click actually installs it', 'tone' => 'green', 'filter' => 'deployable',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                    ['label' => 'Active but blocked', 'value' => $stats['blocked'], 'sub' => 'OS-managed, Store, or unsupported', 'tone' => $stats['blocked'] > 0 ? 'amber' : 'slate', 'filter' => 'blocked',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4M12 17h.01"/>'],
+                    ['label' => 'Inactive', 'value' => $stats['inactive'], 'sub' => 'Removed from the catalogue', 'tone' => 'slate', 'filter' => 'inactive',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>'],
+                ];
+                $packageTones = [
+                    'teal'  => 'bg-teal-50 text-teal-700 border-teal-100',
+                    'green' => 'bg-green-50 text-green-700 border-green-100',
+                    'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+                    'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                ];
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach ($packageCards as $card)
+                    @php $tag = $card['filter'] === null ? 'div' : 'button'; @endphp
+                    <{{ $tag }}
+                        @if ($card['filter'] !== null)
+                            type="button" wire:click="$set('managementStatus', '{{ $managementStatus === $card['filter'] ? '' : $card['filter'] }}')"
+                        @endif
+                        @class([
+                            'pd-card p-4 block text-left w-full',
+                            'hover:border-teal-200 transition-colors cursor-pointer' => $card['filter'] !== null,
+                            'ring-2 ring-teal-500' => $card['filter'] !== null && $managementStatus === $card['filter'],
+                        ])>
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $packageTones[$card['tone']] }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">{!! $card['icon'] !!}</svg>
+                            </span>
+                            <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                        </div>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                    </{{ $tag }}>
+                @endforeach
+            </div>
+
             <div class="flex flex-wrap items-center gap-3">
                 <div class="relative">
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none"
@@ -51,6 +93,9 @@
                     <input type="checkbox" wire:model.live="showTrashed" class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
                     Show deleted
                 </label>
+                @if ($managementStatus !== '')
+                    <button type="button" wire:click="$set('managementStatus', '')" class="text-xs pd-action">Clear status filter</button>
+                @endif
             </div>
 
             <div class="pd-card">
@@ -110,10 +155,17 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-3.5 whitespace-nowrap">
-                                    @if ($package->is_active)
+                                    @if (! $package->is_active)
+                                        <span class="pd-badge pd-badge-slate"><span class="pd-dot"></span>inactive</span>
+                                    @elseif ($package->isDeployable())
                                         <span class="pd-badge pd-badge-green"><span class="pd-dot"></span>active</span>
                                     @else
-                                        <span class="pd-badge pd-badge-slate"><span class="pd-dot"></span>inactive</span>
+                                        {{-- Active is true, but "a click here queues a job" is false —
+                                             the exact gap PackageMode exists to stop hiding (see its
+                                             own docblock). Never show plain "active" for these. --}}
+                                        <span class="pd-badge pd-badge-amber" title="{{ $package->management_mode->clientExplanation() }}">
+                                            <span class="pd-dot"></span>{{ $package->management_mode->label() }}
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-3.5 whitespace-nowrap text-right space-x-1">

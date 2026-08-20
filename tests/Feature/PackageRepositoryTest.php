@@ -215,6 +215,64 @@ class PackageRepositoryTest extends TestCase
             ->assertDontSee('Legacy MSI Tool');
     }
 
+    /**
+     * The exact gap PackageMode was built to close (its own docblock:
+     * deactivating hid a package entirely, so "active" alone used to be the
+     * whole story). An OS-managed/Store package is still active, but a
+     * click on it does nothing -- the old badge could not tell the two
+     * apart and this list must not say "active" for both.
+     */
+    public function test_an_active_but_blocked_package_never_shows_the_plain_active_badge(): void
+    {
+        Package::factory()->create([
+            'name' => 'Microsoft Edge', 'is_active' => true, 'management_mode' => \App\Enums\PackageMode::OsManaged,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(PackagesIndex::class)
+            ->assertSee('OS-managed')
+            // Not assertDontSee('active') -- "Deactivate" and "Active only"
+            // both contain that substring. The actual badge markup does not.
+            ->assertDontSeeHtml('<span class="pd-dot"></span>active</span>');
+    }
+
+    public function test_a_deployable_active_package_still_shows_the_plain_active_badge(): void
+    {
+        Package::factory()->create(['name' => 'Notepad++', 'is_active' => true, 'management_mode' => \App\Enums\PackageMode::Deploy]);
+
+        Livewire::actingAs($this->admin())
+            ->test(PackagesIndex::class)
+            ->assertSeeHtml('<span class="pd-dot"></span>active</span>');
+    }
+
+    public function test_summary_cards_count_by_management_status(): void
+    {
+        Package::factory()->create(['is_active' => true, 'management_mode' => \App\Enums\PackageMode::Deploy]);
+        Package::factory()->create(['is_active' => true, 'management_mode' => \App\Enums\PackageMode::Store]);
+        Package::factory()->create(['is_active' => false]);
+
+        Livewire::actingAs($this->admin())
+            ->test(PackagesIndex::class)
+            ->assertViewHas('stats', fn (array $s) => $s['total'] === 3
+                && $s['deployable'] === 1
+                && $s['blocked'] === 1
+                && $s['inactive'] === 1);
+    }
+
+    public function test_clicking_the_blocked_card_filters_to_active_but_undeployable_packages(): void
+    {
+        Package::factory()->create([
+            'name' => 'BlockedPkg', 'is_active' => true, 'management_mode' => \App\Enums\PackageMode::Unsupported,
+        ]);
+        Package::factory()->create(['name' => 'DeployablePkg', 'is_active' => true]);
+
+        Livewire::actingAs($this->admin())
+            ->test(PackagesIndex::class)
+            ->assertSee('BlockedPkg')->assertSee('DeployablePkg')
+            ->set('managementStatus', 'blocked')
+            ->assertSee('BlockedPkg')->assertDontSee('DeployablePkg');
+    }
+
     public function test_package_changes_are_activity_logged(): void
     {
         $package = Package::factory()->create(['name' => 'Logged Package']);

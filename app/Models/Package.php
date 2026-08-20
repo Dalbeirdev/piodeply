@@ -102,6 +102,24 @@ class Package extends Model
         return $query->where('is_active', true);
     }
 
+    /**
+     * Not "active/inactive" — whether a click on this row would actually
+     * queue a job. A package can be active and still show green on the old
+     * badge while being OS-managed or Store/MSIX, which is exactly the
+     * "true, and useless" trap PackageMode was built to end (see its own
+     * docblock). One definition, shared by the catalogue's summary cards
+     * and its filter.
+     */
+    public function scopeManagementStatus(Builder $query, string $status): Builder
+    {
+        return match ($status) {
+            'deployable' => $query->where('is_active', true)->where('management_mode', PackageMode::Deploy),
+            'blocked'    => $query->where('is_active', true)->where('management_mode', '!=', PackageMode::Deploy),
+            'inactive'   => $query->where('is_active', false),
+            default      => $query,
+        };
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class)->withTrashed();

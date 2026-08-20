@@ -22,11 +22,32 @@ class PackagesIndex extends Component
 
     public bool $showTrashed = false;
 
+    public string $managementStatus = ''; // '', 'deployable', 'blocked', 'inactive'
+
     public function updating($name, $value): void
     {
-        if (in_array($name, ['search', 'categoryId', 'installerType', 'activeOnly', 'showTrashed'], true)) {
+        if (in_array($name, ['search', 'categoryId', 'installerType', 'activeOnly', 'showTrashed', 'managementStatus'], true)) {
             $this->resetPage();
         }
+    }
+
+    /**
+     * Scoped the same as the list itself (tenancy, private packages), so
+     * the cards can never claim a bigger or smaller catalogue than what a
+     * click on them actually filters down to.
+     */
+    private function stats(): array
+    {
+        $visible = Package::query()
+            ->when(auth()->user()->tenantClientId() !== null, fn ($q) => $q->where(fn ($w) => $w
+                ->whereNull('client_id')->orWhere('client_id', auth()->user()->tenantClientId())));
+
+        return [
+            'total'      => (clone $visible)->count(),
+            'deployable' => (clone $visible)->managementStatus('deployable')->count(),
+            'blocked'    => (clone $visible)->managementStatus('blocked')->count(),
+            'inactive'   => (clone $visible)->managementStatus('inactive')->count(),
+        ];
     }
 
     public function toggleActive(int $packageId, PackageService $service): void
@@ -65,7 +86,9 @@ class PackagesIndex extends Component
                 activeOnly: $this->activeOnly ?: null,
                 withTrashed: $this->showTrashed,
                 visibleToClientId: auth()->user()->tenantClientId(),
+                managementStatus: $this->managementStatus,
             ),
+            'stats'      => $this->stats(),
             'categories' => \App\Models\PackageCategory::orderBy('sort_order')->get(['id', 'name']),
             'types'      => \App\Enums\InstallerType::cases(),
         ])->layout('layouts.app');

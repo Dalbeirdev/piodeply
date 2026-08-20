@@ -15,6 +15,7 @@ interface PackageRepositoryInterface extends RepositoryInterface
         bool $withTrashed = false,
         ?int $visibleToClientId = null,
         int $perPage = 15,
+        string $managementStatus = '',
     ): LengthAwarePaginator;
 
     public function restore(Package $package): bool;
