@@ -16,7 +16,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
 
             {{-- Tiles --}}
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 @php $health = $stats['health']; @endphp
                 <a href="{{ route('reports.computers') }}" class="pd-card p-4 hover:border-teal-300 transition-colors"
                    @if ($health !== null && $health['avg'] < 90) title="Weakest machine: {{ $health['worst'] }} ({{ $health['worst_score'] }}/100)" @endif>
@@ -40,6 +40,13 @@
                 <a href="{{ route('deployments.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
                     <p class="text-2xl font-bold {{ $stats['failed'] > 0 ? 'text-red-600' : 'text-slate-300' }} leading-tight">{{ $stats['failed'] }}</p>
                     <p class="text-sm font-semibold text-slate-700">Failed installs</p>
+                </a>
+                <a href="{{ route('computers.index', ['softwareStatus' => 'outdated']) }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
+                    <p class="text-2xl font-bold {{ $stats['outdated'] > 0 ? 'text-amber-600' : 'text-slate-300' }} leading-tight">{{ $stats['outdated'] }}</p>
+                    <p class="text-sm font-semibold text-slate-700">Updates available</p>
+                    @if ($stats['outdated'] > 0)
+                        <p class="text-xs text-slate-400 mt-0.5">on {{ $stats['outdated_machines'] }} {{ Str::plural('machine', $stats['outdated_machines']) }}</p>
+                    @endif
                 </a>
             </div>
 

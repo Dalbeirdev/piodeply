@@ -146,6 +146,14 @@ class Dashboard extends Component
 
         $computers = Computer::whereIn('project_id', $projects->pluck('id'));
 
+        // pending($clientId) alone would out-run a project-confined
+        // technician's visibility — narrow to the same computer set the
+        // rest of this portal is already scoped to.
+        $confinedIds = (clone $computers)->pluck('id')->all();
+        $updates = app(\App\Services\FleetUpdateService::class)
+            ->pending($clientId)
+            ->whereIn('computer_id', $confinedIds);
+
         $stats = [
             'online'  => (clone $computers)->online()->count(),
             'offline' => (clone $computers)->offline()->count(),
@@ -154,6 +162,11 @@ class Dashboard extends Component
             'failed'  => DeploymentJob::whereIn('computer_id', (clone $computers)->pluck('id'))
                 ->where('status', JobStatus::Failed)->count(),
             'health'  => $this->averageHealth((clone $computers)->pluck('id')->all()),
+            // The staff dashboard's "Updates available" tile, scoped to this
+            // client — previously the portal had no software-update
+            // visibility at all, only agent/deployment state.
+            'outdated'          => $updates->count(),
+            'outdated_machines' => $updates->pluck('computer_id')->unique()->count(),
         ];
 
         return view('livewire.client-dashboard', [

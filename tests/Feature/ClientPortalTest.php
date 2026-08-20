@@ -9,6 +9,7 @@ use App\Livewire\Deployments\DeploymentsIndex;
 use App\Livewire\Projects\ProjectsIndex;
 use App\Models\Client;
 use App\Models\Computer;
+use App\Models\ComputerSoftware;
 use App\Models\DeploymentJob;
 use App\Models\Project;
 use App\Models\User;
@@ -168,6 +169,51 @@ class ClientPortalTest extends TestCase
         Livewire::actingAs($admin)
             ->test(Dashboard::class)
             ->assertSee('Fleet by client');
+    }
+
+    /**
+     * The portal previously had no software-update visibility at all --
+     * only agent/deployment state. A client counts only their own
+     * outdated software, exactly like every other portal figure.
+     */
+    public function test_client_dashboard_shows_only_their_own_outdated_software(): void
+    {
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->acmeComputer->id, 'name' => 'Google.Chrome',
+            'version' => '138.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->globexComputer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '139.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+
+        Livewire::actingAs($this->acmeUser)
+            ->test(Dashboard::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['outdated'] === 1 && $stats['outdated_machines'] === 1);
+    }
+
+    /** A technician confined to a subset of a client's projects must not see the whole client's outdated count. */
+    public function test_a_project_confined_technician_only_counts_their_own_projects_outdated_software(): void
+    {
+        $otherProject = Project::factory()->for($this->acme)->create(['name' => 'Acme — Other Site']);
+        $otherComputer = Computer::factory()->for($otherProject)->create(['hostname' => 'ACME-OTHER-PC']);
+
+        ComputerSoftware::factory()->create([
+            'computer_id' => $this->acmeComputer->id, 'name' => 'Google.Chrome',
+            'version' => '138.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $otherComputer->id, 'name' => 'Mozilla.Firefox',
+            'version' => '139.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+
+        $technician = tap(User::factory()->create(['client_id' => $this->acme->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
+        $technician->assignedProjects()->attach($this->acmeProject->id);
+
+        Livewire::actingAs($technician)
+            ->test(Dashboard::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['outdated'] === 1);
     }
 
     public function test_agent_download_script_is_personalised_without_embedding_keys(): void

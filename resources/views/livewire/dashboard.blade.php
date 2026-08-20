@@ -67,7 +67,7 @@
 
             {{-- Secondary tiles --}}
             <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
-                <div class="pd-card p-4">
+                <a href="{{ route('computers.index', ['softwareStatus' => 'outdated']) }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
                     <p class="text-xl font-bold {{ $stats['outdated'] > 0 ? 'text-amber-600' : 'text-slate-300' }}">{{ $stats['outdated'] }}</p>
                     <p class="text-xs font-semibold text-slate-600">Updates available</p>
                     @if ($stats['outdated'] > 0)
@@ -75,7 +75,7 @@
                             on {{ $stats['outdated_machines'] }} {{ Str::plural('machine', $stats['outdated_machines']) }}
                         </p>
                     @endif
-                </div>
+                </a>
                 <a href="{{ route('computers.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
                     <p class="text-xl font-bold {{ $stats['not_ready'] > 0 ? 'text-red-600' : 'text-slate-300' }}">{{ $stats['not_ready'] }}</p>
                     <p class="text-xs font-semibold text-slate-600">Not ready to deploy</p>
