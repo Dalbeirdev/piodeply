@@ -73,6 +73,17 @@ class ProjectEnrollmentTest extends TestCase
         $this->assertNull(Project::findByApiKey($revealed), 'revoked key must stop authenticating');
     }
 
+    public function test_the_revoked_count_only_shows_once_theres_something_to_report(): void
+    {
+        $this->page()->assertDontSee('revoked');
+
+        $page = $this->page()->set('newKeyLabel', 'Temp key')->call('createKey');
+        $key = $this->project->apiKeys()->where('label', 'Temp key')->first();
+        $this->page()->call('revokeKey', $key->id);
+
+        $this->page()->assertSee('1 revoked');
+    }
+
     public function test_key_management_requires_the_rotate_permission(): void
     {
         $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));

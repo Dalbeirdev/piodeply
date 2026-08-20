@@ -60,7 +60,11 @@
                 <div class="pd-card p-6 space-y-3">
                     <div class="flex items-center justify-between">
                         <h3 class="text-sm font-semibold text-slate-800">API keys</h3>
-                        <span class="text-xs text-slate-400">{{ $apiKeys->whereNull('revoked_at')->count() }} active</span>
+                        @php $revokedCount = $apiKeys->whereNotNull('revoked_at')->count(); @endphp
+                        <span class="text-xs text-slate-400">
+                            {{ $apiKeys->whereNull('revoked_at')->count() }} active
+                            @if ($revokedCount > 0) &middot; {{ $revokedCount }} revoked @endif
+                        </span>
                     </div>
                     <p class="text-xs text-slate-500">
                         A project can hold several keys — one per site, RMM, or rollout wave. Creating a key never
