@@ -26,11 +26,17 @@ class ComputersIndex extends Component
     #[Url]
     public string $agentStatus = ''; // '', 'outdated', 'current'
 
+    // '', 'outdated', 'uptodate', 'pending' — the catalogue software a
+    // machine is running, not the agent itself. Bound to the URL for the
+    // same reason as agentStatus: the summary cards below deep-link here.
+    #[Url]
+    public string $softwareStatus = '';
+
     public bool $showTrashed = false;
 
     public function updating($name, $value): void
     {
-        if (in_array($name, ['search', 'clientId', 'projectId', 'connectivity', 'agentStatus', 'showTrashed'], true)) {
+        if (in_array($name, ['search', 'clientId', 'projectId', 'connectivity', 'agentStatus', 'softwareStatus', 'showTrashed'], true)) {
             $this->resetPage();
         }
     }
@@ -125,6 +131,23 @@ class ComputersIndex extends Component
                     ->whereNull('agent_version')
                     ->orWhere('agent_version', '<', self::SELF_UPDATE_FLOOR))
                 ->count(),
+
+            // The software row below counts MACHINES, not software instances
+            // — this list is a list of machines, so that is the unit every
+            // other card here already uses, and the one a click can filter
+            // this same list down to.
+            'software_total' => \App\Models\ComputerSoftware::whereIn(
+                'computer_id', (clone $visible)->pluck('id')
+            )->count(),
+            'software_outdated' => (clone $visible)
+                ->whereHas('software', fn ($q) => $q->withUpdateAvailable())->count(),
+            'software_uptodate' => (clone $visible)
+                ->whereHas('software')
+                ->whereDoesntHave('software', fn ($q) => $q->withUpdateAvailable())->count(),
+            'software_pending' => (clone $visible)
+                ->whereHas('deploymentJobs', fn ($q) => $q->whereIn('status', [
+                    \App\Enums\JobStatus::Pending, \App\Enums\JobStatus::Blocked, \App\Enums\JobStatus::Running,
+                ]))->count(),
         ];
     }
 
@@ -144,6 +167,7 @@ class ComputersIndex extends Component
                 withTrashed: $tenantId === null && $this->showTrashed,
                 agentStatus: $this->agentStatus,
                 allowedProjectIds: auth()->user()->visibleProjectIds(),
+                softwareStatus: $this->softwareStatus,
             ),
             'clients'  => $tenantId === null
                 ? \App\Models\Client::orderBy('company_name')->get(['id', 'company_name'])

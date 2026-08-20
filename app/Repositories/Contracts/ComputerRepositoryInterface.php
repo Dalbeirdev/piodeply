@@ -16,6 +16,7 @@ interface ComputerRepositoryInterface extends RepositoryInterface
         int $perPage = 15,
         string $agentStatus = '',
         ?array $allowedProjectIds = null,
+        string $softwareStatus = '',
     ): LengthAwarePaginator;
 
     public function findByAgentUuid(string $agentUuid, bool $withTrashed = false): ?Computer;

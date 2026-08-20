@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JobStatus;
 use App\Enums\Role as RoleEnum;
 use App\Livewire\Computers\ComputersIndex;
 use App\Models\Client;
 use App\Models\Computer;
+use App\Models\ComputerSoftware;
+use App\Models\DeploymentJob;
+use App\Models\Package;
 use App\Models\Project;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -100,5 +104,86 @@ class ComputerStatsTest extends TestCase
         Livewire::actingAs($admin)
             ->test(ComputersIndex::class)
             ->assertViewHas('stats', fn (array $s) => $s['update_available'] === 1 && $s['stranded'] === 2);
+    }
+
+    /* ─────────── fleet-wide software cards ─────────── */
+
+    public function test_fleet_software_stats_count_machines_not_software_items(): void
+    {
+        $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+
+        // One machine, two outdated items on it: still ONE machine counted.
+        $outdatedMachine = Computer::factory()->create(['project_id' => $project->id]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $outdatedMachine->id, 'name' => 'Google.Chrome',
+            'version' => '138.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $outdatedMachine->id, 'name' => 'Mozilla.Firefox',
+            'version' => '139.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+
+        // Reported in, nothing outdated.
+        $currentMachine = Computer::factory()->create(['project_id' => $project->id]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $currentMachine->id, 'name' => 'Notepad++.Notepad++',
+            'version' => '8.9', 'available_version' => null, 'source' => 'winget',
+        ]);
+
+        // Never reported any software at all — must not count as "up to date".
+        Computer::factory()->create(['project_id' => $project->id]);
+
+        $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
+
+        Livewire::actingAs($admin)
+            ->test(ComputersIndex::class)
+            ->assertViewHas('stats', fn (array $s) => $s['software_total'] === 3
+                && $s['software_outdated'] === 1
+                && $s['software_uptodate'] === 1);
+    }
+
+    public function test_fleet_pending_counts_machines_with_an_in_flight_job(): void
+    {
+        $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+        $package = Package::factory()->create();
+
+        $busy = Computer::factory()->create(['project_id' => $project->id]);
+        DeploymentJob::factory()->create([
+            'computer_id' => $busy->id, 'package_id' => $package->id, 'status' => JobStatus::Running,
+        ]);
+        Computer::factory()->create(['project_id' => $project->id]); // idle
+
+        $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
+
+        Livewire::actingAs($admin)
+            ->test(ComputersIndex::class)
+            ->assertViewHas('stats', fn (array $s) => $s['software_pending'] === 1);
+    }
+
+    public function test_the_update_required_card_filters_the_list_to_matching_machines(): void
+    {
+        $client = Client::factory()->create();
+        $project = Project::factory()->create(['client_id' => $client->id]);
+
+        $outdated = Computer::factory()->create(['project_id' => $project->id, 'hostname' => 'OUTDATED-PC']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $outdated->id, 'name' => 'Google.Chrome',
+            'version' => '138.0', 'available_version' => '141.0', 'source' => 'winget',
+        ]);
+        $current = Computer::factory()->create(['project_id' => $project->id, 'hostname' => 'CURRENT-PC']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $current->id, 'name' => 'Notepad++.Notepad++',
+            'version' => '8.9', 'available_version' => null, 'source' => 'winget',
+        ]);
+
+        $admin = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Admin->value));
+
+        Livewire::actingAs($admin)
+            ->test(ComputersIndex::class)
+            ->set('softwareStatus', 'outdated')
+            ->assertSee('OUTDATED-PC')
+            ->assertDontSee('CURRENT-PC');
     }
 }

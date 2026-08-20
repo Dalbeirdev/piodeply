@@ -41,6 +41,13 @@
                     <option value="outdated">Agent outdated</option>
                     <option value="current">Agent up to date</option>
                 </select>
+                <select wire:model.live="softwareStatus" aria-label="Filter by software status"
+                        class="border-slate-300 rounded-md shadow-sm text-sm">
+                    <option value="">Any software status</option>
+                    <option value="outdated">Update required</option>
+                    <option value="uptodate">Up to date</option>
+                    <option value="pending">Pending job</option>
+                </select>
                 @unless ($isTenant ?? false)
 <label class="flex items-center gap-2 text-sm text-slate-600">
                     <input type="checkbox" wire:model.live="showTrashed" class="rounded border-slate-300">
@@ -86,6 +93,49 @@
                 @endforeach
             </div>
 
+            {{-- Software across the fleet — a second row, deliberately: these
+                 count machines by their SOFTWARE state, a different question
+                 from the row above. "Total tracked" is items, not machines,
+                 so it isn't a filter target; the other three set
+                 softwareStatus and filter the same list below. --}}
+            @php
+                $swPct = fn (int $n) => $stats['total'] > 0 ? round($n / $stats['total'] * 100).'%' : '—';
+                $softwareCards = [
+                    ['label' => 'Total tracked', 'value' => $stats['software_total'], 'sub' => 'Software items detected', 'tone' => 'teal', 'filter' => null,
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375"/>'],
+                    ['label' => 'Update required', 'value' => $stats['software_outdated'], 'sub' => $swPct($stats['software_outdated']).' of machines', 'tone' => $stats['software_outdated'] > 0 ? 'amber' : 'slate', 'filter' => 'outdated',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>'],
+                    ['label' => 'Up to date', 'value' => $stats['software_uptodate'], 'sub' => $swPct($stats['software_uptodate']).' of machines', 'tone' => 'green', 'filter' => 'uptodate',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                    ['label' => 'Pending', 'value' => $stats['software_pending'], 'sub' => 'Machines with a job running', 'tone' => $stats['software_pending'] > 0 ? 'sky' : 'slate', 'filter' => 'pending',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                ];
+                $swTones = $tones + ['sky' => 'bg-sky-50 text-sky-700 border-sky-100'];
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach ($softwareCards as $card)
+                    @php $tag = $card['filter'] === null ? 'div' : 'a'; @endphp
+                    <{{ $tag }}
+                        @if ($card['filter'] !== null)
+                            href="#computers-list" wire:click="$set('softwareStatus', '{{ $card['filter'] }}')"
+                        @endif
+                        @class([
+                            'pd-card p-4 block text-left',
+                            'hover:border-teal-200 transition-colors cursor-pointer' => $card['filter'] !== null,
+                            'ring-2 ring-teal-500' => $card['filter'] !== null && $softwareStatus === $card['filter'],
+                        ])>
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $swTones[$card['tone']] }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">{!! $card['icon'] !!}</svg>
+                            </span>
+                            <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                        </div>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                    </{{ $tag }}>
+                @endforeach
+            </div>
+
             @if (session('status'))
                 <div class="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-700" role="status">
                     {{ session('status') }}
@@ -103,7 +153,7 @@
                  horizontal scrollbar and hid the status column — the one thing
                  an operator scans for. Each machine is now a block that reflows:
                  identity on the left, facts in the middle, state on the right. --}}
-            <div class="pd-card">
+            <div class="pd-card" id="computers-list">
                 <ul class="divide-y divide-slate-100">
                     @forelse ($computers as $computer)
                         {{-- py-3, not py-4 — matches Clients; see that file for why. --}}
