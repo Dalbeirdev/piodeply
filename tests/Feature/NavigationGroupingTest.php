@@ -2,8 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JobAction;
 use App\Enums\Role as RoleEnum;
+use App\Models\Client;
+use App\Models\ClientRole;
+use App\Models\Computer;
+use App\Models\Package;
+use App\Models\Project;
 use App\Models\User;
+use App\Services\DeploymentService;
 use App\Services\NavigationService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -144,6 +151,44 @@ class NavigationGroupingTest extends TestCase
             ->get(route('packages.index'))
             ->assertOk()
             ->assertSee("openSection: 'software'", false);
+    }
+
+    /**
+     * A pending deployment request otherwise sits invisible until the owner
+     * happens to click into Approvals -- nothing else hints one is waiting.
+     * The nav item itself must carry that count.
+     */
+    public function test_the_approvals_nav_item_carries_the_pending_count(): void
+    {
+        $client = Client::factory()->create();
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        $role = ClientRole::factory()->create([
+            'client_id' => $client->id, 'can_install' => true, 'requires_approval' => true,
+        ]);
+        $requester = tap(User::factory()->create(['client_id' => $client->id, 'client_role_id' => $role->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
+
+        $computer = Computer::factory()->create(['project_id' => Project::factory()->create(['client_id' => $client->id])->id]);
+        $package = Package::factory()->create();
+
+        $this->actingAs($requester);
+        app(DeploymentService::class)->queueIfNeeded($computer, $package, JobAction::Install);
+
+        $items = collect($this->nav()->items($owner));
+        $this->assertSame(1, $items->firstWhere('route', 'approvals.index')['badge']);
+    }
+
+    /** A fresh tenant with nothing pending shows no badge at all -- not a "0". */
+    public function test_the_approvals_nav_item_has_no_badge_when_nothing_is_pending(): void
+    {
+        $client = Client::factory()->create();
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        $items = collect($this->nav()->items($owner));
+        $this->assertNull($items->firstWhere('route', 'approvals.index')['badge']);
     }
 
     /** Collapsing hides items visually; it must not remove them from the page. */

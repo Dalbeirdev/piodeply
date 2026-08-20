@@ -12,6 +12,10 @@
         <svg class="h-[18px] w-[18px] shrink-0 {{ $active ? 'text-teal-700' : 'text-slate-400' }}"
              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{!! $item['icon'] !!}</svg>
-        {{ __($item['label']) }}
+        <span class="flex-1 truncate">{{ __($item['label']) }}</span>
+        @if (! empty($item['badge']))
+            <span class="shrink-0 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold"
+                  title="{{ $item['badge'] }} awaiting approval">{{ $item['badge'] }}</span>
+        @endif
     </a>
 </li>

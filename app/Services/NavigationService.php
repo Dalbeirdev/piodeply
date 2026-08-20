@@ -24,10 +24,17 @@ class NavigationService
     public const ADMIN = 'Administration';
 
     /**
-     * @return list<array{label: string, route: string, active: string, group: ?string}>
+     * @return list<array{label: string, route: string, active: string, group: ?string, badge: ?int}>
      */
     public function items(User $user): array
     {
+        // Deployment requests from approval-gated custom roles otherwise sit
+        // invisible until the owner happens to click into the Approvals
+        // page — nothing else in the app hints one is waiting.
+        $pendingApprovals = ($user->tenantClientId() !== null && $user->isClientOwner())
+            ? \App\Models\DeploymentRequest::where('client_id', $user->tenantClientId())->where('status', 'pending')->count()
+            : 0;
+
         // Order here is the order on screen, within a group and between them.
         $definition = [
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard', 'permission' => null, 'group' => null,
@@ -46,6 +53,7 @@ class NavigationService
                 'icon' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/>'],
             // Deployment requests from approval-gated roles await the owner.
             ['label' => 'Approvals', 'route' => 'approvals.index', 'active' => 'approvals.*', 'permission' => Permission::UsersView, 'group' => self::FLEET, 'tenantOnly' => true, 'ownerOnly' => true,
+                'badge' => $pendingApprovals > 0 ? $pendingApprovals : null,
                 'icon' => '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>'],
             ['label' => 'Device Groups', 'route' => 'computers.groups', 'active' => 'computers.groups', 'permission' => Permission::ComputersView, 'group' => self::FLEET, 'staffOnly' => true,
                 'icon' => '<path d="M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87"/><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/>'],
@@ -139,6 +147,7 @@ class NavigationService
                 'active' => $item['active'],
                 'icon'   => $item['icon'] ?? '',
                 'group'  => $item['group'] ?? null,
+                'badge'  => $item['badge'] ?? null,
             ])
             ->values()
             ->all();
