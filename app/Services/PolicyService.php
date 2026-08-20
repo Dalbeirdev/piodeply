@@ -440,6 +440,40 @@ class PolicyService
         return $counts;
     }
 
+    /**
+     * Fleet-wide widget: aggregate across every active, non-disabled
+     * policy. Mirrors BrowserPolicyService::fleetSummary() — the same
+     * "one number for the whole fleet" a hub tile or a dashboard card
+     * needs, without hand-rolling a second summation of complianceSummary()
+     * that could quietly drift from what the report itself shows.
+     *
+     * @return array{policies: int, target: int, compliant: int, percent: ?float}
+     */
+    public function fleetSummary(?int $tenantClientId = null): array
+    {
+        $policies = SoftwarePolicy::query()
+            ->where('mode', '!=', \App\Enums\PolicyMode::Disabled)
+            ->when($tenantClientId !== null, fn ($q) => $q->whereHas(
+                'project',
+                fn ($p) => $p->withTrashed()->where('client_id', $tenantClientId)
+            ))
+            ->get();
+
+        $totals = ['policies' => $policies->count(), 'target' => 0, 'compliant' => 0];
+
+        foreach ($policies as $policy) {
+            $summary = $this->complianceSummary($policy);
+            $totals['target'] += $summary['target'];
+            $totals['compliant'] += $summary['compliant'];
+        }
+
+        $totals['percent'] = $totals['target'] > 0
+            ? round($totals['compliant'] / $totals['target'] * 100, 1)
+            : null;
+
+        return $totals;
+    }
+
     /** @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string, outdated: bool} */
     private function row(Computer $computer, string $status, ?string $version, string $reason, bool $outdated = false): array
     {

@@ -8,6 +8,7 @@ use App\Enums\Role as RoleEnum;
 use App\Livewire\Reports\ComplianceReport;
 use App\Livewire\Reports\ComputersReport;
 use App\Livewire\Reports\DeploymentsReport;
+use App\Livewire\Reports\ReportsIndex;
 use App\Models\Client;
 use App\Models\Computer;
 use App\Models\ComputerSoftware;
@@ -54,6 +55,37 @@ class ReportsTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)->get('/reports')->assertForbidden();
+    }
+
+    /** Each hub tile leads with the same number the linked report itself shows -- never a second, quietly different one. */
+    public function test_the_hub_tiles_match_what_the_linked_reports_show(): void
+    {
+        $project = Project::factory()->create();
+        $package = Package::factory()->create();
+
+        $compliant = Computer::factory()->online()->create(['project_id' => $project->id]);
+        $offline = Computer::factory()->offline()->create(['project_id' => $project->id]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $compliant->id, 'name' => $package->winget_id, 'source' => 'winget',
+        ]);
+        SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+
+        DeploymentJob::factory()->count(3)->create([
+            'computer_id' => $compliant->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Succeeded,
+        ]);
+        DeploymentJob::factory()->create([
+            'computer_id' => $compliant->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Failed,
+        ]);
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(ReportsIndex::class)
+            ->assertViewHas('compliance', fn (array $c) => $c['policies'] === 1 && $c['percent'] === 50.0)
+            ->assertViewHas('deployments', fn (array $d) => $d['rate'] === 75.0)
+            ->assertViewHas('offline', 1);
     }
 
     public function test_compliance_report_aggregates_policies(): void
