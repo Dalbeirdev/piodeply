@@ -103,6 +103,10 @@
                                 <td class="px-6 py-3 font-medium text-slate-800">
                                     {{ $member->name }}
                                     @if ($member->id === auth()->id())<span class="text-xs text-slate-400">(you)</span>@endif
+                                    @if ($member->two_factor_confirmed_at !== null)
+                                        <span class="ml-1 align-middle inline-flex items-center text-[10px] font-semibold rounded-full px-1.5 py-0.5 border bg-green-50 text-green-700 border-green-200"
+                                              title="Two-factor enabled {{ $member->two_factor_confirmed_at->format('Y-m-d') }}">2FA</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3">{{ $member->email }}</td>
                                 <td class="px-6 py-3">

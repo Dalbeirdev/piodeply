@@ -106,6 +106,21 @@ class RbacTest extends TestCase
             ->assertDontSee('admin/users');
     }
 
+    /** Same definition `php artisan security:check` uses -- surfaced where an admin can actually fix it, not only in the CLI audit. */
+    public function test_the_users_page_counts_unbound_client_accounts_and_missing_2fa(): void
+    {
+        $admin = tap($this->userWithRole(RoleEnum::Admin), fn (User $u) => $u->forceFill(['two_factor_confirmed_at' => now()])->save());
+        User::factory()->create(['two_factor_confirmed_at' => null, 'client_id' => null])->assignRole(RoleEnum::Manager->value);
+        $unboundClient = tap(User::factory()->create(['two_factor_confirmed_at' => now(), 'client_id' => null]),
+            fn (User $u) => $u->assignRole(RoleEnum::Client->value));
+
+        Livewire::actingAs($admin)
+            ->test(\App\Livewire\Admin\ManageUsers::class)
+            ->assertViewHas('stats', fn (array $s) => $s['no_2fa'] === 1 && $s['unbound'] === 1)
+            ->set('statusFilter', 'unbound')
+            ->assertSee($unboundClient->name);
+    }
+
     public function test_admin_can_assign_roles_via_users_page(): void
     {
         $admin = $this->userWithRole(RoleEnum::Admin);

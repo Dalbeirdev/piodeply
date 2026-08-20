@@ -13,6 +13,8 @@ class ManageUsers extends Component
 
     public string $search = '';
 
+    public string $statusFilter = ''; // '', 'no_2fa', 'unbound'
+
     public bool $showCreate = false;
 
     public string $newName = '';
@@ -24,6 +26,11 @@ class ManageUsers extends Component
     public string $newRole = '';
 
     public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatusFilter(): void
     {
         $this->resetPage();
     }
@@ -132,6 +139,24 @@ class ManageUsers extends Component
         abort_if(auth()->user()->tenantClientId() !== null, 403, 'Use your Team page to manage your own users.');
     }
 
+    /**
+     * The same account-hygiene facts `php artisan security:check` already
+     * computes, surfaced where an admin can actually act on them — this
+     * page, next to the very controls (role, client) that fix them —
+     * instead of only visible to whoever thinks to run the CLI audit.
+     */
+    private function stats(): array
+    {
+        return [
+            'total'   => User::count(),
+            'no_2fa'  => User::whereNull('two_factor_confirmed_at')->count(),
+            // Same definition SecurityCheck uses: a Client-role account with
+            // no client binding fails closed (sees nothing) rather than
+            // breaking, but it is dead weight until someone fixes it here.
+            'unbound' => User::role(RoleEnum::Client->value)->whereNull('client_id')->count(),
+        ];
+    }
+
     public function render()
     {
         $this->assertStaff();
@@ -139,12 +164,15 @@ class ManageUsers extends Component
 
         return view('livewire.admin.manage-users', [
             'clients' => \App\Models\Client::orderBy('company_name')->get(['id', 'company_name']),
+            'stats'   => $this->stats(),
             'users' => User::with('roles')
                 ->when($this->search !== '', function ($query) {
                     $query->where(fn ($q) => $q
                         ->where('name', 'like', "%{$this->search}%")
                         ->orWhere('email', 'like', "%{$this->search}%"));
                 })
+                ->when($this->statusFilter === 'no_2fa', fn ($q) => $q->whereNull('two_factor_confirmed_at'))
+                ->when($this->statusFilter === 'unbound', fn ($q) => $q->role(RoleEnum::Client->value)->whereNull('client_id'))
                 ->orderBy('name')
                 ->paginate(15),
             'roles' => RoleEnum::values(),

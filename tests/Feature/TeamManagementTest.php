@@ -47,6 +47,21 @@ class TeamManagementTest extends TestCase
             ->assertSee('New user');
     }
 
+    /** The admin Users page already shows this per person; the owner's own Team page showed nothing at all. */
+    public function test_the_2fa_badge_shows_for_enrolled_members_only(): void
+    {
+        $enrolled = tap(User::factory()->create(['client_id' => $this->client->id, 'two_factor_confirmed_at' => now()]),
+            fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
+        $notEnrolled = tap(User::factory()->create(['client_id' => $this->client->id, 'two_factor_confirmed_at' => null]),
+            fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
+
+        $html = Livewire::actingAs($this->owner)->test(TeamIndex::class)->html();
+
+        $this->assertStringContainsString($enrolled->name, $html);
+        $this->assertStringContainsString($notEnrolled->name, $html);
+        $this->assertSame(1, substr_count($html, '>2FA<'), 'only the enrolled member should carry the badge');
+    }
+
     public function test_an_owner_can_add_a_technician_bound_to_their_own_client(): void
     {
         Livewire::actingAs($this->owner)

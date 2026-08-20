@@ -1,8 +1,11 @@
 <div>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-slate-800 leading-tight">
-            {{ __('Users') }}
-        </h2>
+        <div>
+            <h2 class="font-semibold text-xl text-slate-800 leading-tight">
+                {{ __('Users') }}
+            </h2>
+            <p class="text-sm text-slate-500 mt-0.5">{{ $stats['total'] }} {{ Str::plural('user', $stats['total']) }}</p>
+        </div>
     </x-slot>
 
     <div class="py-12">
@@ -13,10 +16,48 @@
                 </div>
             @endif
 
+            {{-- Same account-hygiene facts `php artisan security:check` already
+                 computes, shown where the fix actually happens: the role and
+                 client controls on each row below. --}}
+            @php
+                $userCards = [
+                    ['label' => 'Without 2FA', 'value' => $stats['no_2fa'], 'sub' => 'Not enrolled', 'tone' => $stats['no_2fa'] > 0 ? 'amber' : 'slate', 'filter' => 'no_2fa'],
+                    ['label' => 'Unbound client accounts', 'value' => $stats['unbound'], 'sub' => 'Client role, no client set', 'tone' => $stats['unbound'] > 0 ? 'red' : 'slate', 'filter' => 'unbound'],
+                ];
+                $userTones = [
+                    'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+                    'red'   => 'bg-red-50 text-red-700 border-red-100',
+                    'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                ];
+            @endphp
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                @foreach ($userCards as $card)
+                    <button type="button" wire:click="$set('statusFilter', '{{ $statusFilter === $card['filter'] ? '' : $card['filter'] }}')"
+                        @class([
+                            'pd-card p-4 block text-left w-full hover:border-teal-200 transition-colors cursor-pointer',
+                            'ring-2 ring-teal-500' => $statusFilter === $card['filter'],
+                        ])>
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $userTones[$card['tone']] }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4M12 17h.01"/></svg>
+                            </span>
+                            <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                        </div>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                    </button>
+                @endforeach
+            </div>
+
             <div class="flex items-center justify-between">
-                <input type="search" wire:model.live.debounce.300ms="search"
-                       placeholder="Search name or email…" aria-label="Search users"
-                       class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-80">
+                <div class="flex items-center gap-3">
+                    <input type="search" wire:model.live.debounce.300ms="search"
+                           placeholder="Search name or email…" aria-label="Search users"
+                           class="border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm w-80">
+                    @if ($statusFilter !== '')
+                        <button type="button" wire:click="$set('statusFilter', '')" class="text-xs pd-action">Clear filter</button>
+                    @endif
+                </div>
                 <div class="flex items-center gap-3">
                     <span x-data="{ shown: false }"
                           x-on:role-updated.window="shown = true; setTimeout(() => shown = false, 2000)"
@@ -87,7 +128,7 @@
                  editable controls on the right. Everything wraps on narrow
                  screens — no horizontal scrollbar, ever. --}}
             <div class="pd-card divide-y divide-slate-100">
-                @foreach ($users as $user)
+                @forelse ($users as $user)
                     <div class="px-6 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
                         {{-- Identity --}}
                         <div class="flex items-center gap-3 min-w-[16rem] flex-1">
@@ -161,7 +202,9 @@
                             </div>
                         </div>
                     </div>
-                @endforeach
+                @empty
+                    <div class="px-6 py-12 text-center text-slate-400">No users match this filter.</div>
+                @endforelse
             </div>
 
             {{ $users->links() }}
