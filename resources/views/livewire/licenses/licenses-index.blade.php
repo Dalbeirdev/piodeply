@@ -12,6 +12,48 @@
                 <div class="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700" role="alert">{{ session('error') }}</div>
             @endif
 
+            @php
+                $licenseCards = [
+                    ['label' => 'Total licenses', 'value' => $stats['total'], 'sub' => 'Tracked here', 'tone' => 'teal', 'filter' => null,
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                    ['label' => 'Expiring soon', 'value' => $stats['expiring'], 'sub' => 'Within 30 days', 'tone' => $stats['expiring'] > 0 ? 'amber' : 'slate', 'filter' => 'expiring',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>'],
+                    ['label' => 'Expired', 'value' => $stats['expired'], 'sub' => 'Renewal overdue', 'tone' => $stats['expired'] > 0 ? 'red' : 'slate', 'filter' => 'expired',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4M12 17h.01"/>'],
+                    ['label' => 'Seats full', 'value' => $stats['full'], 'sub' => 'No free seat left', 'tone' => $stats['full'] > 0 ? 'amber' : 'slate', 'filter' => 'full',
+                     'icon' => '<path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/>'],
+                ];
+                $licenseTones = [
+                    'teal'  => 'bg-teal-50 text-teal-700 border-teal-100',
+                    'amber' => 'bg-amber-50 text-amber-700 border-amber-100',
+                    'red'   => 'bg-red-50 text-red-700 border-red-100',
+                    'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                ];
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach ($licenseCards as $card)
+                    @php $tag = $card['filter'] === null ? 'div' : 'button'; @endphp
+                    <{{ $tag }}
+                        @if ($card['filter'] !== null)
+                            type="button" wire:click="$set('statusFilter', '{{ $statusFilter === $card['filter'] ? '' : $card['filter'] }}')"
+                        @endif
+                        @class([
+                            'pd-card p-4 block text-left w-full',
+                            'hover:border-teal-200 transition-colors cursor-pointer' => $card['filter'] !== null,
+                            'ring-2 ring-teal-500' => $card['filter'] !== null && $statusFilter === $card['filter'],
+                        ])>
+                        <div class="flex items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {{ $licenseTones[$card['tone']] }}">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor">{!! $card['icon'] !!}</svg>
+                            </span>
+                            <p class="text-sm font-semibold text-slate-700 leading-tight">{{ $card['label'] }}</p>
+                        </div>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums mt-2">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                    </{{ $tag }}>
+                @endforeach
+            </div>
+
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search" placeholder="Search name or vendor…"
                        class="block w-64 text-sm border-slate-300 focus:border-teal-500 focus:ring-teal-500 rounded-md shadow-sm">
@@ -22,6 +64,9 @@
                             <option value="{{ $client->id }}">{{ $client->company_name }}</option>
                         @endforeach
                     </select>
+                @endif
+                @if ($statusFilter !== '')
+                    <button type="button" wire:click="$set('statusFilter', '')" class="text-xs pd-action">Clear status filter</button>
                 @endif
             </div>
 
@@ -148,7 +193,11 @@
                 </div>
             @empty
                 <div class="pd-card p-8 text-center text-sm text-slate-500">
-                    No licenses yet. Add your paid software licenses to track keys, seats and renewals in one place.
+                    @if ($statusFilter !== '' || $search !== '')
+                        No licenses match this filter.
+                    @else
+                        No licenses yet. Add your paid software licenses to track keys, seats and renewals in one place.
+                    @endif
                 </div>
             @endforelse
         </div>

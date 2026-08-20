@@ -153,4 +153,47 @@ class LicenseManagementTest extends TestCase
         $this->assertFalse($soon->isExpired());
         $this->assertFalse($far->expiresSoon());
     }
+
+    /* ─────────── the summary cards ─────────── */
+
+    public function test_the_summary_cards_count_by_status(): void
+    {
+        $this->license(['expires_at' => now()->subDay()->toDateString(), 'name' => 'Old'], key: 'K1');
+        $this->license(['expires_at' => now()->addDays(10)->toDateString(), 'name' => 'Soon'], key: 'K2');
+        $this->license(['expires_at' => now()->addYear()->toDateString(), 'name' => 'Far'], key: 'K3');
+
+        Livewire::actingAs($this->ownerOf($this->clientA))
+            ->test(LicensesIndex::class)
+            ->assertViewHas('stats', fn (array $s) => $s['total'] === 3
+                && $s['expired'] === 1
+                && $s['expiring'] === 1);
+    }
+
+    public function test_a_seat_limited_license_with_no_free_seat_counts_as_full_but_unlimited_never_does(): void
+    {
+        $projectA = Project::factory()->create(['client_id' => $this->clientA->id]);
+        $computer = Computer::factory()->create(['project_id' => $projectA->id]);
+        $service = app(LicenseService::class);
+
+        $full = $this->license(['seats' => 1, 'name' => 'Full'], key: 'K1');
+        $service->assign($full, $computer, null);
+
+        $this->license(['seats' => null, 'name' => 'Unlimited'], key: 'K2');
+
+        Livewire::actingAs($this->ownerOf($this->clientA))
+            ->test(LicensesIndex::class)
+            ->assertViewHas('stats', fn (array $s) => $s['full'] === 1);
+    }
+
+    public function test_clicking_the_expired_card_filters_the_list(): void
+    {
+        $this->license(['expires_at' => now()->subDay()->toDateString(), 'name' => 'ExpiredLicense'], key: 'K1');
+        $this->license(['expires_at' => now()->addYear()->toDateString(), 'name' => 'FarLicense'], key: 'K2');
+
+        Livewire::actingAs($this->ownerOf($this->clientA))
+            ->test(LicensesIndex::class)
+            ->assertSee('ExpiredLicense')->assertSee('FarLicense')
+            ->set('statusFilter', 'expired')
+            ->assertSee('ExpiredLicense')->assertDontSee('FarLicense');
+    }
 }

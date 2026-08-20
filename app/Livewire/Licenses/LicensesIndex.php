@@ -21,6 +21,8 @@ class LicensesIndex extends Component
 
     public ?int $clientFilter = null; // staff only
 
+    public string $statusFilter = ''; // '', 'expiring', 'expired', 'full'
+
     // Create/edit form state.
     public ?int $editingId = null;
 
@@ -178,12 +180,38 @@ class LicensesIndex extends Component
         $this->reset('revealedId', 'revealedKey');
     }
 
+    /** Fully assigned AND seat-limited — an unlimited license is never "full". */
+    private function isFull(SoftwareLicense $license): bool
+    {
+        return $license->seats !== null && ! $license->hasFreeSeat();
+    }
+
     public function render()
     {
         $tenantId = $this->tenantId();
 
+        // No pagination on this page (a license register is a handful of
+        // rows, not a fleet), so the cards and the filter both work off one
+        // fetch rather than a second query per status.
+        $all = $this->visibleLicenses()->orderBy('name')->get();
+
+        $stats = [
+            'total'    => $all->count(),
+            'expiring' => $all->filter->expiresSoon()->count(),
+            'expired'  => $all->filter->isExpired()->count(),
+            'full'     => $all->filter(fn (SoftwareLicense $l) => $this->isFull($l))->count(),
+        ];
+
+        $licenses = match ($this->statusFilter) {
+            'expiring' => $all->filter->expiresSoon(),
+            'expired'  => $all->filter->isExpired(),
+            'full'     => $all->filter(fn (SoftwareLicense $l) => $this->isFull($l)),
+            default    => $all,
+        };
+
         return view('livewire.licenses.licenses-index', [
-            'licenses'  => $this->visibleLicenses()->orderBy('name')->get(),
+            'licenses'  => $licenses->values(),
+            'stats'     => $stats,
             'isStaff'   => $tenantId === null,
             'canManage' => auth()->user()->can(Permission::LicensesManage->value),
             'clients'   => $tenantId === null ? Client::orderBy('company_name')->get(['id', 'company_name']) : collect(),
