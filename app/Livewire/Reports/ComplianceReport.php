@@ -43,6 +43,7 @@ class ComplianceReport extends Component
             'policies'      => $rows->count(),
             'target'        => $rows->sum(fn ($row) => $row['summary']['target']),
             'compliant'     => $rows->sum(fn ($row) => $row['summary']['compliant']),
+            'compliant_outdated' => $rows->sum(fn ($row) => $row['summary']['compliant_outdated']),
             'failed'        => $rows->sum(fn ($row) => $row['summary']['failed']),
             'non_compliant' => $rows->sum(fn ($row) => $row['summary']['non_compliant']),
         ];
@@ -60,7 +61,7 @@ class ComplianceReport extends Component
         $rows = $this->build($service)['rows'];
 
         $csv = implode(",", ['Policy', 'Client', project_term(), 'Action', 'Mode', 'Target', 'Compliant',
-            'Pending', 'Scheduled', 'Failed', 'Non-compliant', 'Excluded', 'Offline', 'Compliance %']) . "\n";
+            'Compliant but outdated', 'Pending', 'Scheduled', 'Failed', 'Non-compliant', 'Excluded', 'Offline', 'Compliance %']) . "\n";
 
         foreach ($rows as $row) {
             $summary = $row['summary'];
@@ -72,7 +73,7 @@ class ComplianceReport extends Component
                     $row['policy']->project->name,
                     $row['policy']->action->label(),
                     $row['policy']->mode->label(),
-                    $summary['target'], $summary['compliant'], $summary['pending'], $summary['scheduled'],
+                    $summary['target'], $summary['compliant'], $summary['compliant_outdated'], $summary['pending'], $summary['scheduled'],
                     $summary['failed'], $summary['non_compliant'], $summary['excluded'], $summary['offline'],
                     $summary['percent'] ?? '',
                 ]

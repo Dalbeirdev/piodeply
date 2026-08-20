@@ -10,13 +10,17 @@
                     <x-secondary-button type="button" wire:click="export">Export CSV</x-secondary-button>
                 </div>
             @endcan
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Policies</p>
                     <p class="text-2xl font-bold text-slate-800">{{ $overall['policies'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Machine targets</p>
                     <p class="text-2xl font-bold text-slate-800">{{ $overall['target'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Compliant</p>
                     <p class="text-2xl font-bold text-green-600">{{ $overall['compliant'] }}</p></div>
+                <div class="pd-card p-4" title="The policy's own condition is genuinely met — this only means the machine's package manager has since reported something newer.">
+                    <p class="text-xs uppercase tracking-wider text-slate-400">Compliant but outdated</p>
+                    <p class="text-2xl font-bold {{ $overall['compliant_outdated'] > 0 ? 'text-amber-600' : 'text-slate-300' }}">{{ $overall['compliant_outdated'] }}</p>
+                </div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Failed</p>
                     <p class="text-2xl font-bold text-red-600">{{ $overall['failed'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Overall</p>
@@ -64,7 +68,12 @@
                                 </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-slate-600 text-sm">{{ $policy->mode->label() }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-slate-700">{{ $summary['target'] }}</td>
-                                <td class="px-6 py-3 whitespace-nowrap text-right text-green-600">{{ $summary['compliant'] }}</td>
+                                <td class="px-6 py-3 whitespace-nowrap text-right text-green-600">
+                                    {{ $summary['compliant'] }}
+                                    @if ($summary['compliant_outdated'] > 0)
+                                        <span class="ml-1 text-xs font-normal text-amber-600" title="Policy condition met, but a newer version has been reported">({{ $summary['compliant_outdated'] }} outdated)</span>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-blue-600">{{ $summary['pending'] }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right text-violet-600">{{ $summary['scheduled'] }}</td>
                                 <td class="px-6 py-3 whitespace-nowrap text-right {{ $summary['failed'] > 0 ? 'text-red-600 font-semibold' : 'text-slate-400' }}">{{ $summary['failed'] }}</td>

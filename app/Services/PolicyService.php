@@ -278,7 +278,7 @@ class PolicyService
     /**
      * Per-computer compliance rows for a policy.
      *
-     * @return Collection<int, array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string}>
+     * @return Collection<int, array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string, outdated: bool}>
      */
     public function complianceFor(SoftwarePolicy $policy): Collection
     {
@@ -293,7 +293,7 @@ class PolicyService
      * machine. The computer-centric inverse of complianceFor(): same
      * reasoning, asked from the other end, for "why is this not installed?".
      *
-     * @return Collection<int, array{policy: SoftwarePolicy, status: string, reason: string, installed_version: ?string}>
+     * @return Collection<int, array{policy: SoftwarePolicy, status: string, reason: string, installed_version: ?string, outdated: bool}>
      */
     public function explainFor(Computer $computer): Collection
     {
@@ -330,7 +330,7 @@ class PolicyService
      * ring and the failure backoff all govern queueing, which will never
      * happen here, so quoting them would describe work that is not coming.
      *
-     * @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string}
+     * @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string, outdated: bool}
      */
     private function auditRow(SoftwarePolicy $policy, Computer $computer): array
     {
@@ -341,7 +341,8 @@ class PolicyService
                 $computer,
                 'compliant',
                 $state['version'],
-                $this->compliantReason($policy, $state).$this->updateNote($policy, $computer)
+                $this->compliantReason($policy, $state).$this->updateNote($policy, $computer),
+                outdated: $this->isOutdated($policy, $computer),
             );
         }
 
@@ -356,7 +357,7 @@ class PolicyService
     /**
      * One policy against one machine: its status and, in words, why.
      *
-     * @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string}
+     * @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string, outdated: bool}
      */
     private function evaluate(SoftwarePolicy $policy, Computer $computer, bool $excluded): array
     {
@@ -373,7 +374,8 @@ class PolicyService
                 $computer,
                 'compliant',
                 $state['version'],
-                $this->compliantReason($policy, $state).$this->updateNote($policy, $computer)
+                $this->compliantReason($policy, $state).$this->updateNote($policy, $computer),
+                outdated: $this->isOutdated($policy, $computer),
             );
         }
 
@@ -410,7 +412,7 @@ class PolicyService
     }
 
     /**
-     * @return array{target: int, compliant: int, pending: int, failed: int, non_compliant: int, excluded: int, offline: int, percent: ?float}
+     * @return array{target: int, compliant: int, compliant_outdated: int, pending: int, failed: int, non_compliant: int, excluded: int, offline: int, percent: ?float}
      */
     public function complianceSummary(SoftwarePolicy $policy): array
     {
@@ -419,6 +421,10 @@ class PolicyService
         $counts = [
             'target'        => $rows->where('status', '!=', 'excluded')->count(),
             'compliant'     => $rows->where('status', 'compliant')->count(),
+            // A subset of "compliant", never a different status — the policy
+            // condition is genuinely met; this only says a newer version
+            // exists too, which "Compliant" alone hides completely.
+            'compliant_outdated' => $rows->where('status', 'compliant')->where('outdated', true)->count(),
             'pending'       => $rows->where('status', 'pending')->count(),
             'scheduled'     => $rows->where('status', 'scheduled')->count(),
             'failed'        => $rows->where('status', 'failed')->count(),
@@ -434,8 +440,8 @@ class PolicyService
         return $counts;
     }
 
-    /** @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string} */
-    private function row(Computer $computer, string $status, ?string $version, string $reason): array
+    /** @return array{computer: Computer, status: string, offline: bool, installed_version: ?string, reason: string, outdated: bool} */
+    private function row(Computer $computer, string $status, ?string $version, string $reason, bool $outdated = false): array
     {
         return [
             'computer'          => $computer,
@@ -443,6 +449,10 @@ class PolicyService
             'offline'           => ! $computer->isOnline(),
             'installed_version' => $version,
             'reason'            => $reason,
+            // "Compliant" only ever means the policy's own condition is met
+            // (see updateNote()'s docblock) — this is a second, independent
+            // fact riding alongside it, never a reason to change the status.
+            'outdated'          => $outdated,
         ];
     }
 
@@ -465,8 +475,23 @@ class PolicyService
      */
     private function updateNote(SoftwarePolicy $policy, Computer $computer): string
     {
+        $row = $this->reportedSoftware($policy, $computer);
+
+        return $row !== null && $row->hasUpdate()
+            ? " — {$row->available_version} available"
+            : '';
+    }
+
+    /** The same fact updateNote() prints, as a plain boolean the fleet-wide compliance report can count. */
+    private function isOutdated(SoftwarePolicy $policy, Computer $computer): bool
+    {
+        return $this->reportedSoftware($policy, $computer)?->hasUpdate() ?? false;
+    }
+
+    private function reportedSoftware(SoftwarePolicy $policy, Computer $computer): ?\App\Models\ComputerSoftware
+    {
         if (! $policy->package->installer_type->requiresPackageManagerId()) {
-            return ''; // no package manager to ask
+            return null; // no package manager to ask
         }
 
         $id = $policy->package->installer_type === \App\Enums\InstallerType::Winget
@@ -474,17 +499,13 @@ class PolicyService
             : $policy->package->choco_id;
 
         if ($id === null) {
-            return '';
+            return null;
         }
 
-        $row = $computer->software()
+        return $computer->software()
             ->where('source', $policy->package->installer_type->value)
             ->where('name', $id)
             ->first();
-
-        return $row !== null && $row->hasUpdate()
-            ? " — {$row->available_version} available"
-            : '';
     }
 
     /** @param array{present: bool, version: ?string} $state */

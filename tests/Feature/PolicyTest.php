@@ -140,6 +140,38 @@ class PolicyTest extends TestCase
         $this->assertSame(0.0, $summary['percent']);
     }
 
+    /**
+     * The exact blind spot updateNote()'s docblock warns about: an Install
+     * policy is satisfied the moment the software is present, so this MUST
+     * still read "compliant" — outdated is a second, independent fact
+     * riding alongside it, never a reason to fail the policy.
+     */
+    public function test_compliant_but_outdated_is_counted_apart_from_plain_compliant(): void
+    {
+        $project = Project::factory()->create();
+        $package = Package::factory()->create(['installer_type' => 'winget']);
+        $current = Computer::factory()->create(['project_id' => $project->id]);
+        $stale = Computer::factory()->create(['project_id' => $project->id]);
+
+        ComputerSoftware::factory()->create([
+            'computer_id' => $current->id, 'name' => $package->winget_id, 'source' => 'winget',
+            'version' => '141.0', 'available_version' => null,
+        ]);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $stale->id, 'name' => $package->winget_id, 'source' => 'winget',
+            'version' => '138.0', 'available_version' => '141.0',
+        ]);
+
+        $policy = SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+
+        $summary = $this->service()->complianceSummary($policy);
+
+        $this->assertSame(2, $summary['compliant'], 'both machines satisfy the policy');
+        $this->assertSame(1, $summary['compliant_outdated'], 'only the stale one carries the extra fact');
+    }
+
     public function test_disabled_mode_is_inert(): void
     {
         $project = Project::factory()->create();

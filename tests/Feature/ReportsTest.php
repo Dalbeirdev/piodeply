@@ -79,6 +79,35 @@ class ReportsTest extends TestCase
                 && $overall['percent'] === 50.0);
     }
 
+    /** The report's whole reason to exist: "94% compliant" must not hide that half of it is stale. */
+    public function test_compliance_report_surfaces_compliant_but_outdated_machines(): void
+    {
+        $project = Project::factory()->create();
+        $package = Package::factory()->create(['installer_type' => 'winget']);
+        $stale = Computer::factory()->create(['project_id' => $project->id, 'hostname' => 'STALE-PC']);
+        ComputerSoftware::factory()->create([
+            'computer_id' => $stale->id, 'name' => $package->winget_id, 'source' => 'winget',
+            'version' => '138.0', 'available_version' => '141.0',
+        ]);
+
+        SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(ComplianceReport::class)
+            ->assertViewHas('overall', fn ($overall) => $overall['compliant'] === 1
+                && $overall['compliant_outdated'] === 1)
+            ->assertSee('1 outdated');
+
+        $this->actingAs($this->userWithRole(RoleEnum::Manager));
+        $component = new ComplianceReport();
+        ob_start();
+        $component->export(app(\App\Services\PolicyService::class))->sendContent();
+        $csv = ob_get_clean();
+        $this->assertStringContainsString('Compliant but outdated', $csv);
+    }
+
     public function test_deployments_report_counts_and_success_rate(): void
     {
         $computer = Computer::factory()->create();
@@ -106,6 +135,31 @@ class ReportsTest extends TestCase
                 && $stats['success_rate'] === 75.0);
     }
 
+    /** A red "Failed: 3" tells an operator nothing about whether it's three retriable blips or three broken packages -- same classifier the Needs Attention queue uses. */
+    public function test_deployments_report_breaks_failures_down_by_kind(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create();
+
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Failed,
+            'exit_code' => \App\Models\DeploymentJob::PERMANENT_EXIT_CODES[0], // package
+        ]);
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Failed,
+            'exit_code' => \App\Models\DeploymentJob::MACHINE_EXIT_CODES[0], // machine
+        ]);
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(DeploymentsReport::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['failed'] === 2
+                && $stats['failed_by_kind']['package'] === 1
+                && $stats['failed_by_kind']['machine'] === 1)
+            ->assertSee('Needs attention');
+    }
+
     public function test_deployment_export_produces_csv_and_respects_permission(): void
     {
         $computer = Computer::factory()->create(['hostname' => 'CSV-PC']);
@@ -130,6 +184,7 @@ class ReportsTest extends TestCase
         $csv = ob_get_clean();
         $this->assertStringContainsString('CSV-PC', $csv);
         $this->assertStringContainsString('CsvApp', $csv);
+        $this->assertStringContainsString('Failure kind', $csv);
 
         // Viewer (view only) is refused.
         Livewire::actingAs($this->userWithRole(RoleEnum::Viewer))

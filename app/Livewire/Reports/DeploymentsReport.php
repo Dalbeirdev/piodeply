@@ -69,10 +69,22 @@ class DeploymentsReport extends Component
         $failed = (int) $byStatus->get(JobStatus::Failed->value, 0);
         $finished = $succeeded + $failed;
 
+        // Same classifier the escalation path and the Needs Attention queue
+        // use — a red "Failed: 14" here says nothing about whether that's
+        // fourteen momentary blips or fourteen machines with a full disk.
+        // exit_code only, never a full model: this can be thousands of rows
+        // on a wide date range.
+        $failedByKind = (clone $this->query())
+            ->where('status', JobStatus::Failed)
+            ->pluck('exit_code')
+            ->map(fn ($code) => DeploymentJob::classifyFailure($code)->value)
+            ->countBy();
+
         return [
             'total'        => $total,
             'succeeded'    => $succeeded,
             'failed'       => $failed,
+            'failed_by_kind' => $failedByKind,
             'in_flight'    => $total - $finished - (int) $byStatus->get(JobStatus::Cancelled->value, 0),
             'cancelled'    => (int) $byStatus->get(JobStatus::Cancelled->value, 0),
             'success_rate' => $finished > 0 ? round($succeeded / $finished * 100, 1) : null,
@@ -85,7 +97,7 @@ class DeploymentsReport extends Component
 
         $jobs = $this->query()->orderByDesc('id')->limit(self::EXPORT_CAP)->get();
 
-        $csv = "Job,Date,Computer,Client,Project,Package,Action,Status,Attempts,Exit code,Failure reason\n";
+        $csv = "Job,Date,Computer,Client,Project,Package,Action,Status,Attempts,Exit code,Failure kind,Failure reason\n";
         foreach ($jobs as $job) {
             $csv .= implode(',', array_map(
                 fn ($value) => '"' . str_replace('"', '""', (string) $value) . '"',
@@ -100,6 +112,7 @@ class DeploymentsReport extends Component
                     $job->status->label(),
                     "{$job->attempts}/{$job->max_attempts}",
                     $job->exit_code ?? '',
+                    $job->status === JobStatus::Failed ? $job->failureKind()->label() : '',
                     $job->failure_reason ?? '',
                 ]
             )) . "\n";

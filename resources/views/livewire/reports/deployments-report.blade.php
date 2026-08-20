@@ -40,8 +40,23 @@
                     <p class="text-2xl font-bold text-slate-800">{{ $stats['total'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Succeeded</p>
                     <p class="text-2xl font-bold text-green-600">{{ $stats['succeeded'] }}</p></div>
-                <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Failed</p>
-                    <p class="text-2xl font-bold text-red-600">{{ $stats['failed'] }}</p></div>
+                <div class="pd-card p-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs uppercase tracking-wider text-slate-400">Failed</p>
+                        @if ($stats['failed'] > 0)
+                            <a href="{{ route('failure-queue.index') }}" class="text-[11px] pd-action">Needs attention →</a>
+                        @endif
+                    </div>
+                    <p class="text-2xl font-bold text-red-600">{{ $stats['failed'] }}</p>
+                    @php
+                        $kindParts = collect(['package', 'machine', 'unknown', 'transient'])
+                            ->map(fn ($kind) => ($stats['failed_by_kind'][$kind] ?? 0) > 0 ? $stats['failed_by_kind'][$kind].' '.$kind : null)
+                            ->filter();
+                    @endphp
+                    @if ($kindParts->isNotEmpty())
+                        <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">{{ $kindParts->implode(' · ') }}</p>
+                    @endif
+                </div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">In flight</p>
                     <p class="text-2xl font-bold text-blue-600">{{ $stats['in_flight'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Success rate</p>
@@ -88,8 +103,17 @@
                                     @endphp
                                     <span class="text-xs font-semibold rounded-full px-2 py-0.5 border {{ $badge }}">{{ $job->status->label() }}</span>
                                 </td>
-                                <td class="px-6 py-3 text-slate-500 text-sm max-w-xs truncate" title="{{ $job->failure_reason }}">
-                                    {{ $job->failure_reason ?? ($job->exit_code !== null ? "exit {$job->exit_code}" : '—') }}
+                                <td class="px-6 py-3 text-slate-500 text-sm max-w-xs">
+                                    @if ($job->status === \App\Enums\JobStatus::Failed)
+                                        @php $kind = $job->failureKind(); @endphp
+                                        <span class="inline-flex text-[10px] font-semibold rounded-full px-1.5 py-0.5 border mr-1 align-middle
+                                                     {{ $kind === \App\Enums\FailureKind::Machine ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700' }}">
+                                            {{ ucfirst($kind->value) }}
+                                        </span>
+                                    @endif
+                                    <span class="truncate align-middle" title="{{ $job->failure_reason }}">
+                                        {{ $job->failure_reason ?? ($job->exit_code !== null ? "exit {$job->exit_code}" : '—') }}
+                                    </span>
                                 </td>
                             </tr>
                         @empty
