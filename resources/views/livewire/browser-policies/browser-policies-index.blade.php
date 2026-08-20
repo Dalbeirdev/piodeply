@@ -1,7 +1,10 @@
 <div>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ browser_policy_terms() }}</h2>
+            <div>
+                <h2 class="font-semibold text-xl text-slate-800 leading-tight">{{ browser_policy_terms() }}</h2>
+                <p class="text-sm text-slate-500 mt-0.5">{{ $policies->total() }} {{ Str::plural(browser_policy_term_lower(), $policies->total()) }}</p>
+            </div>
             <div class="flex items-center gap-2">
                 <a href="{{ route('browser-policies.compliance') }}"
                    class="inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-xs text-slate-700 uppercase tracking-widest hover:bg-slate-50">

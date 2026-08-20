@@ -258,6 +258,15 @@ class BrowserPolicyTest extends TestCase
         $this->assertTrue($policy->excludedComputers()->whereKey($computer->id)->exists());
     }
 
+    public function test_the_index_header_shows_the_total_count(): void
+    {
+        BrowserPolicy::factory()->count(3)->create();
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(BrowserPoliciesIndex::class)
+            ->assertSee('3');
+    }
+
     public function test_viewer_sees_but_cannot_manage(): void
     {
         $policy = BrowserPolicy::factory()->create();
