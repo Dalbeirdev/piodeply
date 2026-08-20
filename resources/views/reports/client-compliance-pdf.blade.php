@@ -45,6 +45,17 @@
         @if ($software->isEmpty())
             <p class="muted">No active software policies for this client.</p>
         @else
+            <table class="tiles"><tr>
+                <td><div class="v {{ ($softwareFleet['percent'] ?? 0) >= 95 ? 'good' : 'warn' }}">{{ $softwareFleet['percent'] !== null ? $softwareFleet['percent'].'%' : '—' }}</div><div class="k">Compliant</div></td>
+                <td><div class="v">{{ $softwareFleet['compliant'] }}</div><div class="k">Machines compliant</div></td>
+                <td><div class="v {{ $softwareFleet['compliant_outdated'] > 0 ? 'warn' : '' }}">{{ $softwareFleet['compliant_outdated'] }}</div><div class="k">Compliant, but outdated</div></td>
+                <td><div class="v">{{ $softwareFleet['target'] }}</div><div class="k">Targeted</div></td>
+            </tr></table>
+            <p class="muted" style="font-size:9px; margin: 4px 0 0;">
+                "Compliant, but outdated" means the required software is installed and the policy is satisfied —
+                the machine's own updater has simply since reported a newer version exists.
+            </p>
+
             <table>
                 <thead><tr>
                     <th>Policy</th><th>{{ project_term() }}</th>
@@ -57,7 +68,12 @@
                         <td>{{ $row['policy']->package->name }} — {{ $row['policy']->action->label() }}</td>
                         <td>{{ $row['policy']->project->name }}</td>
                         <td class="num">{{ $row['summary']['target'] }}</td>
-                        <td class="num good">{{ $row['summary']['compliant'] }}</td>
+                        <td class="num good">
+                            {{ $row['summary']['compliant'] }}
+                            @if ($row['summary']['compliant_outdated'] > 0)
+                                <span class="warn">({{ $row['summary']['compliant_outdated'] }} outdated)</span>
+                            @endif
+                        </td>
                         <td class="num">{{ $row['summary']['pending'] + $row['summary']['scheduled'] }}</td>
                         <td class="num {{ ($row['summary']['failed'] + $row['summary']['non_compliant']) > 0 ? 'bad' : '' }}">
                             {{ $row['summary']['failed'] + $row['summary']['non_compliant'] }}

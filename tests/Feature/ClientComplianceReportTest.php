@@ -85,6 +85,34 @@ class ClientComplianceReportTest extends TestCase
         $this->assertSame('Report Widget', $data['software']->first()['policy']->package->name);
     }
 
+    /**
+     * Same asymmetry the browser section didn't have: software compliance
+     * had a per-policy table but no fleet-wide "are we protected" figure,
+     * and "Compliant" alone hid a genuinely outdated machine -- exactly the
+     * gap already closed on the internal report, now closed here too since
+     * this is the document a client actually reads.
+     */
+    public function test_report_data_includes_a_fleet_wide_software_summary(): void
+    {
+        [$client] = $this->fixtures();
+        $project = $client->projects()->firstOrFail();
+        $package = \App\Models\Package::factory()->create(['installer_type' => 'winget']);
+        $stale = $project->computers()->first();
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $stale->id, 'name' => $package->winget_id, 'source' => 'winget',
+            'version' => '138.0', 'available_version' => '141.0',
+        ]);
+        \App\Models\SoftwarePolicy::factory()->create([
+            'project_id' => $project->id, 'package_id' => $package->id, 'action' => 'install',
+        ]);
+
+        $data = app(ClientComplianceReportService::class)->dataFor($client);
+
+        $this->assertSame(1, $data['softwareFleet']['compliant']);
+        $this->assertSame(1, $data['softwareFleet']['compliant_outdated']);
+        $this->assertSame(1, $data['software']->first()['summary']['compliant_outdated']);
+    }
+
     public function test_staff_can_download_the_pdf(): void
     {
         [$client] = $this->fixtures();

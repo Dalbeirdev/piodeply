@@ -447,7 +447,7 @@ class PolicyService
      * needs, without hand-rolling a second summation of complianceSummary()
      * that could quietly drift from what the report itself shows.
      *
-     * @return array{policies: int, target: int, compliant: int, percent: ?float}
+     * @return array{policies: int, target: int, compliant: int, compliant_outdated: int, percent: ?float}
      */
     public function fleetSummary(?int $tenantClientId = null): array
     {
@@ -459,12 +459,13 @@ class PolicyService
             ))
             ->get();
 
-        $totals = ['policies' => $policies->count(), 'target' => 0, 'compliant' => 0];
+        $totals = ['policies' => $policies->count(), 'target' => 0, 'compliant' => 0, 'compliant_outdated' => 0];
 
         foreach ($policies as $policy) {
             $summary = $this->complianceSummary($policy);
             $totals['target'] += $summary['target'];
             $totals['compliant'] += $summary['compliant'];
+            $totals['compliant_outdated'] += $summary['compliant_outdated'];
         }
 
         $totals['percent'] = $totals['target'] > 0

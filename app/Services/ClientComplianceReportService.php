@@ -63,6 +63,11 @@ class ClientComplianceReportService
             'computers' => $computers,
 
             'software' => $softwarePolicies,
+            // The browser section below already leads with a fleet-wide
+            // tile row; software compliance had no equivalent at all, only
+            // the per-policy table, so a reader had no single "are we
+            // protected" figure for software the way they do for browsers.
+            'softwareFleet' => $this->policies->fleetSummary($client->id),
             'browser'  => $this->browserPolicies->fleetSummary($client->id),
 
             'deployments' => [
