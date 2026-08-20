@@ -208,6 +208,56 @@ class DeploymentsListTest extends TestCase
         $this->assertSame(0, $job->attempts);
     }
 
+    /** The cards must count what the table is actually showing -- folded tasks, not every historical attempt. */
+    public function test_summary_cards_count_folded_tasks_by_default(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create();
+
+        // Same task, retried twice: one failed attempt superseded by a
+        // succeeded one. Folded, this is 1 succeeded task, not 2 jobs.
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Failed,
+        ]);
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Succeeded,
+        ]);
+        // A different, still-pending task.
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => Package::factory()->create()->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Pending,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(DeploymentsIndex::class)
+            ->assertViewHas('stats', fn (array $s) => $s['total'] === 2
+                && $s['succeeded'] === 1
+                && $s['failed'] === 0
+                && $s['in_flight'] === 1);
+    }
+
+    public function test_the_in_flight_card_filters_to_pending_blocked_and_running(): void
+    {
+        $computer = Computer::factory()->create();
+
+        $pending = DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => Package::factory()->create(['name' => 'PendingPkg'])->id,
+            'status' => JobStatus::Pending,
+        ]);
+        $succeeded = DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => Package::factory()->create(['name' => 'SucceededPkg'])->id,
+            'status' => JobStatus::Succeeded,
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(DeploymentsIndex::class)
+            ->set('status', 'in_flight')
+            ->assertSee('PendingPkg')
+            ->assertDontSee('SucceededPkg');
+    }
+
     public function test_full_history_shows_every_attempt(): void
     {
         $computer = Computer::factory()->create();

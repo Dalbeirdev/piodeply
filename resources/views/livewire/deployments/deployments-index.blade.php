@@ -30,6 +30,48 @@
                 </div>
             @endif
 
+            {{-- Current state of the queue this refreshes into view every
+                 10s along with the table below — tenant-scoped, folded to
+                 one row per task unless "Show full history" is on, never
+                 narrowed by search/action. Clicking a card sets the same
+                 status filter the dropdown drives. --}}
+            @php
+                $jobCards = [
+                    ['label' => 'Total', 'value' => $stats['total'], 'sub' => $history ? 'Every attempt' : 'Current tasks', 'tone' => 'teal', 'filter' => null],
+                    ['label' => 'Succeeded', 'value' => $stats['succeeded'], 'sub' => null, 'tone' => 'green', 'filter' => 'succeeded'],
+                    ['label' => 'Failed', 'value' => $stats['failed'], 'sub' => null, 'tone' => $stats['failed'] > 0 ? 'red' : 'slate', 'filter' => 'failed'],
+                    ['label' => 'In flight', 'value' => $stats['in_flight'], 'sub' => 'pending / blocked / running', 'tone' => $stats['in_flight'] > 0 ? 'sky' : 'slate', 'filter' => 'in_flight'],
+                ];
+                $jobTones = [
+                    'teal'  => 'bg-teal-50 text-teal-700 border-teal-100',
+                    'green' => 'bg-green-50 text-green-700 border-green-100',
+                    'red'   => 'bg-red-50 text-red-700 border-red-100',
+                    'sky'   => 'bg-sky-50 text-sky-700 border-sky-100',
+                    'slate' => 'bg-slate-100 text-slate-600 border-slate-200',
+                ];
+            @endphp
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach ($jobCards as $card)
+                    @php $tag = $card['filter'] === null ? 'div' : 'button'; @endphp
+                    <{{ $tag }}
+                        @if ($card['filter'] !== null)
+                            type="button" wire:click="$set('status', '{{ $status === $card['filter'] ? '' : $card['filter'] }}')"
+                        @endif
+                        @class([
+                            'pd-card p-4 block text-left w-full border-l-4',
+                            $jobTones[$card['tone']],
+                            'hover:border-teal-200 transition-colors cursor-pointer' => $card['filter'] !== null,
+                            'ring-2 ring-teal-500' => $card['filter'] !== null && $status === $card['filter'],
+                        ])>
+                        <p class="text-2xl font-bold text-slate-900 tabular-nums">{{ number_format($card['value']) }}</p>
+                        <p class="text-sm font-semibold text-slate-700">{{ $card['label'] }}</p>
+                        @if ($card['sub'])
+                            <p class="text-xs text-slate-400">{{ $card['sub'] }}</p>
+                        @endif
+                    </{{ $tag }}>
+                @endforeach
+            </div>
+
             <div class="flex flex-wrap items-center gap-3">
                 <input type="search" wire:model.live.debounce.300ms="search"
                        placeholder="Search computer or package…" aria-label="Search deployments"
@@ -37,6 +79,7 @@
                 <select wire:model.live="status" aria-label="Filter by status"
                         class="border-slate-300 rounded-md shadow-sm text-sm">
                     <option value="">All statuses</option>
+                    <option value="in_flight">In flight (pending / blocked / running)</option>
                     @foreach ($statuses as $s)
                         <option value="{{ $s->value }}">{{ $s->label() }}</option>
                     @endforeach

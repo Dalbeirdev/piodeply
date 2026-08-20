@@ -117,40 +117,67 @@ class DeploymentsIndex extends Component
             ));
     }
 
-    public function render()
+    /**
+     * The current-state view every card and the unfiltered table agree on:
+     * tenant-scoped, folded to one row per task unless history is on. Never
+     * narrowed by search/status/action — those describe what the table
+     * shows, not what the fleet's queue actually looks like right now.
+     */
+    private function currentStateJobs()
     {
-        $this->authorize('viewAny', DeploymentJob::class);
-
-        // Tenancy: client-bound users see only their own machines' jobs.
         $tenantId = auth()->user()->tenantClientId();
 
-        $jobs = DeploymentJob::query()
-            ->with(['computer', 'package', 'packageVersion'])
-            ->withRepeatCount()
+        return DeploymentJob::query()
             ->unless($this->history, fn ($q) => $q->onlyLatestPerTask())
             ->when($tenantId !== null, fn ($q) => $q->whereHas(
                 'computer.project',
                 fn ($p) => $p->withTrashed()->where('client_id', $tenantId)
                     ->when(auth()->user()->visibleProjectIds() !== null,
                         fn ($qq) => $qq->whereIn('projects.id', auth()->user()->visibleProjectIds()))
-            ))
+            ));
+    }
+
+    public function render()
+    {
+        $this->authorize('viewAny', DeploymentJob::class);
+
+        $base = $this->currentStateJobs();
+        $stats = [
+            'total'     => (clone $base)->count(),
+            'succeeded' => (clone $base)->where('status', \App\Enums\JobStatus::Succeeded)->count(),
+            'failed'    => (clone $base)->where('status', \App\Enums\JobStatus::Failed)->count(),
+            'in_flight' => (clone $base)->whereIn('status', [
+                \App\Enums\JobStatus::Pending, \App\Enums\JobStatus::Blocked, \App\Enums\JobStatus::Running,
+            ])->count(),
+        ];
+
+        $jobs = (clone $base)
+            ->with(['computer', 'package', 'packageVersion'])
+            ->withRepeatCount()
             // The two search branches must be grouped: ungrouped, AND binds
             // tighter than OR and the package branch escapes the tenancy
             // filter above, showing a client another client's machines.
             ->when($this->search !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->whereHas('computer', fn ($c) => $c->where('hostname', 'like', "%{$this->search}%"))
                 ->orWhereHas('package', fn ($p) => $p->where('name', 'like', "%{$this->search}%"))))
-            ->when($this->status !== '', fn ($q) => $q->where('status', $this->status))
+            ->when($this->status === 'in_flight', fn ($q) => $q->whereIn('status', [
+                \App\Enums\JobStatus::Pending, \App\Enums\JobStatus::Blocked, \App\Enums\JobStatus::Running,
+            ]))
+            ->when($this->status !== '' && $this->status !== 'in_flight', fn ($q) => $q->where('status', $this->status))
             ->when($this->action !== '', fn ($q) => $q->where('action', $this->action))
             ->orderByDesc('id')
             ->paginate(20);
 
         return view('livewire.deployments.deployments-index', [
             'jobs'     => $jobs,
+            'stats'    => $stats,
             'statuses' => \App\Enums\JobStatus::cases(),
             'actions'  => \App\Enums\JobAction::cases(),
-            // Drives the "Retry all failed" button — counted over what this
-            // user may act on, so the number and the action always agree.
+            // Drives the "Retry all failed" button — counted over every
+            // failed ROW this user may act on (not folded: retrying touches
+            // actual job rows), so the number and the action always agree.
+            // Deliberately a separate figure from the Failed card above,
+            // which counts currently-failing TASKS to match the table.
             'failedCount' => $this->scopedJobs()->where('status', \App\Enums\JobStatus::Failed)->count(),
         ])->layout('layouts.app');
     }
