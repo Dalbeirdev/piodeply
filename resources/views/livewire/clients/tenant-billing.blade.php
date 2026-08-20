@@ -62,6 +62,15 @@
                     <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
                         Your last payment did not go through. Stripe will retry automatically — or update your card
                         now via <em>Manage billing</em> to settle it immediately. Your fleet keeps working meanwhile.
+                        @if ($suspensionDaysLeft !== null)
+                            <b>
+                                @if ($suspensionDaysLeft > 0)
+                                    Your account will be suspended for non-payment in {{ $suspensionDaysLeft }} {{ Str::plural('day', $suspensionDaysLeft) }} if this isn't resolved.
+                                @else
+                                    Your account is due to be suspended for non-payment imminently if this isn't resolved.
+                                @endif
+                            </b>
+                        @endif
                     </p>
                 @endif
 

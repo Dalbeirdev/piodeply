@@ -252,6 +252,45 @@ class RecurringBillingTest extends TestCase
         $this->assertSame(150, $client->fresh()->subscription_machines);
     }
 
+    /**
+     * billing:client-dunning already computes and emails this exact
+     * countdown every few days -- the tenant's own page must show the same
+     * urgency to anyone who checks it instead of their inbox.
+     */
+    public function test_a_past_due_client_sees_the_same_suspension_countdown_the_dunning_job_emails(): void
+    {
+        $client = $this->subscribedClient();
+        $client->forceFill([
+            'subscription_status'         => 'past_due',
+            'subscription_past_due_since' => now()->subDays(9),
+        ])->save();
+
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Clients\TenantBilling::class)
+            ->assertSee('suspended for non-payment in 5 days');
+    }
+
+    public function test_a_suspended_client_does_not_see_a_stale_countdown(): void
+    {
+        $client = $this->subscribedClient();
+        $client->forceFill([
+            'subscription_status'         => 'past_due',
+            'subscription_past_due_since' => now()->subDays(30),
+            'billing_suspended_at'        => now(),
+        ])->save();
+
+        $owner = tap(User::factory()->create(['client_id' => $client->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::ClientOwner->value));
+
+        Livewire::actingAs($owner)
+            ->test(\App\Livewire\Clients\TenantBilling::class)
+            ->assertDontSee('will be suspended')
+            ->assertDontSee('due to be suspended');
+    }
+
     public function test_resize_refuses_without_an_online_subscription(): void
     {
         $client = Client::factory()->create(); // invoiced/manual — no Stripe ids

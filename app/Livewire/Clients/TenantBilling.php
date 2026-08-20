@@ -33,6 +33,26 @@ class TenantBilling extends Component
     }
 
     /**
+     * The exact countdown billing:client-dunning already computes and
+     * emails out every few days — but only to whoever reads the reminder
+     * mail. Mirrored here so a client checking the page itself sees the
+     * same urgency, not just a generic "we'll retry" message.
+     */
+    private function suspensionCountdown(Client $client, \App\Services\SettingsService $settings): ?int
+    {
+        if ($client->subscription_status !== 'past_due'
+            || $client->subscription_past_due_since === null
+            || $client->billing_suspended_at !== null) {
+            return null;
+        }
+
+        $graceDays = max(3, (int) $settings->get('billing.client_grace_days', '14'));
+        $daysOverdue = (int) $client->subscription_past_due_since->diffInDays(now());
+
+        return max(0, $graceDays - $daysOverdue);
+    }
+
+    /**
      * Billing belongs to whoever owns the account — not to the Manager who
      * runs the fleet, and certainly not to a technician. Same line the Team
      * page draws.
@@ -113,7 +133,7 @@ class TenantBilling extends Component
         return redirect()->away($url);
     }
 
-    public function render()
+    public function render(\App\Services\SettingsService $settings)
     {
         $client = $this->client();
 
@@ -127,6 +147,7 @@ class TenantBilling extends Component
             'upcoming'     => $client->stripe_customer_id
                 ? app(BillingService::class)->upcomingInvoice($client->stripe_customer_id, $client->stripe_subscription_id)
                 : null,
+            'suspensionDaysLeft' => $this->suspensionCountdown($client, $settings),
             'isOwner'      => auth()->user()->isClientOwner(),
         ])->layout('layouts.app');
     }
