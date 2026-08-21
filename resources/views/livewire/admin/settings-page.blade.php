@@ -17,7 +17,14 @@
                     <div class="max-w-sm">
                         <x-label for="company_name" value="Company name" />
                         <x-input id="company_name" type="text" class="mt-1 block w-full" wire:model="company_name" />
-                        <p class="mt-1 text-xs text-slate-500">Shown in the sidebar next to the PioDeploy logo.</p>
+                        <p class="mt-1 text-xs text-slate-500">
+                            Shown in the sidebar next to the PioDeploy logo — but only as a fallback.
+                            @if ($brandedClients > 0)
+                                <strong>{{ $brandedClients }}</strong> {{ Str::plural('client', $brandedClients) }} set their own portal name (Team &gt; Branding) and will keep showing that instead.
+                            @else
+                                No client has set their own portal name yet, so every client currently shows this.
+                            @endif
+                        </p>
                         <x-input-error for="company_name" class="mt-1" />
                     </div>
                     <div>

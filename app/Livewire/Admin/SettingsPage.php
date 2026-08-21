@@ -4,6 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Enums\Permission;
 use App\Enums\Role as RoleEnum;
+use App\Models\Client;
 use App\Models\Computer;
 use App\Models\User;
 use App\Services\SettingsService;
@@ -129,6 +130,10 @@ class SettingsPage extends Component
             // Auto-update's own description already says what turning it off
             // does; this says how many machines it is doing it to right now.
             'agentsOutdated'  => Computer::agentOutdated()->count(),
+            // This name is a fallback: a client with their own portal name
+            // (Team > Branding) never sees it, so an admin renaming the
+            // platform should know how many clients this actually reaches.
+            'brandedClients'  => Client::whereNotNull('portal_name')->count(),
         ])->layout('layouts.app');
     }
 }

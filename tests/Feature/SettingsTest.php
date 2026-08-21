@@ -185,6 +185,18 @@ class SettingsTest extends TestCase
             ->assertSee('1 machine behind the published version');
     }
 
+    /** The platform name is a fallback -- a client with their own portal name never sees it, so an admin renaming it should know how many clients actually still show it. */
+    public function test_company_name_shows_how_many_clients_it_still_reaches(): void
+    {
+        \App\Models\Client::factory()->create(['portal_name' => 'Acme IT Portal']); // branded, unaffected
+        \App\Models\Client::factory()->create(['portal_name' => null]); // still shows the platform default
+
+        Livewire::actingAs($this->admin())
+            ->test(SettingsPage::class)
+            ->assertViewHas('brandedClients', 1)
+            ->assertSee('client set their own portal name');
+    }
+
     public function test_sidebar_shows_the_configured_company_name(): void
     {
         $this->settings()->set('branding.company_name', 'Acme Managed IT');
