@@ -234,6 +234,48 @@ class ClientPortalTest extends TestCase
             ->assertViewHas('stats', fn ($stats) => $stats['outdated'] === 1);
     }
 
+    /**
+     * The Enrolment page already promises a broken prerequisite shows on the
+     * machine's own page -- but the portal had no fleet-wide count of it at
+     * all, unlike the staff dashboard's identical "Not ready to deploy" tile.
+     */
+    public function test_client_dashboard_shows_the_not_ready_count(): void
+    {
+        $this->acmeComputer->update(['environment' => [
+            ['key' => 'vcredist', 'ok' => false, 'detail' => 'missing'],
+        ]]);
+        $this->globexComputer->update(['environment' => [
+            ['key' => 'vcredist', 'ok' => false, 'detail' => 'missing'],
+        ]]);
+
+        Livewire::actingAs($this->acmeUser)
+            ->test(Dashboard::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['not_ready'] === 1)
+            ->assertSee('Not ready to deploy');
+    }
+
+    /** Same confinement rule as the outdated-software count: a technician limited to one site must not see the whole client's not-ready total. */
+    public function test_a_project_confined_technician_only_counts_their_own_projects_not_ready_machines(): void
+    {
+        $otherProject = Project::factory()->for($this->acme)->create(['name' => 'Acme — Other Site']);
+        $otherComputer = Computer::factory()->for($otherProject)->create(['hostname' => 'ACME-OTHER-PC']);
+
+        $this->acmeComputer->update(['environment' => [
+            ['key' => 'vcredist', 'ok' => false, 'detail' => 'missing'],
+        ]]);
+        $otherComputer->update(['environment' => [
+            ['key' => 'winget', 'ok' => false, 'detail' => 'broken'],
+        ]]);
+
+        $technician = tap(User::factory()->create(['client_id' => $this->acme->id]),
+            fn (User $u) => $u->assignRole(RoleEnum::Technician->value));
+        $technician->assignedProjects()->attach($this->acmeProject->id);
+
+        Livewire::actingAs($technician)
+            ->test(Dashboard::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['not_ready'] === 1);
+    }
+
     public function test_agent_download_script_is_personalised_without_embedding_keys(): void
     {
         $response = $this->get("/download/agent/{$this->acmeProject->download_token}")

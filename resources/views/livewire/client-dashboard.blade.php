@@ -16,7 +16,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-5">
 
             {{-- Tiles --}}
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                 @php $health = $stats['health']; @endphp
                 <a href="{{ route('reports.computers') }}" class="pd-card p-4 hover:border-teal-300 transition-colors"
                    @if ($health !== null && $health['avg'] < 90) title="Weakest machine: {{ $health['worst'] }} ({{ $health['worst_score'] }}/100)" @endif>
@@ -46,6 +46,13 @@
                     <p class="text-sm font-semibold text-slate-700">Updates available</p>
                     @if ($stats['outdated'] > 0)
                         <p class="text-xs text-slate-400 mt-0.5">on {{ $stats['outdated_machines'] }} {{ Str::plural('machine', $stats['outdated_machines']) }}</p>
+                    @endif
+                </a>
+                <a href="{{ route('computers.index') }}" class="pd-card p-4 hover:border-teal-300 transition-colors">
+                    <p class="text-2xl font-bold {{ $stats['not_ready'] > 0 ? 'text-red-600' : 'text-slate-300' }} leading-tight">{{ $stats['not_ready'] }}</p>
+                    <p class="text-sm font-semibold text-slate-700">Not ready to deploy</p>
+                    @if ($stats['not_ready'] > 0)
+                        <p class="text-xs text-slate-400 mt-0.5">winget or a runtime is missing</p>
                     @endif
                 </a>
             </div>

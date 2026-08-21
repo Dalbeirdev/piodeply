@@ -158,6 +158,15 @@ class Dashboard extends Component
             ->pending($clientId)
             ->whereIn('computer_id', $confinedIds);
 
+        // ReadinessService::notReadyCount($clientId) counts the whole client,
+        // which would outrun a project-confined technician's visibility —
+        // same reasoning as $confinedIds above. Filtering the already-scoped
+        // $computers set keeps it exact.
+        $readiness = app(\App\Services\ReadinessService::class);
+        $notReady = (clone $computers)->whereNotNull('environment')->get()
+            ->filter(fn (Computer $c) => ! $readiness->isReady($c))
+            ->count();
+
         $stats = [
             'online'  => (clone $computers)->online()->count(),
             'offline' => (clone $computers)->offline()->count(),
@@ -174,6 +183,10 @@ class Dashboard extends Component
             // visibility at all, only agent/deployment state.
             'outdated'          => $updates->count(),
             'outdated_machines' => $updates->pluck('computer_id')->unique()->count(),
+            // The staff dashboard's "Not ready to deploy" tile — the
+            // Enrolment page already promises this shows per-machine, but
+            // the portal had no fleet-wide count of it at all.
+            'not_ready' => $notReady,
         ];
 
         return view('livewire.client-dashboard', [
