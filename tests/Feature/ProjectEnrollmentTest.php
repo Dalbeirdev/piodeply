@@ -84,6 +84,22 @@ class ProjectEnrollmentTest extends TestCase
         $this->page()->assertSee('1 revoked');
     }
 
+    /**
+     * created_by is stamped on every key and already has its own creator()
+     * relation -- but the table never showed it, so a live fleet credential
+     * carried no record of who actually issued it.
+     */
+    public function test_the_table_shows_who_created_each_key(): void
+    {
+        $admin = $this->admin();
+        Livewire::actingAs($admin)
+            ->test(ProjectEnrollment::class, ['project' => $this->project])
+            ->set('newKeyLabel', 'London office')
+            ->call('createKey');
+
+        $this->page()->assertSee($admin->name);
+    }
+
     public function test_key_management_requires_the_rotate_permission(): void
     {
         $viewer = tap(User::factory()->create(), fn (User $u) => $u->assignRole(RoleEnum::Viewer->value));

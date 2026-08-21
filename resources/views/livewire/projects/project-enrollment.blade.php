@@ -84,7 +84,8 @@
                         <thead>
                             <tr class="text-left text-xs text-slate-400 uppercase">
                                 <th class="py-1 pr-3">Label</th><th class="py-1 pr-3">Key</th>
-                                <th class="py-1 pr-3">Created</th><th class="py-1 pr-3">Last used</th><th class="py-1"></th>
+                                <th class="py-1 pr-3">Created</th><th class="py-1 pr-3">Created by</th>
+                                <th class="py-1 pr-3">Last used</th><th class="py-1"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -93,6 +94,7 @@
                                     <td class="py-1.5 pr-3">{{ $apiKey->label }}</td>
                                     <td class="py-1.5 pr-3 font-mono text-xs">{{ $apiKey->key_prefix }}…</td>
                                     <td class="py-1.5 pr-3 text-xs text-slate-500">{{ $apiKey->created_at->format('Y-m-d') }}</td>
+                                    <td class="py-1.5 pr-3 text-xs text-slate-500">{{ $apiKey->creator?->name ?? '—' }}</td>
                                     <td class="py-1.5 pr-3 text-xs text-slate-500">{{ $apiKey->last_used_at?->diffForHumans() ?? 'never' }}</td>
                                     <td class="py-1.5 text-right">
                                         @if ($apiKey->revoked_at)

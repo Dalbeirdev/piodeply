@@ -83,7 +83,7 @@ class ProjectEnrollment extends Component
             'selected'    => $method,
             'placeholder' => EnrollmentScriptService::KEY_PLACEHOLDER,
             'keyPattern'  => EnrollmentScriptService::KEY_PATTERN,
-            'apiKeys'     => $this->project->apiKeys()->orderByDesc('created_at')->get(),
+            'apiKeys'     => $this->project->apiKeys()->with('creator')->orderByDesc('created_at')->get(),
         ])->layout('layouts.app');
     }
 }
