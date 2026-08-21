@@ -35,7 +35,7 @@
                 </select>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Jobs</p>
                     <p class="text-2xl font-bold text-slate-800">{{ $stats['total'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Succeeded</p>
@@ -57,6 +57,8 @@
                         <p class="text-[11px] text-slate-400 mt-0.5 leading-snug">{{ $kindParts->implode(' · ') }}</p>
                     @endif
                 </div>
+                <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Cancelled</p>
+                    <p class="text-2xl font-bold text-slate-500">{{ $stats['cancelled'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">In flight</p>
                     <p class="text-2xl font-bold text-blue-600">{{ $stats['in_flight'] }}</p></div>
                 <div class="pd-card p-4"><p class="text-xs uppercase tracking-wider text-slate-400">Success rate</p>

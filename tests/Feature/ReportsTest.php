@@ -167,6 +167,34 @@ class ReportsTest extends TestCase
                 && $stats['success_rate'] === 75.0);
     }
 
+    /**
+     * The stat was already computed -- subtracted out of "in flight" so that
+     * math stayed correct -- but the tile grid never showed it, so cancelled
+     * jobs vanished from the total with no accounting for where they went.
+     */
+    public function test_deployments_report_shows_the_cancelled_count(): void
+    {
+        $computer = Computer::factory()->create();
+        $package = Package::factory()->create();
+
+        DeploymentJob::factory()->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Succeeded,
+        ]);
+        DeploymentJob::factory()->count(2)->create([
+            'computer_id' => $computer->id, 'package_id' => $package->id,
+            'action' => JobAction::Install, 'status' => JobStatus::Cancelled,
+        ]);
+
+        Livewire::actingAs($this->userWithRole(RoleEnum::Manager))
+            ->test(DeploymentsReport::class)
+            ->assertViewHas('stats', fn ($stats) => $stats['total'] === 3
+                && $stats['cancelled'] === 2
+                && $stats['in_flight'] === 0)
+            ->assertSee('Cancelled')
+            ->assertSee('2');
+    }
+
     /** A red "Failed: 3" tells an operator nothing about whether it's three retriable blips or three broken packages -- same classifier the Needs Attention queue uses. */
     public function test_deployments_report_breaks_failures_down_by_kind(): void
     {
