@@ -44,8 +44,12 @@ class ComputerShow extends Component
 
         $item = $this->computer->software()->findOrFail($softwareId);
 
-        $package = \App\Models\Package::active()
-            ->usableFor($this->computer->project)
+        // Matched regardless of active status: an inactive package still
+        // occupies its winget_id, so filtering to active() here made a
+        // package that was merely deactivated for editing look like it did
+        // not exist yet — and cloned a duplicate the moment someone clicked
+        // Update now while it was mid-edit.
+        $package = \App\Models\Package::usableFor($this->computer->project)
             ->where('winget_id', $item->name)
             ->first();
 
@@ -61,6 +65,10 @@ class ComputerShow extends Component
 
             $package = $this->adoptPackage($item);
             session()->flash('status', "{$item->name} added to your catalogue — updating now.");
+        } elseif (! $package->is_active) {
+            session()->flash('status', "{$item->name} is in the catalogue but currently deactivated — reactivate it before updating.");
+
+            return;
         }
 
         $result = $deployments->queueIfNeeded(

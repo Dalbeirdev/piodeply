@@ -117,6 +117,33 @@ class UpdateAvailableTest extends TestCase
         $this->assertSame(0, \App\Models\DeploymentJob::count());
     }
 
+    /**
+     * The real bug: deactivating a package to edit it made "Update now"
+     * think it did not exist yet, and clone a duplicate under the same
+     * winget_id. Reproduced live on Microsoft Edge -- deactivated mid-edit,
+     * "Update now" adopted a second "Microsoft.Edge" into General.
+     */
+    public function test_update_now_never_clones_a_deactivated_package(): void
+    {
+        $edge = Package::factory()->create([
+            'name' => 'Microsoft Edge', 'winget_id' => 'Microsoft.Edge', 'is_active' => false,
+        ]);
+        ComputerSoftware::create([
+            'computer_id' => $this->computer->id, 'name' => 'Microsoft.Edge',
+            'version' => '128.0', 'available_version' => '129.0', 'source' => 'winget',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(ComputerShow::class, ['computer' => $this->computer])
+            ->call('queueUpdate', $this->computer->software()->first()->id)
+            ->assertSee('deactivated');
+
+        $this->assertSame(1, Package::where('winget_id', 'Microsoft.Edge')->count(),
+            'the deactivated package must be recognised, not cloned');
+        $this->assertSame(0, \App\Models\DeploymentJob::where('package_id', $edge->id)->count(),
+            'a deactivated package must never receive a queued job either');
+    }
+
     public function test_a_tenants_adopted_package_is_private_to_them(): void
     {
         $client = Client::factory()->create();
