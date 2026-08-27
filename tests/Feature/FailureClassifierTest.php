@@ -24,6 +24,16 @@ class FailureClassifierTest extends TestCase
         $this->assertTrue(DeploymentJob::classifyFailure(1618)->shouldRetry());
     }
 
+    /** winget's own "in use by another application" -- clears once the app is closed. */
+    public function test_an_app_open_and_in_use_is_worth_retrying(): void
+    {
+        $this->assertSame(FailureKind::Transient, DeploymentJob::classifyFailure(-1978334959));
+        $this->assertTrue(DeploymentJob::classifyFailure(-1978334959)->shouldRetry());
+
+        $job = DeploymentJob::factory()->make(['exit_code' => -1978334959]);
+        $this->assertStringContainsString('was open and using its own files', $job->failureHint());
+    }
+
     public function test_a_package_that_cannot_install_here_is_not_retried(): void
     {
         foreach ([

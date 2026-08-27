@@ -156,8 +156,9 @@ class DeploymentJob extends Model
             return FailureKind::Package;
         }
 
-        // Known-momentary: another install holding the lock, or a bad download.
-        if (in_array($code, [1618, -1978334975], true)) {
+        // Known-momentary: another install holding the lock, a bad download,
+        // or the target application itself was open and using its own files.
+        if (in_array($code, [1618, -1978334975, -1978334959], true)) {
             return FailureKind::Transient;
         }
 
@@ -247,6 +248,10 @@ class DeploymentJob extends Model
                          . 'an EXE/MSI with machine-wide silent switches, or exclude this machine.',
             -1978334975 => 'The downloaded installer’s hash did not match (0x8A150041) — a corrupt or tampered '
                          . 'download. Retry; if it repeats, the package version needs checking.',
+            -1978334959 => 'The application was open and using its own files on the machine (0x8A150111, winget’s '
+                         . '"in use by another application"). This clears once it is closed — OBS Studio mid-recording '
+                         . 'is the usual case. Retry after asking the machine\'s user to close it; if it keeps '
+                         . 'happening, the app needs closing before every update on that machine.',
 
             default => null,
         };
