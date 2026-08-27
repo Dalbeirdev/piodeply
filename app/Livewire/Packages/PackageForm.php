@@ -66,17 +66,27 @@ class PackageForm extends Component
             'license'             => ['nullable', 'string', 'max:100'],
             'installer_type'      => ['required', Rule::in(InstallerType::values())],
             'architecture'        => ['required', Rule::in(Architecture::values())],
+            // A second package sharing an id is not a hypothetical: one was
+            // found live, silently cloned by a code path that has since
+            // been fixed. This closes the other way to create one — typing
+            // in an id the catalogue already has, deleted rows excepted.
             'winget_id'           => ['nullable', 'string', 'max:255', $idRule,
-                Rule::requiredIf($this->installer_type === 'winget')],
+                Rule::requiredIf($this->installer_type === 'winget'),
+                Rule::unique('packages', 'winget_id')->whereNull('deleted_at')
+                    ->when($this->package, fn ($rule) => $rule->ignore($this->package->id))],
             'winget_scopeless'    => ['boolean'],
             'choco_id'            => ['nullable', 'string', 'max:255', $idRule,
-                Rule::requiredIf($this->installer_type === 'choco')],
+                Rule::requiredIf($this->installer_type === 'choco'),
+                Rule::unique('packages', 'choco_id')->whereNull('deleted_at')
+                    ->when($this->package, fn ($rule) => $rule->ignore($this->package->id))],
             'management_mode'    => ['required', Rule::in(PackageMode::values())],
         ], [
             'winget_id.regex'       => 'winget IDs may only contain letters, digits, ".", "-", "+" and "_".',
             'choco_id.regex'        => 'Chocolatey IDs may only contain letters, digits, ".", "-", "+" and "_".',
             'winget_id.required'    => 'winget packages need a winget ID.',
             'choco_id.required'     => 'Chocolatey packages need a Chocolatey ID.',
+            'winget_id.unique'      => 'Another package already uses this winget ID.',
+            'choco_id.unique'       => 'Another package already uses this Chocolatey ID.',
         ]);
 
         if ($this->package) {

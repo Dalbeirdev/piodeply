@@ -350,4 +350,54 @@ class PackageManagementModeTest extends TestCase
             ->call('save')
             ->assertHasErrors('management_mode');
     }
+
+    /**
+     * A second package sharing a winget_id is not hypothetical: one was
+     * found live on production, silently cloned by a lookup bug that has
+     * since been fixed elsewhere. This closes the other door — typing in
+     * an id the catalogue already has, by hand, in this form.
+     */
+    public function test_a_new_package_cannot_reuse_an_existing_winget_id(): void
+    {
+        Package::factory()->create(['winget_id' => 'Microsoft.Edge']);
+        $category = PackageCategory::factory()->create();
+
+        Livewire::actingAs($this->admin())
+            ->test(PackageForm::class)
+            ->set('package_category_id', $category->id)
+            ->set('name', 'Microsoft.Edge')
+            ->set('winget_id', 'Microsoft.Edge')
+            ->call('save')
+            ->assertHasErrors('winget_id');
+
+        $this->assertSame(1, Package::where('winget_id', 'Microsoft.Edge')->count());
+    }
+
+    /** Editing a package must not trip over its own, unchanged id. */
+    public function test_editing_a_package_does_not_flag_its_own_unchanged_winget_id(): void
+    {
+        $package = Package::factory()->create(['winget_id' => 'Vendor.App'])->fresh();
+
+        Livewire::actingAs($this->admin())
+            ->test(PackageForm::class, ['package' => $package])
+            ->set('vendor', 'Updated Vendor')
+            ->call('save')
+            ->assertHasNoErrors();
+    }
+
+    /** A deleted package's id is free again -- it is gone, not merely hidden. */
+    public function test_a_soft_deleted_packages_winget_id_can_be_reused(): void
+    {
+        $old = Package::factory()->create(['winget_id' => 'Vendor.Retired']);
+        $old->delete();
+        $category = PackageCategory::factory()->create();
+
+        Livewire::actingAs($this->admin())
+            ->test(PackageForm::class)
+            ->set('package_category_id', $category->id)
+            ->set('name', 'Vendor Retired Replacement')
+            ->set('winget_id', 'Vendor.Retired')
+            ->call('save')
+            ->assertHasNoErrors();
+    }
 }
