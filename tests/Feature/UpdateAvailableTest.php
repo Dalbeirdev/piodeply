@@ -144,6 +144,33 @@ class UpdateAvailableTest extends TestCase
             'a deactivated package must never receive a queued job either');
     }
 
+    /**
+     * The lookup only ever checked winget_id, so a choco-sourced app never
+     * matched its own catalogue entry -- adoptPackage() sets choco_id for
+     * these, not winget_id, so every "Update now" click cloned a fresh
+     * duplicate regardless of active status.
+     */
+    public function test_update_now_matches_a_choco_package_by_its_own_id_not_winget_id(): void
+    {
+        $existing = Package::factory()->create([
+            'name' => 'Notepad++', 'choco_id' => 'notepadplusplus', 'winget_id' => null,
+        ]);
+        ComputerSoftware::create([
+            'computer_id' => $this->computer->id, 'name' => 'notepadplusplus',
+            'version' => '8.6', 'available_version' => '8.7', 'source' => 'choco',
+        ]);
+
+        Livewire::actingAs($this->admin())
+            ->test(ComputerShow::class, ['computer' => $this->computer])
+            ->call('queueUpdate', $this->computer->software()->first()->id);
+
+        $this->assertSame(1, Package::where('choco_id', 'notepadplusplus')->count(),
+            'the existing choco package must be recognised, not cloned');
+        $this->assertDatabaseHas('deployment_jobs', [
+            'computer_id' => $this->computer->id, 'package_id' => $existing->id, 'action' => 'update',
+        ]);
+    }
+
     public function test_a_tenants_adopted_package_is_private_to_them(): void
     {
         $client = Client::factory()->create();

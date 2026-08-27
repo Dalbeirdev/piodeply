@@ -44,13 +44,17 @@ class ComputerShow extends Component
 
         $item = $this->computer->software()->findOrFail($softwareId);
 
-        // Matched regardless of active status: an inactive package still
-        // occupies its winget_id, so filtering to active() here made a
-        // package that was merely deactivated for editing look like it did
-        // not exist yet — and cloned a duplicate the moment someone clicked
-        // Update now while it was mid-edit.
+        // Matched on whichever id this source actually adopts under
+        // (adoptPackage() below sets winget_id for winget, choco_id for
+        // choco) — matching only winget_id made every choco-sourced app
+        // fail to find its own catalogue entry and clone a fresh duplicate
+        // on every single click, adopted or not. Regardless of active
+        // status: an inactive package still occupies its id, so filtering
+        // to active() here made a package merely deactivated for editing
+        // look like it did not exist yet, and cloned a duplicate too.
+        $idColumn = $item->source === 'choco' ? 'choco_id' : 'winget_id';
         $package = \App\Models\Package::usableFor($this->computer->project)
-            ->where('winget_id', $item->name)
+            ->where($idColumn, $item->name)
             ->first();
 
         // Not in the catalogue yet — add it. Only winget/choco apps can be
