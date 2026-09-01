@@ -307,6 +307,12 @@ class PolicyService
 
                 if (! $policy->package->is_active) {
                     $row = $this->row($computer, 'disabled', null, 'Package is not active in the catalogue — no jobs will run');
+                } elseif (! $policy->package->isDeployable()) {
+                    // Checked ahead of the Audit branch too: auditRow() only
+                    // ever reports drift, which would call an OS-managed or
+                    // Store package "non-compliant" forever for a mismatch
+                    // this platform was never able to act on either way.
+                    $row = $this->row($computer, 'excluded', null, $policy->package->management_mode->clientExplanation());
                 } elseif ($policy->mode === \App\Enums\PolicyMode::Disabled) {
                     $row = $this->row($computer, 'disabled', null, 'Policy is disabled');
                 } elseif ($policy->mode === \App\Enums\PolicyMode::Audit && ! $excluded) {
@@ -365,6 +371,18 @@ class PolicyService
 
         if ($excluded) {
             return $this->row($computer, 'excluded', $state['version'], 'Excluded from this policy');
+        }
+
+        // enforce() already refuses to queue anything for a package this
+        // platform cannot install (Store/OS-managed/Unsupported) -- but
+        // nothing told the compliance report, so a policy that slipped onto
+        // one of these showed a permanent, unfixable "Failed" or
+        // "Non-compliant" that no retry or maintenance window would ever
+        // clear. Same bucket manual exclusion already uses: correctly out
+        // of the target denominator, since this platform was never going
+        // to act on it either way.
+        if (! $policy->package->isDeployable()) {
+            return $this->row($computer, 'excluded', $state['version'], $policy->package->management_mode->clientExplanation());
         }
 
         $remediation = $this->remediationFor($policy, $computer);

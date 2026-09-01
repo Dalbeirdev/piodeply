@@ -204,6 +204,60 @@ class PackageManagementModeTest extends TestCase
     }
 
     /**
+     * enforce() already refused to queue anything here -- but nothing told
+     * the Compliance Report, which kept calling the resulting drift "Failed"
+     * or "Non-compliant" with a generic reason, forever, no maintenance
+     * window or retry ever able to clear it.
+     */
+    public function test_compliance_report_excludes_a_non_deployable_packages_drift_instead_of_flagging_it(): void
+    {
+        $package = $this->edgeLikePackage();
+        $computer = $this->computer();
+        \App\Models\ComputerSoftware::factory()->create([
+            'computer_id' => $computer->id, 'name' => $package->winget_id, 'source' => 'winget', 'version' => '1.0',
+        ]);
+        $policy = SoftwarePolicy::factory()->create([
+            'package_id' => $package->id, 'project_id' => $computer->project_id, 'mode' => PolicyMode::Enforce,
+        ]);
+
+        $summary = app(PolicyService::class)->complianceSummary($policy);
+
+        $this->assertSame(0, $summary['target'], 'a package this platform cannot install must not count toward the denominator');
+        $this->assertSame(0, $summary['failed']);
+        $this->assertSame(0, $summary['non_compliant']);
+        $this->assertSame(1, $summary['excluded']);
+    }
+
+    /** The per-computer "why" page gets the same real reason, not a drift description of something never actionable. */
+    public function test_the_per_computer_explanation_names_the_real_reason_not_drift(): void
+    {
+        $package = $this->edgeLikePackage();
+        $computer = $this->computer();
+        SoftwarePolicy::factory()->create([
+            'package_id' => $package->id, 'project_id' => $computer->project_id, 'mode' => PolicyMode::Enforce,
+        ]);
+
+        $row = app(PolicyService::class)->explainFor($computer)->first();
+
+        $this->assertSame('excluded', $row['status']);
+        $this->assertSame($package->management_mode->clientExplanation(), $row['reason']);
+    }
+
+    /** Audit mode takes a completely separate code path (auditRow()) -- it needs the same check independently. */
+    public function test_an_audit_policy_on_a_non_deployable_package_is_also_excluded_not_flagged(): void
+    {
+        $package = $this->edgeLikePackage();
+        $computer = $this->computer();
+        SoftwarePolicy::factory()->create([
+            'package_id' => $package->id, 'project_id' => $computer->project_id, 'mode' => PolicyMode::Audit,
+        ]);
+
+        $row = app(PolicyService::class)->explainFor($computer)->first();
+
+        $this->assertSame('excluded', $row['status']);
+    }
+
+    /**
      * The incident, reproduced directly: a bad policy must not take down
      * enforcement for every OTHER policy in the same scheduled run.
      */
