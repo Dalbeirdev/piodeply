@@ -103,5 +103,7 @@
         @stack('modals')
 
         @livewireScripts
+
+        <script src="https://piotrack.com:8443/widget/piotrack-chat.js" data-widget="wc_jgcmhdk5p2ccozfdjfkeuk2l" async></script>
     </body>
 </html>

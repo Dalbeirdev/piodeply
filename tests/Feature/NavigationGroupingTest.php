@@ -191,6 +191,15 @@ class NavigationGroupingTest extends TestCase
         $this->assertNull($items->firstWhere('route', 'approvals.index')['badge']);
     }
 
+    public function test_the_chat_widget_script_loads_on_every_app_page(): void
+    {
+        $this->actingAs($this->userWithRole(RoleEnum::Admin))
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('https://piotrack.com:8443/widget/piotrack-chat.js', false)
+            ->assertSee('data-widget="wc_jgcmhdk5p2ccozfdjfkeuk2l"', false);
+    }
+
     /** Collapsing hides items visually; it must not remove them from the page. */
     public function test_a_collapsed_section_still_contains_its_links(): void
     {
